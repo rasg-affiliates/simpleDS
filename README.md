@@ -7,7 +7,7 @@
 of interferometric radio data. It performs the Fourier Transform of
 visibility data along the Frequency dimension
 and cross-multiplies redundant baseline information (if available).
-`simpleDS` attempts to caclulate the Delay Spectrum in the simplest manner
+`simpleDS` attempts to calculate the Delay Spectrum in the simplest manner
 using only Fast Fourier Transforms (FFTs) and calculating the beam_squared_area
 directly from a UVBeam compatible beam map.
 This calculator requires `pyuvdata` for data handling and beam area calculation.
@@ -34,4 +34,4 @@ Navigate into the directory and run `python setup.py install` or `pip install .`
 
 ### Running Tests
 Requires installation of `nose` package.
-From the source `simpleDs` directory run: `nosetests simpleDS`.
+From the source `simpleDS` directory run: `nosetests simpleDS`.
