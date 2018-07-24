@@ -85,7 +85,7 @@ def test_construct_version_info():
 
 
 def test_main():
-    """Test the main function of version.""""
+    """Test the main function of version."""
     version_info = simpleDS.version.construct_version_info()
 
     saved_stdout = sys.stdout
