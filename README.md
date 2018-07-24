@@ -19,6 +19,7 @@ First install dependencies.
 
 * numpy >= 1.10
 * astropy >= 2.0
+* aipy
 * future (for python3 forward compatibility)
 * pyuvdata (`pip install pyuvdata` or use https://github.com/HERA-Team/pyuvdata.git)
 
