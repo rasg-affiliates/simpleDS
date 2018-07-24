@@ -7,6 +7,7 @@ from pyuvdata import UVData, utils as uvutils
 from builtins import range, map
 from astropy import constants as const
 
+
 def import_calfile(filename=None):
     """Import the calfile from the PAPER array."""
     if filename is None:
@@ -44,13 +45,15 @@ def read_paper_miriad(filename, calfile=None, antpos_file=None, **kwargs):
         aa = calfile.get_aa(np.array([.1]))
         antpos = np.array([aa.get_baseline(0, i, src='z')
                            for i in range(len(aa.ants))])
-        antpos *= const.c.to('m/ns').value  # Convert light-nanoseconds to meters
+        # Convert light-nanoseconds to meters
+        antpos *= const.c.to('m/ns').value
         antpos -= antpos.mean(0)
     else:
         if not os.path.exists(antpos_file):
             raise IOError("{0} not found.".format(antpos_file))
         antpos = np.genfromtxt(antpos_file, **kwargs)
-    antpos_ecef = uvutils.ECEF_from_ENU(antpos, *uv.telescope_location_lat_lon_alt)
+    antpos_ecef = uvutils.ECEF_from_ENU(antpos,
+                                        *uv.telescope_location_lat_lon_alt)
     antpos_itrf = antpos_ecef - uv.telescope_location
     good_ants = list(map(int, uv.antenna_names))
     antpos_itrf = np.take(antpos_itrf, good_ants, axis=0)

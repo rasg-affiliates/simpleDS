@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+"""Version info for simpleDS repo."""
 from __future__ import absolute_import, division, print_function
 
 import os
@@ -9,12 +9,14 @@ import json
 
 
 def construct_version_info():
+    """Construct git info."""
     simpleDS_dir = os.path.dirname(os.path.realpath(__file__))
 
     def get_git_output(args, capture_stderr=False):
-        """Get output from Git, ensuring that it is of the ``str`` type,
-        not bytes."""
+        """Get output from Git.
 
+        ensuring that it is of the ``str`` type, not bytes.
+        """
         argv = ['git', '-C', simpleDS_dir] + args
 
         if capture_stderr:
@@ -79,6 +81,7 @@ git_branch = version_info['git_branch']
 
 
 def main():
+    """Gather git info."""
     print('Version = {0}'.format(version))
     print('git origin = {0}'.format(git_origin))
     print('git branch = {0}'.format(git_branch))

@@ -12,6 +12,7 @@ from simpleDS.data import DATA_PATH
 from builtins import range, zip
 from astropy import constants as const
 
+
 def test_read_no_calfile():
     """Test ValueError when no file given."""
     nt.assert_raises(ValueError, utils.import_calfile, None)
@@ -34,6 +35,7 @@ def test_calfile():
     exec('import {0} as test_cal'.format(test_cal_base))
     test_aa = test_cal.get_aa(np.array([.1]))
     nt.assert_dict_equal(test_aa.array_params, aa_out.array_params)
+
 
 def test_calfile_with_py():
     """Test input calfile with appelation py is read has same attributes."""

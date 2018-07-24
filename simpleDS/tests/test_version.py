@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-
-"""Tests for version.py.
-
-"""
+"""Tests for version.py."""
 from __future__ import absolute_import, division, print_function
 
 import nose.tools as nt
@@ -16,17 +13,22 @@ import simpleDS
 
 
 def test_construct_version_info():
-    # this test is a bit silly because it uses the nearly the same code as the original,
+    """Test gathering git version info."""
+    # this test is a bit silly because it uses the nearly
+    #  the same code as the original,
     # but it will detect accidental changes that could cause problems.
     # It does test that the __version__ attribute is set on simpleDS.
-    # I can't figure out how to test the except clause in construct_version_info.
-    # this line is modified from the main implementation since we're in simpleDS/tests/
+    # I can't figure out how to test the except
+    # clause in construct_version_info.
+    # this line is modified from the main implementation
+    # since we're in simpleDS/tests/
     simpleDS_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     def get_git_output(args, capture_stderr=False):
-        """Get output from Git, ensuring that it is of the ``str`` type,
-        not bytes."""
+        """Get output from Git.
 
+        ensuring that it is of the ``str`` type, not bytes.
+        """
         argv = ['git', '-C', simpleDS_dir] + args
 
         if capture_stderr:
@@ -78,10 +80,12 @@ def test_construct_version_info():
                          'git_description': git_description,
                          'git_branch': git_branch}
 
-    nt.assert_equal(simpleDS.version.construct_version_info(), test_version_info)
+    nt.assert_equal(simpleDS.version.construct_version_info(),
+                    test_version_info)
 
 
 def test_main():
+    """Test the main function of version.""""
     version_info = simpleDS.version.construct_version_info()
 
     saved_stdout = sys.stdout
