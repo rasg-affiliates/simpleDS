@@ -27,6 +27,7 @@ install:
   - source activate test-environment
   - conda install astropy
   - conda install scikit-learn
+  - conda install future
   - pip install coveralls
   - pip install git+https://github.com/HERA-Team/pyuvdata.git
   - python setup.py install
