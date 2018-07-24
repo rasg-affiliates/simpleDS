@@ -21,7 +21,7 @@ def jy_to_mk(freqs):
 
 
 def delay_transform(data_1_array, data_2_array=None,
-                    chans=None, delta_f=1. * units.Hz,
+                    delta_f=1. * units.Hz,
                     window=windows.blackmanharris):
     """Perform the Dealy transform over specified channel rangeself.
 
@@ -32,7 +32,9 @@ def delay_transform(data_1_array, data_2_array=None,
         data_1_array : (Nbls, Nfreqs, Ntimes) array from utils.get_data_array
         data_2_array : same type as data_1_array if take cross-multiplication
                        Defaults to copying data_1_array
-        chans : list channel range start and stop (eg: [100,300])
+        delta_f: The difference between frequency channels in the data.
+                 This is used to properly normalize the Fourier Transform.
+                 Must be an astropy Quantity object
         window : Window function used in delay transform.
                  Default is scipy.signal.windows.blackmanharris
     Returns:
@@ -43,6 +45,10 @@ def delay_transform(data_1_array, data_2_array=None,
         unit = data_1_array.unit
     else:
         unit = 1.
+
+    if not isinstance(delta_f, Quantity):
+        raise ValueError('delta_f must be an astropy Quantity object. '
+                         'value was : {df}'.format(df=delta_f))
 
     if data_2_array is None:
         data_2_array = data_1_array.copy()

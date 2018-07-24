@@ -53,3 +53,10 @@ def test_units_delay_transform():
     fake_corr = dspec.delay_transform(fake_data, window=windows.boxcar)
     test_units = (units.m*units.Hz)**2
     nt.assert_equal(test_units, fake_corr.unit)
+
+
+def test_delta_f_unitless():
+    """Test delta_f is unitless raises exception."""
+    fake_data = np.zeros((1, 21, 13)) * units.m
+    fake_data[0, 11, 7] += 1 * units.m
+    nt.assert_raises(ValueError, dspec.delay_transform, fake_data, delta_f=2.)
