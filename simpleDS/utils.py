@@ -61,3 +61,35 @@ def read_paper_miriad(filename, calfile=None, antpos_file=None, **kwargs):
     uv.set_uvws_from_antenna_positions()
 
     return uv
+
+
+def get_data_array(uv, reds, squeeze=True):
+    """Remove data from pyuvdata object and store in numpy array.
+
+    Duplicates data in redundant group as an array for faster calculations.
+    Arguments:
+        uv : data object which can support uv.get_data(ant_1, ant_2, pol)
+        reds: list of all redundant baselines of interest as baseline numbers
+    keywords:
+        squeeze: set true to squeeze the polarization dimension.
+                 This has no effect for data with Npols > 1.
+
+    Returns:
+        data_array - Nbls x Ntimes numpy array
+        baseline_array - baslines ordering of data_array
+    """
+    data_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
+    data_array = np.zeros(data_shape, dtype=np.complex)
+    reds = np.array(reds)
+    antnums_array = uv.baseline_to_antnums(reds)
+    antnums_array = np.array(antnums_array).transpose([1, 0])
+
+    for pol_cnt, pol in enumerate(uvutils.polnum2str(uv.polarization_array)):
+        for count, (ant_1, ant_2) in enumerate(antnums_array):
+            data_array[pol_cnt, count] = uv.get_data(ant_1, ant_2, pol)
+
+    if squeeze:
+        if data_array.shape[0] == 1:
+            data_array = np.squeeze(data_array, axis=0)
+
+    return data_array
