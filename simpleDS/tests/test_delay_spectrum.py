@@ -5,11 +5,8 @@ import os
 import sys
 import numpy as np
 import nose.tools as nt
-import pyuvdata
-from pyuvdata import UVData, utils as uvutils
 from simpleDS import delay_spectrum as dspec
 from simpleDS.data import DATA_PATH
-from builtins import range, zip
 from astropy import constants as const
 from astropy import units
 from scipy.signal import windows
