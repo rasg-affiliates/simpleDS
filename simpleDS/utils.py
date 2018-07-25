@@ -75,21 +75,86 @@ def get_data_array(uv, reds, squeeze=True):
                  This has no effect for data with Npols > 1.
 
     Returns:
-        data_array - Nbls x Ntimes numpy array
-        baseline_array - baslines ordering of data_array
+        data_array : (Nbls , Ntimes, Nfreqs) numpy array or
+                     (Npols, Nbls, Ntimes, Nfreqs)
     """
     data_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     data_array = np.zeros(data_shape, dtype=np.complex)
-    reds = np.array(reds)
-    antnums_array = uv.baseline_to_antnums(reds)
-    antnums_array = np.array(antnums_array).transpose([1, 0])
 
-    for pol_cnt, pol in enumerate(uvutils.polnum2str(uv.polarization_array)):
-        for count, (ant_1, ant_2) in enumerate(antnums_array):
-            data_array[pol_cnt, count] = uv.get_data(ant_1, ant_2, pol)
+    for count, baseline in enumerate(reds):
+        tmp_data = uv.get_data(baseline, squeeze='none')
+        # Keep the polarization dimenions and squeeze out spw
+        tmp_data = np.squeeze(tmp_data, axis=1)
+        # Reorder to: Npols, Ntimes, Nfreqs
+
+        data_array[:, count] = np.transpose(tmp_data, [2, 0, 1])
 
     if squeeze:
         if data_array.shape[0] == 1:
             data_array = np.squeeze(data_array, axis=0)
 
     return data_array
+
+
+def get_nsample_array(uv, reds, squeeze=True):
+    """Remove nsamples from pyuvdata object and store in numpy array.
+
+    Duplicates nsamples in redundant group as an array for faster calculations.
+    Arguments:
+        uv : data object which can support uv.get_nsamples(ant_1, ant_2, pol)
+        reds: list of all redundant baselines of interest as baseline numbers
+    keywords:
+        squeeze: set true to squeeze the polarization dimension.
+                 This has no effect for data with Npols > 1.
+
+    Returns:
+        nsample_array - Nbls x Ntimes numpy array
+    """
+    nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
+    nsample_array = np.zeros(nsample_shape, dtype=np.complex)
+
+    for count, baseline in enumerate(reds):
+        tmp_data = uv.get_nsamples(baseline, squeeze='none')
+        # Keep the polarization dimenions and squeeze out spw
+        tmp_data = np.squeeze(tmp_data, axis=1)
+        # Reorder to: Npols, Ntimes, Nfreqs
+        nsample_array[:, count] = np.transpose(tmp_data, [2, 0, 1])
+
+    if squeeze:
+        if nsample_array.shape[0] == 1:
+            nsample_array = np.squeeze(nsample_array, axis=0)
+
+    return nsample_array
+
+
+
+def get_flag_array(uv, reds, squeeze=True):
+    """Remove nsamples from pyuvdata object and store in numpy array.
+
+    Duplicates nsamples in redundant group as an array for faster calculations.
+    Arguments:
+        uv : data object which can support uv.get_nsamples(ant_1, ant_2, pol)
+        reds: list of all redundant baselines of interest as baseline numbers
+    keywords:
+        squeeze: set true to squeeze the polarization dimension.
+                 This has no effect for data with Npols > 1.
+
+    Returns:
+        nsample_array - Nbls x Ntimes numpy array
+    """
+    flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
+    flag_array = np.zeros(flag_shape, dtype=np.complex)
+    reds = np.array(reds)
+
+    for count, baseline in enumerate(reds):
+        tmp_data = uv.get_flags(baseline, squeeze='none')
+        # Keep the polarization dimenions and squeeze out spw
+        tmp_data = np.squeeze(tmp_data, axis=1)
+        # Reorder to: Npols, Ntimes, Nfreqs
+        flag_array[:, count] = np.transpose(tmp_data, [2, 0, 1])
+
+    if squeeze:
+        if flag_array.shape[0] == 1:
+            flag_array = np.squeeze(flag_array, axis=0)
+
+    return flag_array

@@ -135,3 +135,126 @@ def test_get_data_array():
 
     compare_data = compare_data.squeeze(axis=0)
     nt.assert_true(np.allclose(compare_data, data_array))
+
+
+def test_get_data_no_squeeze():
+    """Test data is stored into the array the same with no squeezing."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    data_array = utils.get_data_array(test_uv, reds=baseline_array,
+                                      squeeze=False)
+
+    compare_data = np.zeros((test_uv.Npols, test_uv.Nbls,
+                             test_uv.Ntimes, test_uv.Nfreqs), dtype=np.complex)
+
+    pol_array = uvutils.polnum2str(test_uv.polarization_array)
+    for pol_cnt, pol in enumerate(pol_array):
+        for cnt, baseline in enumerate(list(set(test_uv.baseline_array))):
+            ant_1, ant_2 = test_uv.baseline_to_antnums(baseline)
+            compare_data[pol_cnt, cnt] = test_uv.get_data(ant_1, ant_2, pol)
+
+    nt.assert_true(np.allclose(compare_data, data_array))
+
+def test_get_nsamples_array():
+    """Test nsamples is returned the same."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array)
+
+    test_samples = np.zeros((test_uv.Npols, test_uv.Nbls,
+                             test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float)
+
+    pol_array = uvutils.polnum2str(test_uv.polarization_array)
+    for pol_cnt, pol in enumerate(pol_array):
+        for cnt, baseline in enumerate(list(set(test_uv.baseline_array))):
+            ant_1, ant_2 = test_uv.baseline_to_antnums(baseline)
+            test_samples[pol_cnt, cnt] = test_uv.get_nsamples(ant_1, ant_2)
+
+    test_samples = np.squeeze(test_samples, axis=0)
+    nt.assert_true(np.all(test_samples == nsample_array))
+
+
+def test_get_nsamples_no_squeeze():
+    """Test nsamples is returned the same with no squeeze."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array,
+                                            squeeze=False)
+
+    test_samples = np.zeros((test_uv.Npols, test_uv.Nbls,
+                             test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float)
+
+    pol_array = uvutils.polnum2str(test_uv.polarization_array)
+    for pol_cnt, pol in enumerate(pol_array):
+        for cnt, baseline in enumerate(list(set(test_uv.baseline_array))):
+            ant_1, ant_2 = test_uv.baseline_to_antnums(baseline)
+            test_samples[pol_cnt, cnt] = test_uv.get_nsamples(ant_1, ant_2)
+
+    nt.assert_true(np.all(test_samples == nsample_array))
+
+
+def test_get_flag_array():
+    """Test nsamples is returned the same."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    flag_array = utils.get_flag_array(test_uv, reds=baseline_array)
+
+    test_flags = np.zeros((test_uv.Npols, test_uv.Nbls,
+                           test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float)
+
+    pol_array = uvutils.polnum2str(test_uv.polarization_array)
+    for pol_cnt, pol in enumerate(pol_array):
+        for cnt, baseline in enumerate(list(set(test_uv.baseline_array))):
+            ant_1, ant_2 = test_uv.baseline_to_antnums(baseline)
+            test_flags[pol_cnt, cnt] = test_uv.get_flags(ant_1, ant_2)
+
+    test_flags = np.squeeze(test_flags, axis=0)
+    nt.assert_true(np.all(test_flags == flag_array))
+
+def test_get_flag_array_no_squeeze():
+    """Test nsamples is returned the same with no squeeze."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    flag_array = utils.get_flag_array(test_uv, reds=baseline_array,
+                                      squeeze=False)
+
+    test_flags = np.zeros((test_uv.Npols, test_uv.Nbls,
+                           test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float)
+
+    pol_array = uvutils.polnum2str(test_uv.polarization_array)
+    for pol_cnt, pol in enumerate(pol_array):
+        for cnt, baseline in enumerate(list(set(test_uv.baseline_array))):
+            ant_1, ant_2 = test_uv.baseline_to_antnums(baseline)
+            test_flags[pol_cnt, cnt] = test_uv.get_flags(ant_1, ant_2)
+
+    nt.assert_true(np.all(test_flags == flag_array))
