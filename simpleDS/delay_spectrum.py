@@ -87,7 +87,7 @@ def delay_transform(data_1_array, data_2_array=None,
 
 
 def combine_nsamples(nsample_1, nsample_2=None):
-    """Combine the Nsample arrays for use in cross-multiplication.
+    """Combine the nsample arrays for use in cross-multiplication.
 
     Uses numpy slicing to generate array of all sample cross-multiples.
     Used to find the combine samples for a the delay spectrum.
@@ -123,3 +123,33 @@ def combine_nsamples(nsample_1, nsample_2=None):
         samples_out = np.sqrt(nsample_1[:, None, :, :] *
                               nsample_2[:, :, None, :, :])
     return samples_out
+
+
+def remove_auto_correlations(data_array):
+    """Remove the auto-corrlation term from input array.
+
+    Argument:
+        data_array : (Nbls, Nbls, Ntimes, Nfreqs)
+                     Removes same baseline diagonal along the first 2 diemsions
+    Returns:
+        data_out : (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
+                   if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
+    """
+    if len(data_array.shape) == 4:
+        Nbls = data_array.shape[0]
+    elif len(data_array.shape) == 5:
+        Nbls = data_array.shape[1]
+    else:
+        raise ValueError('Input data_array must be of type '
+                         '(Npols, Nbls, Nbls, Ntimes, Nfreqs) or '
+                         '(Nbls, Nbls, Ntimes, Nfreqs) but data_array'
+                         'has shape {0}'.format(data_array.shape))
+    # make a boolean index array with True off the diagonal and
+    # False on the diagonal.
+    indices = np.logical_not(np.diag(np.ones(Nbls, dtype=bool)))
+    if len(data_array.shape) == 4:
+        data_array = data_array[indices]
+    else:
+        data_array = data_array[:, indices]
+
+    return data_array

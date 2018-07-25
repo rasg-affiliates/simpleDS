@@ -104,3 +104,28 @@ def test_combine_nsamples_one_array():
     samples_out = dspec.combine_nsamples(test_samples)
     test_full_samples = np.ones((2, 2, 13, 21)) * 3
     nt.assert_true(np.all(test_full_samples == samples_out))
+
+
+def test_remove_autos():
+    """Test that the remove auto_correlations function returns right shape."""
+    test_array = np.ones((3, 3, 11, 21))
+    out_array = dspec.remove_auto_correlations(test_array)
+    nt.assert_equal((6, 11, 21), out_array.shape)
+
+def test_remove_autos():
+    """Test remove auto_correlations function returns right shape with pols."""
+    test_array = np.ones((4, 3, 3, 11, 21))
+    out_array = dspec.remove_auto_correlations(test_array)
+    nt.assert_equal((4, 6, 11, 21), out_array.shape)
+
+
+def test_remove_autos_small_shape():
+    """Test Exception is raised on an array which is too small."""
+    test_array = np.ones((3))
+    nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
+
+
+def test_remove_autos_small_shape():
+    """Test Exception is raised on an array which is too big."""
+    test_array = np.ones((3, 12, 12, 21, 6, 7))
+    nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
