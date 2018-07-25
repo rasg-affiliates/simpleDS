@@ -106,13 +106,23 @@ def test_combine_nsamples_one_array():
     nt.assert_true(np.all(test_full_samples == samples_out))
 
 
+def test_combine_nsamples_with_pols():
+    """Test that if only one array is given the samples are the same."""
+    test_samples_1 = np.ones((3, 2, 13, 21)) * 3
+    test_samples_2 = np.ones((3, 2, 13, 21)) * 2
+    samples_out = dspec.combine_nsamples(test_samples_1, test_samples_2)
+    test_full_samples = np.ones((3, 2, 2, 13, 21)) * np.sqrt(6)
+    nt.assert_true(np.all(test_full_samples == samples_out))
+
+
 def test_remove_autos():
     """Test that the remove auto_correlations function returns right shape."""
     test_array = np.ones((3, 3, 11, 21))
     out_array = dspec.remove_auto_correlations(test_array)
     nt.assert_equal((6, 11, 21), out_array.shape)
 
-def test_remove_autos():
+
+def test_remove_autos_with_pols():
     """Test remove auto_correlations function returns right shape with pols."""
     test_array = np.ones((4, 3, 3, 11, 21))
     out_array = dspec.remove_auto_correlations(test_array)
