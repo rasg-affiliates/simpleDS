@@ -73,6 +73,7 @@ def test_delay_vals_with_pols():
     fake_corr = fake_corr.value
     nt.assert_true(np.allclose(test_corr, fake_corr))
 
+
 def test_units_delay_transform():
     """Test units are returned squared from delay_transform."""
     fake_data = np.zeros((1, 13, 21)) * units.m
@@ -95,6 +96,7 @@ def test_combine_nsamples_different_shapes():
     test_sample_2 = np.ones((3, 13, 21))
     nt.assert_raises(ValueError, dspec.combine_nsamples,
                      test_sample_1, test_sample_2)
+
 
 def test_combine_nsamples_one_array():
     """Test that if only one array is given the samples are the same."""
