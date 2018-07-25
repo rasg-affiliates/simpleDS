@@ -30,7 +30,7 @@ def delay_transform(data_1_array, data_2_array=None,
 
     Arguments:
         data_1_array : (Nbls, Ntimes, Nfreqs) array from utils.get_data_array
-                        Can also have shape (Npols, Nbls, Nfreqs, Ntimes)
+                        Can also have shape (Npols, Nbls, Ntimes, Nfreqs)
         data_2_array : same type as data_1_array if take cross-multiplication
                        Defaults to copying data_1_array for auto-correlation
         delta_f: The difference between frequency channels in the data.
@@ -84,3 +84,42 @@ def delay_transform(data_1_array, data_2_array=None,
         delay_power = (delay_1_array[:, None, :, :].conj() *
                        delay_2_array[:, :, None, :, :])
     return delay_power
+
+
+def combine_nsamples(nsample_1, nsample_2=None):
+    """Combine the Nsample arrays for use in cross-multiplication.
+
+    Uses numpy slicing to generate array of all sample cross-multiples.
+    Used to find the combine samples for a the delay spectrum.
+    The geometric mean is taken between nsamples_1 and nsamples_2 because
+    nsmaples array is used to compute thermal variance in the delay spectrum.
+
+    Arguments:
+        nsample_1 : (Nbls, Ntimes, Nfreqs) array from utils.get_nsamples_array
+                    can also have shape (Npols, Nbls, Ntimes, Nfreqs)
+        nsample_2 : same type as nsample_1 if take cross-multiplication
+                       Defaults to copying nsample_1 for auto-correlation
+    Returns:
+        samples: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
+                 the input sample arrays.
+                Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+    """
+    if nsample_2 is None:
+        nsample_2 = nsample_1.copy()
+
+    if not nsample_1.shape == nsample_2.shape:
+        raise ValueError('nsample_1 and nsample_2 must have same shape, '
+                         'but nsample_1 has shape {d1_s} and '
+                         'nsample_2 has shape {d2_s}'
+                         .format(d1_s=nsample_1.shape,
+                                 d2_s=nsample_2.shape))
+
+    # The nsamples array is used to construct the thermal variance
+    # Cross-correlation takes the geometric mean of thermal variance.
+    if len(nsample_1.shape) == 3:
+        samples_out = np.sqrt(nsample_1[None, :, :] *
+                              nsample_2[:, None, :, :])
+    else:
+        samples_out = np.sqrt(nsample_1[:, None, :, :] *
+                              nsample_2[:, :, None, :, :])
+    return samples_out

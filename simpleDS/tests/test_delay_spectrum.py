@@ -87,3 +87,18 @@ def test_delta_f_unitless():
     fake_data = np.zeros((1, 13, 21)) * units.m
     fake_data[0, 7, 11] += 1 * units.m
     nt.assert_raises(ValueError, dspec.delay_transform, fake_data, delta_f=2.)
+
+
+def test_combine_nsamples_different_shapes():
+    """Test an error is raised if nsample_arrays have different shapes."""
+    test_sample_1 = np.ones((2, 13, 21))
+    test_sample_2 = np.ones((3, 13, 21))
+    nt.assert_raises(ValueError, dspec.combine_nsamples,
+                     test_sample_1, test_sample_2)
+
+def test_combine_nsamples_one_array():
+    """Test that if only one array is given the samples are the same."""
+    test_samples = np.ones((2, 13, 21)) * 3
+    samples_out = dspec.combine_nsamples(test_samples)
+    test_full_samples = np.ones((2, 2, 13, 21)) * 3
+    nt.assert_true(np.all(test_full_samples == samples_out))
