@@ -9,8 +9,8 @@ import pyuvdata
 from pyuvdata import UVData, utils as uvutils
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
-from builtins import range, zip
 from astropy import constants as const
+from scipy.signal import windows
 
 
 def test_read_no_calfile():
@@ -275,5 +275,18 @@ def test_bootstrap_array_shape():
     test_axis = 1
     nboot = 5
     new_array = utils.bootstrap_array(test_array, nboot=nboot, axis=test_axis)
-    shape = (3,4,5)
+    shape = (3, 4, 5)
     nt.assert_equal(shape, new_array.shape)
+
+
+def test_noise_equiv_bandwidth():
+    """Test that relative noise equivalent bandwidth calculation converges."""
+    win = windows.blackmanharris(2000)
+    nt.assert_true(np.isclose(2, 1./utils.noise_equivalent_bandwidth(win),
+                   rtol=1e-2))
+
+
+def test_noise_equiv_bandwidth_boxcar():
+    """Test that relative noise equivalent bandwidth is unity on boxcar."""
+    win = windows.boxcar(2000)
+    nt.assert_equal(1, 1./utils.noise_equivalent_bandwidth(win))

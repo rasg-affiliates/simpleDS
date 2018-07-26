@@ -181,3 +181,8 @@ def bootstrap_array(array, nboot=100, axis=0):
                                    size=(array.shape[axis], nboot),
                                    replace=True)
     return np.take(array, sample_inds, axis=axis)
+
+
+def noise_equivalent_bandwidth(window):
+    """Calculate the relative equivalent noise bandwidth of window function."""
+    return np.sum(window)**2 / (np.sum(window**2) * len(window))
