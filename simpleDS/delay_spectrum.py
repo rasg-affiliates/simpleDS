@@ -100,9 +100,9 @@ def combine_nsamples(nsample_1, nsample_2=None):
         nsample_2 : same type as nsample_1 if take cross-multiplication
                        Defaults to copying nsample_1 for auto-correlation
     Returns:
-        samples: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
-                 the input sample arrays.
-                Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+        samples_out: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
+                     the input sample arrays.
+                     Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
     """
     if nsample_2 is None:
         nsample_2 = nsample_1.copy()
@@ -148,8 +148,57 @@ def remove_auto_correlations(data_array):
     # False on the diagonal.
     indices = np.logical_not(np.diag(np.ones(Nbls, dtype=bool)))
     if len(data_array.shape) == 4:
-        data_array = data_array[indices]
+        data_out = data_array[indices]
     else:
-        data_array = data_array[:, indices]
+        data_out = data_array[:, indices]
 
-    return data_array
+    return data_out
+
+
+def calculate_noise_power(nsamples, freqs, inttime, trcvr):
+    """Generate power as given by the radiometry equation.
+
+    noise_power = Tsys/sqrt(delta_frequency * inttime )
+
+    Computes the system temperature using the equation:
+        T_sys = 180K * (nu/180MHz)^(-2.55) + T_receiver
+    Arguments:
+        nsamples: The nsamples array from which to compute thermal variance
+        freqs: The observed frequncies
+        trcvr: The receiver temperature of the instrument in K
+    Returns:
+        noise_power: White noise with the same shape as nsamples input.
+    """
+    if not isinstance(inttime, Quantity):
+        raise ValueError('inttime must be an astropy Quantity object. '
+                         'value was: {t}'.format(t=inttime))
+    if not isinstance(freqs, Quantity):
+        raise ValueError('freqs must be an astropy Quantity object. '
+                         'value was: {fq}'.format(fq=freqs))
+    if not isinstance(trcvr, Quantity):
+        raise ValueError('trcvr must be an astropy Quantity object. '
+                         ' value was: {temp}'.format(temp=trcvr))
+
+    Tsys = 180. * units.K * np.power(freqs.to('GHz')/(.18 * units.GHz), -2.55)
+    Tsys += trcvr.to('K')
+    delta_f = np.diff(freqs)[0]
+    noise_power = (Tsys.to('K')
+                   / np.sqrt(delta_f.to('1/s') * inttime.to('s') * nsamples))
+    return noise_power
+
+
+def generate_noise(noise_power):
+    """Generate noise given an input array of noise power.
+
+    Argument:
+        noise_power: N-dimensional array of noise power to generate white
+                     noise.
+    Returns:
+        noise: Complex white noise drawn from a Gaussian distribution with
+               width given by the value of the input noise_power array.
+    """
+    # divide by sqrt(2) to conserve total noise amplitude over real and imag
+    noise = noise_power * (1 * np.random.normal(size=noise_power.shape)
+                           + 1j * np.random.normal(size=noise_power.shape))
+    noise /= np.sqrt(2)
+    return noise

@@ -136,3 +136,64 @@ def test_remove_autos_small_shape():
     """Test Exception is raised on an array which is too big."""
     test_array = np.ones((3, 12, 12, 21, 6, 7))
     nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
+
+
+def test_noise_power_inttime_unit():
+    """Test Exception is raised if inttime is not a Quantity object."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 3) * units.GHz
+    test_temp = 400 * units.K
+    test_inttime = 100
+    nt.assert_raises(ValueError, dspec.calculate_noise_power,
+                     nsamples=test_sample, freqs=test_freqs,
+                     inttime=test_inttime, trcvr=test_temp)
+
+
+def test_noise_power_freq_unit():
+    """Test Exception is raised if freq is not a Quantity object."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 3)
+    test_temp = 400 * units.K
+    test_inttime = 100 * units.s
+    nt.assert_raises(ValueError, dspec.calculate_noise_power,
+                     nsamples=test_sample, freqs=test_freqs,
+                     inttime=test_inttime, trcvr=test_temp)
+
+
+def test_noise_power_trcvr_unit():
+    """Test Exception is raised if trcvr is not a Quantity object."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 3) * units.GHz
+    test_temp = 400
+    test_inttime = 100 * units.s
+    nt.assert_raises(ValueError, dspec.calculate_noise_power,
+                     nsamples=test_sample, freqs=test_freqs,
+                     inttime=test_inttime, trcvr=test_temp)
+
+
+def test_noise_power_shape():
+    """Test shape of noise power is as expected."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 21) * units.GHz
+    test_temp = 400 * units.K
+    test_inttime = 100 * units.s
+    test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
+                                                   freqs=test_freqs,
+                                                   trcvr=test_temp,
+                                                   inttime=test_inttime)
+    nt.assert_equal(test_sample.shape, test_noise_power.shape)
+
+
+def test_noise_shape():
+    """Test shape of generate_noise matches nsample array."""
+    test_sample = np.ones((2, 13, 21)) * 3
+    test_noise = dspec.generate_noise(test_sample)
+    nt.assert_equal(test_sample.shape, test_noise.shape)
+
+
+def test_noise_amplitude():
+    """Ensure noise amplitude is reasonable within 1 percent."""
+    rtol = 1e-2
+    test_sample = np.ones((5, 13, 200)) * 3
+    test_noise = dspec.generate_noise(test_sample)
+    nt.assert_true(np.isclose(test_noise.std(), 3, rtol=rtol))
