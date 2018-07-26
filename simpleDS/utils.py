@@ -158,3 +158,26 @@ def get_flag_array(uv, reds, squeeze=True):
             flag_array = np.squeeze(flag_array, axis=0)
 
     return flag_array
+
+
+def bootstrap_array(array, nboot=100, axis=0):
+    """Bootstrap resample the input array along the given axis.
+
+    Arguments:
+        array: N-dimensional array to bootstrap resample.
+        nboot: Number of resamples to draw.
+        axis: Axis along which resampling is performed
+    Returns:
+        array: The resampled array, if input is N-D output is N+1-D,
+               extra dimension is added imediately suceeding the sampled axis.
+    """
+    if axis >= len(np.shape(array)):
+        raise ValueError("Specified axis must be shorter than the lenght "
+                         "of input array.\n"
+                         "axis value was {0} but array has {} dimensions"
+                         .format(axis, len(np.shape(array))))
+
+    sample_inds = np.random.choice(array.shape[axis],
+                                   size=(array.shape[axis], nboot),
+                                   replace=True)
+    return np.take(array, sample_inds, axis=axis)

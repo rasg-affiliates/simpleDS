@@ -258,3 +258,22 @@ def test_get_flag_array_no_squeeze():
             test_flags[pol_cnt, cnt] = test_uv.get_flags(ant_1, ant_2)
 
     nt.assert_true(np.all(test_flags == flag_array))
+
+
+def test_bootstrap_array_invalid_axis():
+    """Test Exception is raised if axis is larger than size of array."""
+    test_array = np.zeros((3, 4))
+    test_axis = 2
+    nboot = 5
+    nt.assert_raises(ValueError, utils.bootstrap_array, test_array,
+                     nboot=nboot, axis=test_axis)
+
+
+def test_bootstrap_array_shape():
+    """Test returned array is the correct shape."""
+    test_array = np.zeros((3, 4))
+    test_axis = 1
+    nboot = 5
+    new_array = utils.bootstrap_array(test_array, nboot=nboot, axis=test_axis)
+    shape = (3,4,5)
+    nt.assert_equal(shape, new_array.shape)
