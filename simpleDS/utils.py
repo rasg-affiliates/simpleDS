@@ -127,7 +127,6 @@ def get_nsample_array(uv, reds, squeeze=True):
     return nsample_array
 
 
-
 def get_flag_array(uv, reds, squeeze=True):
     """Remove nsamples from pyuvdata object and store in numpy array.
 

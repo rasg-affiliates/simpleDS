@@ -161,6 +161,7 @@ def test_get_data_no_squeeze():
 
     nt.assert_true(np.allclose(compare_data, data_array))
 
+
 def test_get_nsamples_array():
     """Test nsamples is returned the same."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
@@ -234,6 +235,7 @@ def test_get_flag_array():
 
     test_flags = np.squeeze(test_flags, axis=0)
     nt.assert_true(np.all(test_flags == flag_array))
+
 
 def test_get_flag_array_no_squeeze():
     """Test nsamples is returned the same with no squeeze."""
