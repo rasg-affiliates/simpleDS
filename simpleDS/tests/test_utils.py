@@ -10,6 +10,7 @@ from pyuvdata import UVData, utils as uvutils
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from astropy import constants as const
+from astropy import units
 from scipy.signal import windows
 
 
@@ -292,3 +293,45 @@ def test_noise_equiv_bandwidth_boxcar():
     """Test that relative noise equivalent bandwidth is unity on boxcar."""
     win = windows.boxcar(2000)
     nt.assert_equal(1, 1./utils.noise_equivalent_bandwidth(win))
+
+
+def test_cross_multiply_array_different_shapes():
+    """Test Exception is raised if both arrays have different shapes."""
+    array_1 = np.zeros((1, 2, 3))
+    array_2 = np.zeros((2, 3, 4))
+    axis = 2
+    nt.assert_raises(ValueError, utils.cross_multipy_array,
+                     array_1, array_2, axis)
+
+
+def test_cross_multiply_shape():
+    """Test that the shape of the array is correct size."""
+    array_1 = np.ones((1, 3))
+    axis = 1
+    array_out = utils.cross_multipy_array(array_1, axis=1)
+    nt.assert_equal((1, 3, 3), array_out.shape)
+
+
+def test_cross_multiply_from_list():
+    """Test that conversion to array occurs correctly from list."""
+    array_1 = np.ones((1, 3)).tolist()
+    axis = 1
+    array_out = utils.cross_multipy_array(array_1, axis=1)
+    nt.assert_equal((1, 3, 3), array_out.shape)
+
+
+def test_cross_multiply_array_2_list():
+    """Test array_2 behaves properly if originally a list."""
+    array_1 = np.ones((1, 3))
+    array_2 = np.ones((1, 3)).tolist()
+    axis = 1
+    array_out = utils.cross_multipy_array(array_1, array_2, axis=1)
+    nt.assert_equal((1, 3, 3), array_out.shape)
+
+
+def test_cross_multiply_quantity():
+    """Test that cross mulitplying quantities behaves well."""
+    array_1 = np.ones((1, 3)) * units.Hz
+    axis = 1
+    array_out = utils.cross_multipy_array(array_1, axis=1)
+    nt.assert_equal((1, 3, 3), array_out.shape)

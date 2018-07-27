@@ -6,6 +6,7 @@ import numpy as np
 from pyuvdata import UVData, utils as uvutils
 from builtins import range, map
 from astropy import constants as const
+import copy
 
 
 def import_calfile(filename=None):
@@ -185,3 +186,37 @@ def bootstrap_array(array, nboot=100, axis=0):
 def noise_equivalent_bandwidth(window):
     """Calculate the relative equivalent noise bandwidth of window function."""
     return np.sum(window)**2 / (np.sum(window**2) * len(window))
+
+
+def cross_multipy_array(array_1, array_2=None, axis=0):
+    """Cross multiply the arrays along the given axis.
+
+    Cross multiplies along axis and computes array_1.conj() * array_2
+    if axis has length M then a new axis of size M will be inserted
+    directly succeeding the original.
+    Arguments:
+        array_1: N-dimensional numpy array
+        array_2: N-dimenional array (copy of array_1 if None)
+        axis: Axis along which to cross multiply
+
+    Returns:
+        cross_array : N+1 Dimensional array
+    """
+    if isinstance(array_1, list):
+        array_1 = np.asarray(array_1)
+
+    if array_2 is None:
+        array_2 = copy.deepcopy(array_1)
+
+    if isinstance(array_2, list):
+        array_2 = np.asarray(array_2)
+
+    if array_2.shape != array_1.shape:
+        raise ValueError("array_1 and array_2 must have the same shapes. "
+                         "array_1 has shape {a1} but array_2 has shape {a2}"
+                         .format(a1=np.shape(array_1), a2=np.shape(array_2)))
+
+    cross_array = (np.expand_dims(array_1, axis=axis).conj() *
+                   np.expand_dims(array_2, axis=axis+1))
+
+    return cross_array
