@@ -4,9 +4,11 @@ from __future__ import print_function
 import os
 import sys
 import numpy as np
+import copy
 import nose.tools as nt
 from simpleDS import delay_spectrum as dspec
 from simpleDS.data import DATA_PATH
+from pyuvdata import UVBeam
 from astropy import constants as const
 from astropy import units
 from scipy.signal import windows
@@ -35,56 +37,64 @@ def test_data_2_wrong_shape():
     """Test Exception is raised if shapes do not match."""
     fake_data_1 = np.zeros((1, 13, 21))
     fake_data_2 = np.zeros((2, 13, 21))
-    nt.assert_raises(ValueError, dspec.delay_transform,
-                     fake_data_1, fake_data_2)
+    axis = 2
+    nt.assert_raises(ValueError, dspec.normalized_fourier_transform,
+                     fake_data_1, fake_data_2, axis=axis)
 
 
-def test_delay_transform():
+def test_normalized_fourier_transform():
     """Test the delay transform and cross-multiplication function."""
     fake_data = np.zeros((1, 13, 21))
     fake_data[0, 7, 11] += 1
-    fake_corr = dspec.delay_transform(fake_data, window=windows.boxcar)
+    fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   window=windows.boxcar,
+                                                   axis=2)
     test_corr = np.fft.fft(fake_data, axis=-1)
     test_corr = np.fft.fftshift(test_corr, axes=-1)
-    test_corr = test_corr[None, ...].conj() * test_corr[:, None, ...]
     fake_corr = fake_corr.value
     nt.assert_true(np.allclose(test_corr, fake_corr))
 
 
-def test_delay_with_pols():
-    """Test delay transform is correct shape when polarizations are present."""
+def test_ft_with_pols():
+    """Test fourier transform is correct shape when pols are present."""
     fake_data = np.zeros((3, 2, 13, 31))
     fake_data[:, 0, 7, 11] += 1.
-    fake_corr = dspec.delay_transform(fake_data, window=windows.boxcar)
-    nt.assert_equal((3, 2, 2, 13, 31), fake_corr.shape)
+    fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   window=windows.boxcar,
+                                                   axis=2)
+    nt.assert_equal((3, 2, 13, 31), fake_corr.shape)
 
 
 def test_delay_vals_with_pols():
-    """Test values in delay_transform when pols present."""
+    """Test values in normalized_fourier_transform when pols present."""
     fake_data = np.zeros((3, 2, 13, 31))
     fake_data[:, 0, 7, 11] += 1.
-    fake_corr = dspec.delay_transform(fake_data, window=windows.boxcar)
+    fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   window=windows.boxcar,
+                                                   axis=3)
     test_corr = np.fft.fft(fake_data, axis=-1)
     test_corr = np.fft.fftshift(test_corr, axes=-1)
-    test_corr = test_corr[:, None, ...].conj() * test_corr[:, :, None, ...]
     fake_corr = fake_corr.value
     nt.assert_true(np.allclose(test_corr, fake_corr))
 
 
-def test_units_delay_transform():
-    """Test units are returned squared from delay_transform."""
+def test_units_normalized_fourier_transform():
+    """Test units are returned squared from normalized_fourier_transform."""
     fake_data = np.zeros((1, 13, 21)) * units.m
     fake_data[0, 7, 11] += 1 * units.m
-    fake_corr = dspec.delay_transform(fake_data, window=windows.boxcar)
-    test_units = (units.m*units.Hz)**2
+    fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   window=windows.boxcar,
+                                                   axis=2)
+    test_units = units.m * units.Hz
     nt.assert_equal(test_units, fake_corr.unit)
 
 
-def test_delta_f_unitless():
-    """Test delta_f is unitless raises exception."""
+def test_delta_x_unitless():
+    """Test delta_x is unitless raises exception."""
     fake_data = np.zeros((1, 13, 21)) * units.m
     fake_data[0, 7, 11] += 1 * units.m
-    nt.assert_raises(ValueError, dspec.delay_transform, fake_data, delta_f=2.)
+    nt.assert_raises(ValueError, dspec.normalized_fourier_transform, fake_data,
+                     delta_x=2., axis=2)
 
 
 def test_combine_nsamples_different_shapes():
@@ -197,3 +207,22 @@ def test_noise_amplitude():
     test_sample = np.ones((5, 13, 200)) * 3
     test_noise = dspec.generate_noise(test_sample)
     nt.assert_true(np.isclose(test_noise.std(), 3, rtol=rtol))
+
+
+def test_calculate_delay_spectrum_mismatched_freqs():
+    """Test Exception is raised when freq arrays are not equal."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    test_uv_2.freq_array += np.ones_like(test_uv_2.freq_array)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    nt.assert_raises(ValueError, calculate_delay_spectrum, test_uv_1,
+                     test_uv_2, uvb, trcvr=144, reds=reds)

@@ -10,6 +10,7 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy import constants as const
 from scipy.signal import windows
+from . import utils
 
 
 def jy_to_mk(freqs):
@@ -20,70 +21,47 @@ def jy_to_mk(freqs):
     return jy2t.to('mK/Jy')
 
 
-def delay_transform(data_1_array, data_2_array=None,
-                    delta_f=1. * units.Hz,
-                    window=windows.blackmanharris):
-    """Perform the Dealy transform over specified channel rangeself.
+def normalized_fourier_transform(data_array, delta_x=1. * units.Hz, axis=-1,
+                                 window=windows.blackmanharris):
+    """Perform the Fourier transform over specified axis.
 
     Perform the FFT over frequency using the specified window function
-    and cross multiplies all baselines in the data array.
+    and normalizes by delta_x (the discrete of sampling rate along the axis).
 
     Arguments:
-        data_1_array : (Nbls, Ntimes, Nfreqs) array from utils.get_data_array
+        data_array : (Nbls, Ntimes, Nfreqs) array from utils.get_data_array
                         Can also have shape (Npols, Nbls, Ntimes, Nfreqs)
-        data_2_array : same type as data_1_array if take cross-multiplication
-                       Defaults to copying data_1_array for auto-correlation
-        delta_f: The difference between frequency channels in the data.
+        delta_x: The difference between frequency channels in the data.
                  This is used to properly normalize the Fourier Transform.
                  Must be an astropy Quantity object
         window : Window function used in delay transform.
                  Default is scipy.signal.windows.blackmanharris
     Returns:
-        delay_power: (Nbls, Nbls, Ntimes, Nfreqs) array
-                     Cross multplies all baselines in data_1_array
-                     if pols are present returns
-                     (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+        delay_arry: (Nbls, Ntimes, Nfreqs) array of the Fourier transform along
+                    specified axis, and normalized by the provided delta_x
+                    if pols are present returns
+                    (Npols, Nbls, Ntimes, Nfreqs)
     """
-    if isinstance(data_1_array, Quantity):
-        unit = data_1_array.unit
+    if isinstance(data_array, Quantity):
+        unit = data_array.unit
     else:
         unit = 1.
 
-    if not isinstance(delta_f, Quantity):
-        raise ValueError('delta_f must be an astropy Quantity object. '
-                         'value was : {df}'.format(df=delta_f))
+    if not isinstance(delta_x, Quantity):
+        raise ValueError('delta_x must be an astropy Quantity object. '
+                         'value was : {df}'.format(df=delta_x))
 
-    if data_2_array is None:
-        data_2_array = data_1_array.copy()
-
-    if not data_2_array.shape == data_1_array.shape:
-        raise ValueError('data_1_array and data_2_array must have same shape, '
-                         'but data_1_array has shape {d1_s} and '
-                         'data_2_array has shape {d2_s}'
-                         .format(d1_s=data_1_array.shape,
-                                 d2_s=data_2_array.shape))
-    nfreqs = data_1_array.shape[-1]
-    win = window(nfreqs).reshape(1, nfreqs)
+    n_axis = data_array.shape[-1]
+    win = window(n_axis).reshape(1, n_axis)
 
     # Fourier Transforms should have a delta_f term multiplied
     # This is the proper normalization of the FT but is not
     # accounted for in an fft.
-    delay_1_array = np.fft.fft(data_1_array * win, axis=-1)
-    delay_1_array = np.fft.fftshift(delay_1_array, axes=-1)
-    delay_1_array = delay_1_array * delta_f.to('1/s') * unit
+    delay_array = np.fft.fft(data_array * win, axis=axis)
+    delay_array = np.fft.fftshift(delay_array, axes=axis)
+    delay_array = delay_array * delta_x.to('1/s') * unit
 
-    delay_2_array = np.fft.fft(data_2_array * win, axis=-1)
-    delay_2_array = np.fft.fftshift(delay_2_array, axes=-1)
-    delay_2_array = delay_2_array * delta_f.to('1/s') * unit
-
-    # Using slicing for cross-multiplication should be quick.
-    if len(data_1_array.shape) == 3:
-        delay_power = (delay_1_array[None, :, :].conj() *
-                       delay_2_array[:, None, :, :])
-    else:
-        delay_power = (delay_1_array[:, None, :, :].conj() *
-                       delay_2_array[:, :, None, :, :])
-    return delay_power
+    return delay_array
 
 
 def combine_nsamples(nsample_1, nsample_2=None):
@@ -114,15 +92,18 @@ def combine_nsamples(nsample_1, nsample_2=None):
                          .format(d1_s=nsample_1.shape,
                                  d2_s=nsample_2.shape))
 
+    if len(nsample_1.shape) == 3:
+        axis = 0
+    else:
+        axis = 1
+
+    samples_out = utils.cross_multipy_array(array_1=nsample_1,
+                                            array_2=nsample_2,
+                                            axis=axis)
+
     # The nsamples array is used to construct the thermal variance
     # Cross-correlation takes the geometric mean of thermal variance.
-    if len(nsample_1.shape) == 3:
-        samples_out = np.sqrt(nsample_1[None, :, :] *
-                              nsample_2[:, None, :, :])
-    else:
-        samples_out = np.sqrt(nsample_1[:, None, :, :] *
-                              nsample_2[:, :, None, :, :])
-    return samples_out
+    return np.sqrt(samples_out)
 
 
 def remove_auto_correlations(data_array):
