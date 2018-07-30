@@ -61,6 +61,9 @@ def read_paper_miriad(filename, calfile=None, antpos_file=None, **kwargs):
     setattr(uv, 'antenna_positions', antpos_itrf)
     uv.set_uvws_from_antenna_positions()
 
+    if 'FRF_NEBW' in uv.extra_keywords:
+        uv.integration_time = uv.extra_keywords['FRF_NEBW']
+
     return uv
 
 

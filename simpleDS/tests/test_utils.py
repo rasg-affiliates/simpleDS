@@ -113,6 +113,17 @@ def test_antpos_from_file():
     nt.assert_true(np.allclose(test_uvws, test_uv.uvw_array))
 
 
+def test_setting_frf_nebw_as_inttime():
+    """Test integration time is set if FRF_NEWB is in extra_keywords."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+    nt.assert_equal(test_uv.extra_keywords['FRF_NEBW'],
+                    test_uv.integration_time)
+
 def test_get_data_array():
     """Test data is stored into the array the same."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
