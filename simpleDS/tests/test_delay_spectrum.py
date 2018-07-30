@@ -7,11 +7,13 @@ import numpy as np
 import copy
 import nose.tools as nt
 from simpleDS import delay_spectrum as dspec
+from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from pyuvdata import UVBeam
 from astropy import constants as const
 from astropy import units
 from scipy.signal import windows
+
 
 
 def test_jy_to_mk_value():
@@ -194,6 +196,18 @@ def test_noise_power_shape():
     nt.assert_equal(test_sample.shape, test_noise_power.shape)
 
 
+def test_noise_power_unit():
+    """Test unit of noise power is as expected."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 21) * units.GHz
+    test_temp = 400 * units.K
+    test_inttime = 100 * units.s
+    test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
+                                                   freqs=test_freqs,
+                                                   trcvr=test_temp,
+                                                   inttime=test_inttime)
+    nt.assert_equal(units.mK, test_noise_power.unit)
+
 def test_noise_shape():
     """Test shape of generate_noise matches nsample array."""
     test_sample = np.ones((2, 13, 21)) * 3
@@ -204,9 +218,12 @@ def test_noise_shape():
 def test_noise_amplitude():
     """Ensure noise amplitude is reasonable within 1 percent."""
     rtol = 1e-2
-    test_sample = np.ones((5, 13, 200)) * 3
+    test_sample = np.ones((100, 1000)) * 3
     test_noise = dspec.generate_noise(test_sample)
-    nt.assert_true(np.isclose(test_noise.std(), 3, rtol=rtol))
+    noise_power = test_noise.std(1)
+    noise_power_uncertainty = noise_power.std()
+    nt.assert_true(np.isclose(test_noise.std(), 3,
+                              atol=noise_power_uncertainty))
 
 
 def test_calculate_delay_spectrum_mismatched_freqs():
@@ -218,11 +235,320 @@ def test_calculate_delay_spectrum_mismatched_freqs():
                                         antpos_file=test_antpos_file,
                                         skip_header=3, usecols=[1, 2, 3])
     test_uv_2 = copy.deepcopy(test_uv_1)
-    test_uv_2.freq_array += np.ones_like(test_uv_2.freq_array)
+    # add 10MHz to make frequencies different
+    test_uv_2.freq_array += np.ones_like(test_uv_2.freq_array) * 10e6
     reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
     uvb = UVBeam()
     uvb.read_beamfits(beam_file)
-    nt.assert_raises(ValueError, calculate_delay_spectrum, test_uv_1,
-                     test_uv_2, uvb, trcvr=144, reds=reds)
+    nt.assert_raises(ValueError, dspec.calculate_delay_spectrum,
+                     uv_even=test_uv_1, uv_odd=test_uv_2, uvb=uvb,
+                     trcvr=144 * units.K, reds=reds)
+
+
+def test_calculate_delay_spectrum_mismatched_inttimes():
+    """Test Exception is raised when integration times are not equal."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    # change the integration_time so they do not match
+    test_uv_2.integration_time += test_uv_2.integration_time * 2
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+
+    nt.assert_raises(ValueError, dspec.calculate_delay_spectrum,
+                     uv_even=test_uv_1, uv_odd=test_uv_2, uvb=uvb,
+                     trcvr=144 * units.K, reds=reds)
+
+
+def test_delay_spectrum_units_delays_units():
+    """Test the units on the output of calculate_delay_spectrum are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(units.s, delays.unit)
+
+
+def test_delay_spectrum_power_units():
+    """Test the units on the output power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(units.mK**2 * units.Mpc**3, delay_power.unit)
+
+
+def test_delay_spectrum_noise_power_units():
+    """Test the units on the output noise power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(units.mK**2 * units.Mpc**3, noise_power.unit)
+
+
+def test_delay_spectrum_thermal_power_units():
+    """Test the units on the output thermal power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(units.mK**2 * units.Mpc**3, thermal_power.unit)
+
+
+def test_delay_spectrum_power_shape():
+    """Test the shape on the output delay power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, thermal_power.shape)
+
+
+def test_delay_spectrum_noise_shape():
+    """Test the shape on the output noise power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, delay_power.shape)
+
+
+def test_delay_spectrum_thermal_power_shape():
+    """Test the shape on the output thermal power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, noise_power.shape)
+
+
+def test_delay_spectrum_power_shape_pols():
+    """Test the shape on the output delay power are correct with pols."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (1, Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds, squeeze=False)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, thermal_power.shape)
+
+
+def test_delay_spectrum_noise_shape_pols():
+    """Test the shape on the output noise power are correct with pols."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (1, Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds, squeeze=False)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, delay_power.shape)
+
+
+def test_delay_spectrum_thermal_power_shape_pols():
+    """Test the shape on the output thermal power are correct with pols."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (1, Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds,
+                                                  squeeze=False)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, noise_power.shape)

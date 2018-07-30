@@ -5,12 +5,11 @@ import os
 import sys
 import numpy as np
 from pyuvdata import UVData
-from builtins import range, zip
 import astropy.units as units
 from astropy.units import Quantity
 from astropy import constants as const
 from scipy.signal import windows
-from . import utils
+from . import utils, cosmo
 
 
 def jy_to_mk(freqs):
@@ -54,7 +53,7 @@ def normalized_fourier_transform(data_array, delta_x=1. * units.Hz, axis=-1,
     n_axis = data_array.shape[-1]
     win = window(n_axis).reshape(1, n_axis)
 
-    # Fourier Transforms should have a delta_f term multiplied
+    # Fourier Transforms should have a delta_x term multiplied
     # This is the proper normalization of the FT but is not
     # accounted for in an fft.
     delay_array = np.fft.fft(data_array * win, axis=axis)
@@ -165,7 +164,7 @@ def calculate_noise_power(nsamples, freqs, inttime, trcvr):
     delta_f = np.diff(freqs)[0]
     noise_power = (Tsys.to('K')
                    / np.sqrt(delta_f.to('1/s') * inttime.to('s') * nsamples))
-    return noise_power
+    return noise_power.to('mK')
 
 
 def generate_noise(noise_power):
@@ -183,3 +182,167 @@ def generate_noise(noise_power):
                            + 1j * np.random.normal(size=noise_power.shape))
     noise /= np.sqrt(2)
     return noise
+
+
+def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
+                             squeeze=True, window=windows.blackmanharris):
+    """Calculate delay cross-correlation between the uv_even and uv_odd.
+
+    Arguments:
+        uv_even: One of the pyuvdata objects to cross correlate
+        uv_odd: Other pyuvdata object to multiply with uv_even.
+        uvb: UVBeam object with relevent beam info.
+                Currently assumes 1 beam object can describe all baselines
+                Must be a power beam in healpix coordinates and peak normalized
+        reds: set of redundant baselines to calculate delay power spectrum.
+        nboot: Number of boot strap re-samples to perform (0 to omit step)
+        trcvr: Receiver Temperature of antenna to calculate noise power
+
+    Returns:
+        delays: Astropy quantity object of delays. Fourier dual to Frequency
+                shape (Nfreqs)
+        delay_power: (Nbls, Nbls, Ntimes, Nfreqs) of delay powers
+                     or (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+                     if polarizations are present or squeeze=False
+        noise_power: (Nbls, Nbls, Ntimes, Nfreqs) of simulated noise powers
+                     or (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+                     if polarizations are present or squeeze=False
+        thermal_power: (Nbls, Nbls, Ntimes, Nfreqs) of expected thermal power
+                     or (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+                     if polarizations are present or squeeze=False
+    """
+    if not np.allclose(uv_even.freq_array, uv_odd.freq_array):
+        raise ValueError("Both pyuvdata objects must have the same "
+                         "frequencies in order to cross-correlate.")
+    freqs = np.squeeze(uv_even.freq_array, axis=0) * units.Hz
+    delays = np.fft.fftfreq(len(freqs), d=np.diff(freqs)[0].value)
+    delays = np.fft.fftshift(delays) / freqs.unit
+    delays = delays.to('s')
+
+    if not np.isclose(uv_even.integration_time, uv_odd.integration_time):
+        raise ValueError("Both pyuvdata objects must have the same "
+                         "integration time in order to cross-correlate.")
+
+    inttime = uv_even.integration_time * units.s
+
+    even_data = utils.get_data_array(uv_even, reds=reds, squeeze=squeeze)
+    odd_data = utils.get_data_array(uv_odd, reds=reds, squeeze=squeeze)
+
+    even_samples = utils.get_nsample_array(uv_even, reds=reds, squeeze=squeeze)
+    odd_samples = utils.get_nsample_array(uv_odd, reds=reds, squeeze=squeeze)
+
+    even_flags = utils.get_flag_array(uv_even, reds=reds, squeeze=squeeze)
+    odd_flags = utils.get_flag_array(uv_odd, reds=reds, squeeze=squeeze)
+
+    # I'm not sure I want to cast them as float right now, but we'll see
+    even_flags = np.logical_not(even_flags).astype(float)
+    odd_flags = np.logical_not(odd_flags).astype(float)
+
+    # Make all the data Quantity objects to help keep the units right
+    even_data = even_data * units.Jy
+    odd_data = odd_data * units.Jy
+
+    even_noise = calculate_noise_power(nsamples=even_samples,
+                                       freqs=freqs,
+                                       inttime=inttime,
+                                       trcvr=trcvr)
+    odd_noise = calculate_noise_power(nsamples=odd_samples,
+                                      freqs=freqs,
+                                      inttime=inttime,
+                                      trcvr=trcvr)
+    # Conver the noise powers to white noise
+    even_noise = generate_noise(even_noise)
+    odd_noise = generate_noise(odd_noise)
+
+    # save cross-multiplication axis
+    if len(np.shape(even_data)) == 3:
+        cross_mult_axis = 0
+    else:
+        cross_mult_axis = 1
+    # Generate a waterfall for each cross multiplication of the
+    # expected thermal variance.
+    thermal_noise_samples = combine_nsamples(even_samples, odd_samples)
+
+    delay_1_array = normalized_fourier_transform(data_array=(even_data
+                                                             * even_flags),
+                                                 delta_x=np.diff(freqs)[0],
+                                                 window=window, axis=-1)
+    delay_2_array = normalized_fourier_transform(data_array=(odd_data
+                                                             * odd_flags),
+                                                 delta_x=np.diff(freqs)[0],
+                                                 window=window, axis=-1)
+
+    delay_power = utils.cross_multipy_array(array_1=delay_1_array,
+                                            array_2=delay_2_array,
+                                            axis=cross_mult_axis)
+
+    noise_1_delay = normalized_fourier_transform(data_array=(even_noise
+                                                             * even_flags),
+                                                 delta_x=np.diff(freqs)[0],
+                                                 window=window)
+
+    noise_2_delay = normalized_fourier_transform(data_array=(odd_noise
+                                                             * odd_flags),
+                                                 delta_x=np.diff(freqs)[0],
+                                                 window=window)
+
+    noise_power = utils.cross_multipy_array(array_1=noise_1_delay,
+                                            array_2=noise_2_delay,
+                                            axis=cross_mult_axis)
+
+    thermal_power = calculate_noise_power(nsamples=thermal_noise_samples,
+                                          freqs=freqs,
+                                          inttime=inttime,
+                                          trcvr=trcvr)
+    thermal_power *= thermal_power
+
+    # Convert from visibility Units (Jy) to comological units (mK^2/(h/Mpc)^3)
+    z_mean = np.mean(cosmo.calc_z(freqs))
+    X2Y = cosmo.X2Y(z_mean)
+    # Calculate the effective bandwith for the given window function
+    bandwidth = (freqs[-1] - freqs[0])
+    bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
+    unit_conversion = X2Y.reshape(1, -1)
+    unit_conversion /= bandwidth.to('1/s') * uvb.get_beam_sq_area()
+
+    # the *= operator does not play nicely with multiplying a non-quantity
+    # with a quantity
+    delay_power = delay_power * unit_conversion * jy_to_mk(freqs)**2
+    noise_power = noise_power * unit_conversion
+    # The thermal expectation requires the additional delta_f**2 factor
+    # for all the units to be correct since we are multiplying them
+    # on explicitly
+    thermal_power = thermal_power * unit_conversion * np.diff(freqs)[0]**2
+
+    return delays, delay_power, noise_power, thermal_power
+
+    # if remove_autos:
+    #     delay_power = utils.remove_auto_correlations(delay_power)
+    #     noise_power = utils.remove_auto_correlations(noise_power)
+    #     thermal_power = utils.remove_auto_correlations(thermal_power)
+    # else:
+    #     if uv_even.Nplos > 1:
+    #         new_shape = (dela_power.shape[0],
+    #                      delay_power.shape[1] * delay_power.shape[2],
+    #                      delay_power.shape[3],
+    #                      delay_power.shape[4])
+    #     else:
+    #         new_shape = (delay_power.shape[0] * delay_power.shape[1],
+    #                      delay_power.shape[2],
+    #                      delay_power.shape[3])
+    #     delay_power = delay_power.reshape(new_shape)
+    #     noise_power = noise_power.reshape(new_shape)
+    #     thermal_power = thermal_power.reshape(new_shape)
+
+    # if nboot:
+    #     if uv_even.Npols > 1:
+    #         boot_axis = 1
+    #     else:
+    #         boot_axis = 0
+    #     delay_power_boot = utils.bootstrap_array(delay_power, nboot=nboot,
+    #                                              axis=boot_axis)
+    #     noise_power_boot = utils.bootstrap_array(noise_power, nboot=nboot,
+    #                                              axis=boot_axis)
+    #     thermal_power_boot = utils.bootstrap_array(thermal_power,
+    #                                                nboot=nboot,
+    #                                                axis=boot_axis)
