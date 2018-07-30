@@ -6,6 +6,7 @@ import numpy as np
 from pyuvdata import UVData, utils as uvutils
 from builtins import range, map
 from astropy import constants as const
+from astropy.units import Quantity
 import copy
 
 
@@ -214,6 +215,13 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
     if isinstance(array_2, list):
         array_2 = np.asarray(array_2)
 
+    unit_1, unit_2 = 1., 1.
+    if isinstance(array_1, Quantity):
+        unit_1 = array_1.unit
+
+    if isinstance(array_2, Quantity):
+        unit_2 = array_2.unit
+
     if array_2.shape != array_1.shape:
         raise ValueError("array_1 and array_2 must have the same shapes. "
                          "array_1 has shape {a1} but array_2 has shape {a2}"
@@ -222,4 +230,4 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
     cross_array = (np.expand_dims(array_1, axis=axis).conj() *
                    np.expand_dims(array_2, axis=axis+1))
 
-    return cross_array
+    return cross_array * unit_1 * unit_2
