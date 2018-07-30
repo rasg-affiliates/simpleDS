@@ -1,0 +1,11 @@
+[run]
+omit =
+    */tests/*
+    */data/*
+    simpleDS/data/*cal.py
+
+[report]
+omit =
+    */tests/*
+    */data/*
+    simpleDS/data/*cal.py
