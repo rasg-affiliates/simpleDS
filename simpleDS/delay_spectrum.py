@@ -311,7 +311,15 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # The thermal expectation requires the additional delta_f**2 factor
     # for all the units to be correct since we are multiplying them
     # on explicitly
-    thermal_power = thermal_power * unit_conversion * np.diff(freqs)[0]**2
+    thermal_power = thermal_power * X2Y * np.diff(freqs)[0]
+    thermal_power /= uvb.get_beam_sq_area()
+    # Divide by the following factors:
+    #   Nbls: baselines should coherently add together
+    #   sqrt(2): noise is split between even and odd
+    thermal_power /= uv_even.Nbls * np.sqrt(2)
+    # divie the thermal expectation by 2 if visibilities are psuedo Stokes
+    if np.intersect1d(uv_even.polarization_array, np.arange(1, 5)):
+        thermal_power /= 2
 
     return delays, delay_power, noise_power, thermal_power
 
