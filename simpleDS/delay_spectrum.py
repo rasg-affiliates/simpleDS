@@ -50,7 +50,7 @@ def normalized_fourier_transform(data_array, delta_x=1. * units.Hz, axis=-1,
         raise ValueError('delta_x must be an astropy Quantity object. '
                          'value was : {df}'.format(df=delta_x))
 
-    n_axis = data_array.shape[-1]
+    n_axis = data_array.shape[axis]
     win = window(n_axis).reshape(1, n_axis)
 
     # Fourier Transforms should have a delta_x term multiplied
@@ -302,7 +302,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # Calculate the effective bandwith for the given window function
     bandwidth = (freqs[-1] - freqs[0])
     bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
-    unit_conversion = X2Y / bandwidth.to('1/s') * uvb.get_beam_sq_area()
+    unit_conversion = X2Y / bandwidth.to('1/s') / uvb.get_beam_sq_area()
 
     # the *= operator does not play nicely with multiplying a non-quantity
     # with a quantity
