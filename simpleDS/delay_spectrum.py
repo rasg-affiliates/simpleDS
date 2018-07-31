@@ -302,8 +302,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # Calculate the effective bandwith for the given window function
     bandwidth = (freqs[-1] - freqs[0])
     bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
-    unit_conversion = X2Y.reshape(1, -1)
-    unit_conversion /= bandwidth.to('1/s') * uvb.get_beam_sq_area()
+    unit_conversion = X2Y / bandwidth.to('1/s') * uvb.get_beam_sq_area()
 
     # the *= operator does not play nicely with multiplying a non-quantity
     # with a quantity
