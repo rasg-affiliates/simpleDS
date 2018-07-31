@@ -15,7 +15,6 @@ from astropy import units
 from scipy.signal import windows
 
 
-
 def test_jy_to_mk_value():
     """Test the Jy to mK conversion factor."""
     test_fq = np.array([.1])*units.GHz
@@ -63,7 +62,7 @@ def test_ft_with_pols():
     fake_data[:, 0, 7, 11] += 1.
     fake_corr = dspec.normalized_fourier_transform(fake_data,
                                                    window=windows.boxcar,
-                                                   axis=2)
+                                                   axis=3)
     nt.assert_equal((3, 2, 13, 31), fake_corr.shape)
 
 
