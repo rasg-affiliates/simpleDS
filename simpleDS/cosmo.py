@@ -7,7 +7,6 @@ Phys. Rev. D 90, 023018 or 	arXiv:1404.2596
 import os
 import sys
 import numpy as np
-from scipy import integrate
 from astropy import constants as const
 from astropy import units
 from astropy.units import Quantity
@@ -26,7 +25,7 @@ def calc_z(freq):
     if not isinstance(freq, Quantity):
         raise ValueError("Input freq must be an astropy Quantity. "
                          "value was: {}".format(freq))
-    return (f21/freq).si.value - 1
+    return (f21 / freq).si.value - 1
 
 
 def u2kperp(u, z, cosmo=little_h_cosmo):
@@ -47,8 +46,8 @@ def eta2kparr(eta, z, cosmo=little_h_cosmo):
     if not isinstance(eta, Quantity):
         raise ValueError('input eta must be an astropy Quantity object. '
                          'value was: {0}'.format(eta))
-    return (eta * (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z)) /
-            (const.c * (1 + z)**2)).to('1/Mpc')
+    return (eta * (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z))
+            / (const.c * (1 + z)**2)).to('1/Mpc')
 
 
 def kparr2eta(kparr, z, cosmo=little_h_cosmo):

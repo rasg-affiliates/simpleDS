@@ -209,6 +209,7 @@ def test_noise_power_unit():
                                                    npols=1)
     nt.assert_equal(units.mK, test_noise_power.unit)
 
+
 def test_noise_shape():
     """Test shape of generate_noise matches nsample array."""
     test_sample = np.ones((2, 13, 21)) * 3

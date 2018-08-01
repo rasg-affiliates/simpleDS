@@ -1,4 +1,4 @@
-"""Tests for cosmo.property
+"""Tests for cosmo module.
 
 Relevent Cosmology units and transforms for Power Spectrum estimation.
 
