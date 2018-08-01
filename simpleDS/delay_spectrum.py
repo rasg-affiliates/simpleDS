@@ -135,7 +135,7 @@ def remove_auto_correlations(data_array):
     return data_out
 
 
-def calculate_noise_power(nsamples, freqs, inttime, trcvr):
+def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
     """Generate power as given by the radiometry equation.
 
     noise_power = Tsys/sqrt(delta_frequency * inttime )
@@ -163,7 +163,8 @@ def calculate_noise_power(nsamples, freqs, inttime, trcvr):
     Tsys += trcvr.to('K')
     delta_f = np.diff(freqs)[0]
     noise_power = (Tsys.to('K')
-                   / np.sqrt(delta_f.to('1/s') * inttime.to('s') * nsamples))
+                   / np.sqrt(delta_f.to('1/s') * inttime.to('s')
+                             * nsamples * npols))
     return noise_power.to('mK')
 
 
@@ -224,7 +225,12 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                          "integration time in order to cross-correlate.")
 
     inttime = uv_even.integration_time * units.s
-
+    # Check if vibiliities are psuedo-Stokes parameters
+    # This will decrease the noise estimate
+    if np.intersect1d(uv_even.polarization_array, np.arange(1, 5)):
+        npols = 2
+    else:
+        npols = 1
     even_data = utils.get_data_array(uv_even, reds=reds, squeeze=squeeze)
     odd_data = utils.get_data_array(uv_odd, reds=reds, squeeze=squeeze)
 
@@ -245,11 +251,11 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     even_noise = calculate_noise_power(nsamples=even_samples,
                                        freqs=freqs,
                                        inttime=inttime,
-                                       trcvr=trcvr)
+                                       trcvr=trcvr, npols=npols)
     odd_noise = calculate_noise_power(nsamples=odd_samples,
                                       freqs=freqs,
                                       inttime=inttime,
-                                      trcvr=trcvr)
+                                      trcvr=trcvr, npols=npols)
     # Conver the noise powers to white noise
     even_noise = generate_noise(even_noise)
     odd_noise = generate_noise(odd_noise)
@@ -293,7 +299,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     thermal_power = calculate_noise_power(nsamples=thermal_noise_samples,
                                           freqs=freqs,
                                           inttime=inttime,
-                                          trcvr=trcvr)
+                                          trcvr=trcvr, npols=npols)
     thermal_power *= thermal_power
 
     # Convert from visibility Units (Jy) to comological units (mK^2/(h/Mpc)^3)
@@ -311,15 +317,17 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # The thermal expectation requires the additional delta_f**2 factor
     # for all the units to be correct since we are multiplying them
     # on explicitly
-    thermal_power = thermal_power * X2Y * np.diff(freqs)[0]
+
+    delta_time = np.diff(np.unique(uv_even.time_array))[0] * units.sday
+    lst_bins = uv_even.Ntimes * delta_time.to('s') / inttime.to('s')
+    thermal_power = thermal_power * X2Y * np.diff(freqs)[0].to('1/s')
     thermal_power /= uvb.get_beam_sq_area()
     # Divide by the following factors:
     #   Nbls: baselines should coherently add together
     #   sqrt(2): noise is split between even and odd
-    thermal_power /= uv_even.Nbls * np.sqrt(2)
+    #   sqrt(lst_bins): noise power spectrum averages incoherently over time
+    thermal_power /= uv_even.Nbls * np.sqrt(2 * lst_bins)
     # divie the thermal expectation by 2 if visibilities are psuedo Stokes
-    if np.intersect1d(uv_even.polarization_array, np.arange(1, 5)):
-        thermal_power /= 2
 
     return delays, delay_power, noise_power, thermal_power
 

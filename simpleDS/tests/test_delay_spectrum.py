@@ -157,7 +157,7 @@ def test_noise_power_inttime_unit():
     test_inttime = 100
     nt.assert_raises(ValueError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp)
+                     inttime=test_inttime, trcvr=test_temp, npols=1)
 
 
 def test_noise_power_freq_unit():
@@ -168,7 +168,7 @@ def test_noise_power_freq_unit():
     test_inttime = 100 * units.s
     nt.assert_raises(ValueError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp)
+                     inttime=test_inttime, trcvr=test_temp, npols=1)
 
 
 def test_noise_power_trcvr_unit():
@@ -179,7 +179,7 @@ def test_noise_power_trcvr_unit():
     test_inttime = 100 * units.s
     nt.assert_raises(ValueError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp)
+                     inttime=test_inttime, trcvr=test_temp, npols=1)
 
 
 def test_noise_power_shape():
@@ -191,7 +191,8 @@ def test_noise_power_shape():
     test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
                                                    freqs=test_freqs,
                                                    trcvr=test_temp,
-                                                   inttime=test_inttime)
+                                                   inttime=test_inttime,
+                                                   npols=1)
     nt.assert_equal(test_sample.shape, test_noise_power.shape)
 
 
@@ -204,7 +205,8 @@ def test_noise_power_unit():
     test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
                                                    freqs=test_freqs,
                                                    trcvr=test_temp,
-                                                   inttime=test_inttime)
+                                                   inttime=test_inttime,
+                                                   npols=1)
     nt.assert_equal(units.mK, test_noise_power.unit)
 
 def test_noise_shape():
