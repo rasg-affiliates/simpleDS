@@ -30,12 +30,12 @@ def calc_z(freq):
 
 
 def u2kperp(u, z, cosmo=little_h_cosmo):
-    """Convert baseline length u to k_perpendical."""
+    """Convert baseline length u to k_perpendicular."""
     return 2 * np.pi * u / cosmo.comoving_distance(z)
 
 
 def kperp2u(kperp, z, cosmo=little_h_cosmo):
-    """Convert comsological k to baseline length u."""
+    """Convert comsological k_perpendicular to baseline length u."""
     if not isinstance(kperp, Quantity):
         raise ValueError('input kperp must be an astropy Quantity object. '
                          'value was: {0}'.format(kperp))
@@ -43,7 +43,7 @@ def kperp2u(kperp, z, cosmo=little_h_cosmo):
 
 
 def eta2kparr(eta, z, cosmo=little_h_cosmo):
-    """Conver the delay eta to comslogical comoving Mpc along line of sight."""
+    """Conver delay eta to k_parallel (comoving 1./Mpc along line of sight)."""
     if not isinstance(eta, Quantity):
         raise ValueError('input eta must be an astropy Quantity object. '
                          'value was: {0}'.format(eta))
@@ -52,7 +52,7 @@ def eta2kparr(eta, z, cosmo=little_h_cosmo):
 
 
 def kparr2eta(kparr, z, cosmo=little_h_cosmo):
-    """Convert k_par (h/Mpc along line of sight) to delay eta."""
+    """Convert k_parallel (comoving 1/Mpc along line of sight) to delay eta."""
     if not isinstance(kparr, Quantity):
         raise ValueError('input kparr must be an astropy Quantity object. '
                          'value was: {0}'.format(kparr))
