@@ -154,7 +154,7 @@ def test_noise_power_inttime_unit():
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 3) * units.GHz
     test_temp = 400 * units.K
-    test_inttime = 100
+    test_inttime = np.ones_like(test_sample) * 100
     nt.assert_raises(ValueError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
@@ -165,7 +165,7 @@ def test_noise_power_freq_unit():
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 3)
     test_temp = 400 * units.K
-    test_inttime = 100 * units.s
+    test_inttime = np.ones_like(test_sample) * 100 * units.s
     nt.assert_raises(ValueError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
@@ -176,7 +176,7 @@ def test_noise_power_trcvr_unit():
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 3) * units.GHz
     test_temp = 400
-    test_inttime = 100 * units.s
+    test_inttime = np.ones_like(test_sample) * 100 * units.s
     nt.assert_raises(ValueError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
@@ -187,7 +187,7 @@ def test_noise_power_shape():
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 21) * units.GHz
     test_temp = 400 * units.K
-    test_inttime = 100 * units.s
+    test_inttime = np.ones_like(test_sample) * 100 * units.s
     test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
                                                    freqs=test_freqs,
                                                    trcvr=test_temp,
@@ -201,7 +201,7 @@ def test_noise_power_unit():
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 21) * units.GHz
     test_temp = 400 * units.K
-    test_inttime = 100 * units.s
+    test_inttime = np.ones_like(test_sample) * 100 * units.s
     test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
                                                    freqs=test_freqs,
                                                    trcvr=test_temp,
@@ -434,6 +434,38 @@ def test_delay_spectrum_noise_shape():
     delays, delay_power, noise_power, thermal_power = output_array
     nt.assert_equal(out_shape, delay_power.shape)
 
+
+def test_delay_spectrum_noise_shape_one_pol():
+    """Test the shape on the output noise power are correct with one pol."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    test_uv_1.polarization_array = np.array([-4])
+    test_uv_2.polarization_array = np.array([-4])
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+    Nbls = len(reds)
+    Ntimes = test_uv_2.Ntimes
+    Nfreqs = test_uv_2.Nfreqs
+    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(out_shape, delay_power.shape)
 
 def test_delay_spectrum_thermal_power_shape():
     """Test the shape on the output thermal power are correct."""

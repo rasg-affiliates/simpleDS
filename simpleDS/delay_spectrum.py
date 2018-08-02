@@ -220,11 +220,14 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     delays = np.fft.fftshift(delays) / freqs.unit
     delays = delays.to('s')
 
-    if not np.isclose(uv_even.integration_time, uv_odd.integration_time):
+    if not np.allclose(uv_even.integration_time, uv_odd.integration_time):
         raise ValueError("Both pyuvdata objects must have the same "
                          "integration time in order to cross-correlate.")
 
-    inttime = uv_even.integration_time * units.s
+    inttime = utils.get_integration_time(uv_even, reds=reds, squeeze=squeeze)
+
+    # make the inttime a quantity object for units to work
+    inttime = inttime * units.s
     # Check if vibiliities are psuedo-Stokes parameters
     # This will decrease the noise estimate
     if np.intersect1d(uv_even.polarization_array, np.arange(1, 5)):

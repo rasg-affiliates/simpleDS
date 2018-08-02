@@ -115,15 +115,16 @@ def test_antpos_from_file():
 
 
 def test_setting_frf_nebw_as_inttime():
-    """Test integration time is set if FRF_NEWB is in extra_keywords."""
+    """Test integration time is set if FRF_NEBW is in extra_keywords."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
 
     test_uv = utils.read_paper_miriad(test_miriad,
                                       antpos_file=test_antpos_file,
                                       skip_header=3, usecols=[1, 2, 3])
-    nt.assert_equal(test_uv.extra_keywords['FRF_NEBW'],
-                    test_uv.integration_time)
+    frf_nebw_array = np.ones_like(test_uv.integration_time)
+    frf_nebw_array *= test_uv.extra_keywords['FRF_NEBW']
+    nt.assert_true(np.allclose(frf_nebw_array, test_uv.integration_time))
 
 
 def test_get_data_array():
@@ -351,7 +352,7 @@ def test_cross_multiply_quantity():
 
 
 def test_align_lst_error():
-    """Test lst_align enforces same integration_time."""
+    """Test lst_align enforces same sampling rate."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
 
@@ -359,7 +360,7 @@ def test_align_lst_error():
                                       antpos_file=test_antpos_file,
                                       skip_header=3, usecols=[1, 2, 3])
     test_uv_2 = copy.deepcopy(test_uv)
-    test_uv_2.integration_time = 2 * test_uv_2.integration_time
+    test_uv_2.time_array = 2 * test_uv_2.time_array
 
     nt.assert_raises(ValueError, utils.lst_align, test_uv, test_uv_2,
                      ra_range=[0, 24])
@@ -420,3 +421,69 @@ def test_align_lst_shapes_equal_uv_1_longer():
                                                  ra_range=ra_range,
                                                  inplace=False)
     nt.assert_equal(test_uv_out.time_array.shape, test_uv_out.time_array.shape)
+
+
+def test_get_integration_time_shape():
+    """Test the shape of the integration_time array is correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    inttime_array = utils.get_integration_time(test_uv, reds=baseline_array)
+    test_shape = (test_uv.Nbls, test_uv.Ntimes, 1)
+    nt.assert_equal(test_shape, inttime_array.shape)
+
+
+def test_get_integration_time_shape_with_pol():
+    """Test the shape of the integration_time array is correct with pols."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    inttime_array = utils.get_integration_time(test_uv, reds=baseline_array,
+                                               squeeze=False)
+    test_shape = (1, test_uv.Nbls, test_uv.Ntimes, 1)
+    nt.assert_equal(test_shape, inttime_array.shape)
+
+
+def test_get_integration_time_vals():
+    """Test the values of the integration_time array is correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    inttime_array = utils.get_integration_time(test_uv, reds=baseline_array)
+    test_shape = (test_uv.Nbls, test_uv.Ntimes, 1)
+    test_array = test_uv.integration_time.copy()
+    test_array = test_array.reshape(test_shape)
+    nt.assert_true(np.allclose(test_array, inttime_array))
+
+
+def test_get_integration_time_vals_with_pol():
+    """Test the values of the integration_time array is correct with pols."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+
+    baseline_array = np.array(list(set(test_uv.baseline_array)))
+    inttime_array = utils.get_integration_time(test_uv, reds=baseline_array,
+                                               squeeze=False)
+    test_shape = (1, test_uv.Nbls, test_uv.Ntimes, 1)
+    test_array = test_uv.integration_time.copy()
+    test_array = test_array.reshape(test_shape)
+    nt.assert_true(np.allclose(test_array, inttime_array))

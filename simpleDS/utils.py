@@ -69,7 +69,8 @@ def read_paper_miriad(filename, calfile=None, antpos_file=None, **kwargs):
     uv.set_uvws_from_antenna_positions()
 
     if 'FRF_NEBW' in uv.extra_keywords:
-        uv.integration_time = uv.extra_keywords['FRF_NEBW']
+        uv.integration_time = np.ones_like(uv.integration_time)
+        uv.integration_time *= uv.extra_keywords['FRF_NEBW']
 
     return uv
 
@@ -87,7 +88,7 @@ def get_data_array(uv, reds, squeeze=True):
 
     Returns:
         data_array : (Nbls , Ntimes, Nfreqs) numpy array or
-                     (Npols, Nbls, Ntimes, Nfreqs)
+                     (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     data_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     data_array = np.zeros(data_shape, dtype=np.complex)
@@ -119,7 +120,8 @@ def get_nsample_array(uv, reds, squeeze=True):
                  This has no effect for data with Npols > 1.
 
     Returns:
-        nsample_array - Nbls x Ntimes numpy array
+        nsample_array : (Nbls, Ntimes, Nfreqs) numpy array
+                        (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     nsample_array = np.zeros(nsample_shape, dtype=np.complex)
@@ -150,7 +152,8 @@ def get_flag_array(uv, reds, squeeze=True):
                  This has no effect for data with Npols > 1.
 
     Returns:
-        nsample_array - Nbls x Ntimes numpy array
+        flag_array : (Nbls, Ntimes, Nfreqs) numpy array
+                     (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     flag_array = np.zeros(flag_shape, dtype=np.complex)
@@ -168,6 +171,44 @@ def get_flag_array(uv, reds, squeeze=True):
             flag_array = np.squeeze(flag_array, axis=0)
 
     return flag_array
+
+
+def get_integration_time(uv, reds, squeeze=True):
+    """Extract the integration_time array from pyuvdata objectself.
+
+    Duplicates integration time for redundant group for faster calculations.
+
+    Arguments:
+        uv: pyuvdata data object from which to get integration time array.
+        reds: list of all redundant baselines of interest as baseline numbers
+    keywords:
+        squeeze: set true to squeeze the polarization dimension.
+                 This has no effect for data with Npols > 1.
+
+    Returns:
+        integration_time : (Nbls, Ntimes, Nfreqs) numpy array
+                           (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+    """
+    shape = (uv.Nbls, uv.Ntimes)
+    integration_time = np.zeros(shape, dtype=np.complex)
+    reds = np.array(reds)
+
+    for count, baseline in enumerate(reds):
+        blt_inds, conj_inds, pol_inds = uv._key2inds(baseline)
+        # The integration doesn't care about conjugation, just need all the
+        # times associated with this baseline
+        inds = np.concatenate([blt_inds, conj_inds])
+        inds.sort()
+        integration_time[count] = uv.integration_time[inds]
+
+    # tile to Npols, Nbls, Ntimes, Nfreqs to be broadcastable with other arrays
+    integration_time = np.tile(integration_time.reshape(uv.Nbls, uv.Ntimes, 1),
+                               (uv.Npols, 1, 1, 1))
+    if squeeze:
+        if integration_time.shape[0] == 1:
+            integration_time = np.squeeze(integration_time, axis=0)
+
+    return integration_time
 
 
 def bootstrap_array(array, nboot=100, axis=0):
@@ -241,11 +282,13 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
 
 def lst_align(uv1, uv2, ra_range, inplace=True):
     """Align the LST values of two pyuvdata objects within the given range."""
-    if not np.isclose(uv1.integration_time, uv2.integration_time):
+    delta_t_1 = uv1._calc_single_integration_time()
+    delta_t_2 = uv2._calc_single_integration_time()
+    if not np.isclose(delta_t_1, delta_t_2):
         raise ValueError("The two UVData objects much have matching "
-                         "integration times. "
+                         "time sample rates. "
                          "values were uv1: {0} and uv2:{1}"
-                         .format(uv1.integration_time, uv2.integration_time))
+                         .format(delta_t_1, delta_t_2))
     bl1 = uv1.baseline_array[0]
     bl2 = uv2.baseline_array[0]
     times_1 = uv1.get_times(bl1)
