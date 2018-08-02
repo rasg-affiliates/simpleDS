@@ -3,15 +3,16 @@ from __future__ import print_function
 
 import os
 import sys
+import copy
 import numpy as np
 import nose.tools as nt
+from scipy.signal import windows
 import pyuvdata
 from pyuvdata import UVData, utils as uvutils
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from astropy import constants as const
 from astropy import units
-from scipy.signal import windows
 
 
 def test_read_no_calfile():
@@ -123,6 +124,7 @@ def test_setting_frf_nebw_as_inttime():
                                       skip_header=3, usecols=[1, 2, 3])
     nt.assert_equal(test_uv.extra_keywords['FRF_NEBW'],
                     test_uv.integration_time)
+
 
 def test_get_data_array():
     """Test data is stored into the array the same."""
