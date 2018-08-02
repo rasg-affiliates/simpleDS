@@ -335,34 +335,3 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # divie the thermal expectation by 2 if visibilities are psuedo Stokes
 
     return delays, delay_power, noise_power, thermal_power
-
-    # if remove_autos:
-    #     delay_power = utils.remove_auto_correlations(delay_power)
-    #     noise_power = utils.remove_auto_correlations(noise_power)
-    #     thermal_power = utils.remove_auto_correlations(thermal_power)
-    # else:
-    #     if uv_even.Nplos > 1:
-    #         new_shape = (dela_power.shape[0],
-    #                      delay_power.shape[1] * delay_power.shape[2],
-    #                      delay_power.shape[3],
-    #                      delay_power.shape[4])
-    #     else:
-    #         new_shape = (delay_power.shape[0] * delay_power.shape[1],
-    #                      delay_power.shape[2],
-    #                      delay_power.shape[3])
-    #     delay_power = delay_power.reshape(new_shape)
-    #     noise_power = noise_power.reshape(new_shape)
-    #     thermal_power = thermal_power.reshape(new_shape)
-
-    # if nboot:
-    #     if uv_even.Npols > 1:
-    #         boot_axis = 1
-    #     else:
-    #         boot_axis = 0
-    #     delay_power_boot = utils.bootstrap_array(delay_power, nboot=nboot,
-    #                                              axis=boot_axis)
-    #     noise_power_boot = utils.bootstrap_array(noise_power, nboot=nboot,
-    #                                              axis=boot_axis)
-    #     thermal_power_boot = utils.bootstrap_array(thermal_power,
-    #                                                nboot=nboot,
-    #                                                axis=boot_axis)
