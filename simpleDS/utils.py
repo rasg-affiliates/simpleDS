@@ -38,9 +38,9 @@ def read_paper_miriad(filename, calfile=None, antpos_file=None, **kwargs):
     if not isinstance(filename, (list, np.ndarray)):
         filename = [filename]
     uv = UVData()
-    kwargs_passed = {key: kwargs[key] for key in kwargs
+    kwargs_uvdata = {key: kwargs[key] for key in kwargs
                      if key in uv.read_miriad.func_code.co_varnames}
-    uv.read_miriad(filename, **kwargs_passed)
+    uv.read_miriad(filename, **kwargs_uvdata)
 
     if all(x is None for x in [calfile, antpos_file]):
         raise ValueError("Either an antpos_file file or a calfile "
@@ -57,9 +57,9 @@ def read_paper_miriad(filename, calfile=None, antpos_file=None, **kwargs):
     else:
         if not os.path.exists(antpos_file):
             raise IOError("{0} not found.".format(antpos_file))
-        kwargs_passed = {key: kwargs[key] for key in kwargs
-                         if key in np.genfromtxt.func_code.co_varnames}
-        antpos = np.genfromtxt(antpos_file, **kwargs_passed)
+        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
+                             if key in np.genfromtxt.func_code.co_varnames}
+        antpos = np.genfromtxt(antpos_file, **kwargs_genfromtxt)
     antpos_ecef = uvutils.ECEF_from_ENU(antpos,
                                         *uv.telescope_location_lat_lon_alt)
     antpos_itrf = antpos_ecef - uv.telescope_location
