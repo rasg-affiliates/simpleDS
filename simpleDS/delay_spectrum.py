@@ -324,7 +324,9 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     delta_time = np.diff(np.unique(uv_even.time_array))[0] * units.sday
     lst_bins = uv_even.Ntimes * delta_time.to('s') / inttime.to('s')
     thermal_power = thermal_power * X2Y * np.diff(freqs)[0].to('1/s')
-    thermal_power /= uvb.get_beam_sq_area()
+    # This normalization of the thermal power comes from
+    # Parsons PSA32 paper appendix B
+    thermal_power *= uvb.get_beam_area()**2 / uvb.get_beam_sq_area()
     # Divide by the following factors:
     #   Nbls: baselines should coherently add together
     #   sqrt(2): noise is split between even and odd
