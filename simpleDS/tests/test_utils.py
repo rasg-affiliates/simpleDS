@@ -348,3 +348,75 @@ def test_cross_multiply_quantity():
     axis = 1
     array_out = utils.cross_multipy_array(array_1, axis=1)
     nt.assert_equal((1, 3, 3), array_out.shape)
+
+
+def test_align_lst_error():
+    """Test lst_align enforces same integration_time."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv)
+    test_uv_2.integration_time = 2 * test_uv_2.integration_time
+
+    nt.assert_raises(ValueError, utils.lst_align, test_uv, test_uv_2,
+                     ra_range=[0, 24])
+
+
+def test_align_lst_shapes_equal():
+    """Test the shape of the time_arrays are equal after lst_align."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv)
+    ra_range = [0, 12]
+
+    test_uv_out, test_uv_2_out = utils.lst_align(test_uv, test_uv_2,
+                                                 ra_range=ra_range,
+                                                 inplace=False)
+    nt.assert_equal(test_uv_out.time_array.shape, test_uv_out.time_array.shape)
+
+
+def test_align_lst_shapes_equal_uv_2_longer():
+    """Test shape of time_array are equal after lst_align: 2nd uv longer."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad_2 = os.path.join(DATA_PATH, 'paper_test_file_2nd_time.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad(test_miriad,
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = utils.read_paper_miriad([test_miriad, test_miriad_2],
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    ra_range = [0, 12]
+
+    test_uv_out, test_uv_2_out = utils.lst_align(test_uv, test_uv_2,
+                                                 ra_range=ra_range,
+                                                 inplace=False)
+    nt.assert_equal(test_uv_out.time_array.shape, test_uv_out.time_array.shape)
+
+
+def test_align_lst_shapes_equal_uv_1_longer():
+    """Test shape of time_array are equal after lst_align: 1st uv longer."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad_2 = os.path.join(DATA_PATH, 'paper_test_file_2nd_time.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv = utils.read_paper_miriad([test_miriad, test_miriad_2],
+                                      antpos_file=test_antpos_file,
+                                      skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    ra_range = [0, 12]
+
+    test_uv_out, test_uv_2_out = utils.lst_align(test_uv, test_uv_2,
+                                                 ra_range=ra_range,
+                                                 inplace=False)
+    nt.assert_equal(test_uv_out.time_array.shape, test_uv_out.time_array.shape)

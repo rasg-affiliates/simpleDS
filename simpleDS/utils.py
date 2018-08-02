@@ -237,3 +237,38 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
                    np.expand_dims(array_2, axis=axis+1))
 
     return cross_array * unit_1 * unit_2
+
+
+def lst_align(uv1, uv2, ra_range, inplace=True):
+    """Align the LST values of two pyuvdata objects within the given range."""
+    if not np.isclose(uv1.integration_time, uv2.integration_time):
+        raise ValueError("The two UVData objects much have matching "
+                         "integration times. "
+                         "values were uv1: {0} and uv2:{1}"
+                         .format(uv1.integration_time, uv2.integration_time))
+    bl1 = uv1.baseline_array[0]
+    bl2 = uv2.baseline_array[0]
+    times_1 = uv1.get_times(bl1)
+    times_2 = uv2.get_times(bl2)
+
+    uv1_location = uv1.telescope_location_lat_lon_alt_degrees
+    uv2_location = uv2.telescope_location_lat_lon_alt_degrees
+    lsts_1 = uvutils.get_lst_for_time(times_1, *uv1_location) * 12. / np.pi
+    lsts_2 = uvutils.get_lst_for_time(times_2, *uv2_location) * 12. / np.pi
+
+    inds_1 = np.logical_and(lsts_1 >= ra_range[0], lsts_1 <= ra_range[-1])
+    inds_2 = np.logical_and(lsts_2 >= ra_range[0], lsts_2 <= ra_range[-1])
+
+    diff = inds_1.sum() - inds_2.sum()
+    if diff > 0:
+        last_ind = inds_1.size - inds_1[::-1].argmax() - 1
+        inds_1[last_ind:last_ind-diff:-1] = False
+    elif diff < 0:
+        diff = np.abs(diff)
+        last_ind = inds_2.size - inds_2[::-1].argmax() - 1
+        inds_2[last_ind:last_ind-diff:-1] = False
+
+    new_times_1 = times_1[inds_1]
+    new_times_2 = times_2[inds_2]
+    return (uv1.select(times=new_times_1, inplace=inplace),
+            uv2.select(times=new_times_2, inplace=inplace))
