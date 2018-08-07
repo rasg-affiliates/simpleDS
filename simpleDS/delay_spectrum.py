@@ -369,3 +369,223 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # divie the thermal expectation by 2 if visibilities are psuedo Stokes
 
     return delays, delay_power, noise_power, thermal_power
+
+
+class DelaySpectrum(object):
+    """A Delay Spectrum object to hold relevant data."""
+
+    self.freqs = None
+    self.delays = None
+    self.redshift = None
+    self.wavelength = None
+    self.Nbls = None
+    self.reds = None
+    self.k_perpendicular = None
+    self.k_parallel = None
+    self.power_real = None
+    self.power_imag = None
+    self.noise_real = None
+    self.noise_imag = None
+    self.thermal_expectation = None
+    self.keep_autos = True
+    self.nboot = None
+    self.trcvr = None
+    self.data_1_array = None
+    self.data_2_array = None
+    self.nsample_1_array = None
+    self.nsample_2_array = None
+    self.flag_1_array = None
+    self.flag_2_array = None
+    self.beam_sq_area = None
+    self.beam_area = None
+
+    def __init__(self, uv1, uv2, uvb, trcvr, reds, squeeze=True):
+        """Initialize the Delay Spectrum Object.
+
+        Arguments
+            uv1: One of the pyuvdata objects to cross correlate
+            uv2: Other pyuvdata object to multiply with uv_even.
+            uvb: UVBeam object with relevent beam info.
+                 Currently assumes 1 beam object can describe all baselines
+                 Must be power beam in healpix coordinates and peak normalized
+            reds: set of redundant baselines to calculate delay power spectrum.
+            trcvr: Receiver Temperature of antenna to calculate noise power
+                   Must be an astropy Quantity object with units of temperature
+        """
+        if not np.allclose(uv_even.freq_array, uv_odd.freq_array):
+            raise ValueError("Both pyuvdata objects must have the same "
+                             "frequencies in order to cross-correlate.")
+        if not np.allclose(uv1.freq_array, uvb.freq_array):
+            raise ValueError("The pyuvdata objects and the UVBream object "
+                             "must have the same frequencies for "
+                             "proper unit conversion.")
+
+        self.freqs = np.squeeze(uv_even.freq_array, axis=0) * units.Hz
+        delays = np.fft.fftfreq(len(freqs), d=np.diff(freqs)[0].value)
+        delays = np.fft.fftshift(delays) / freqs.unit
+        self.delays = delays.to('s')
+
+        self.redshift = cosmo.calc_z(self.freqs).mean()
+        self.X2Y = cosmo.X2Y(z_mean)
+
+        self.jy_to_mk = jy_to_mk(self.freqs)
+
+        if not np.allclose(uv1.integration_time, uv2.integration_time):
+            raise ValueError("Both pyuvdata objects must have the same "
+                             "integration time in order to cross-correlate.")
+        self.inttime = utils.get_integration_time(uv_even, reds=reds,
+                                                  squeeze=squeeze) * units.s
+
+        delta_t_1 = uv1._calc_single_integration_time()
+        delta_t_2 = uv2._calc_single_integration_time()
+        if not np.isclose(delta_t_1, delta_t_2):
+            raise ValueError("The two UVData objects much have matching "
+                             "time sampling rates. "
+                             "values were uv1: {0} and uv2: {1}"
+                             .format(delta_t_1, delta_t_2))
+        self.lst_bins = uv1.Ntimes * delta_time.to('s') / self.inttime.to('s')
+
+        if not isinstance(trcvr, Quantity):
+            raise ValueError('trcvr must be an astropy Quantity object. '
+                             ' value was: {temp}'.format(temp=trcvr))
+        self.trcvr = trcvr
+        # Sometimes antenna pairs can be cast into weird types
+        # If it is an array of anteanna pairs, convert to baseline numbers
+        if isinstance(reds[0], (tuple, np.ndaray, list)):
+            reds = list(map(uv1.antnums_to_baseline, reds))
+        self.reds = reds
+        self.Nbls = len(reds)
+        # Check if vibiliities are psuedo-Stokes parameters
+        # This will affect the noise estimate
+        if np.intersect1d(uv1.polarization_array, np.arange(1, 5)):
+            self.npols = 2
+        else:
+            self.npols = 1
+
+        # Cast the data as Quantity objects for units to work.
+        if uv.vis_unit == 'Jy':
+            unit = units.Jy
+        elif uv.vis_unit == 'K str':
+            unit = units.K * units.sr
+        else:
+            # if the uv unit is uncalibrated give data a
+            # dimensionless_unit
+            unit = units.Unit('')
+        self.data_1_array = utils.get_data_array(uv1, reds=reds,
+                                                 squeeze=squeeze) * unit
+        self.data_2_array = utils.get_data_array(uv2, reds=reds,
+                                                 squeeze=squeeze) * unit
+
+        self.nsample_1_array = utils.get_nsample_array(uv1, reds=reds,
+                                                       squeeze=squeeze)
+        self.nsample_2_array = utils.get_nsample_array(uv2, reds=reds,
+                                                       squeeze=squeeze)
+
+        self.flag_1_array = utils.get_flag_array(uv1, reds=reds,
+                                                 squeeze=squeeze)
+        self.flag_2_array = utils.get_flag_array(uv2, reds=reds,
+                                                 squeeze=squeeze)
+
+        # I'm not sure I want to cast them as float right now, but we'll see
+        self.flag_1_array = np.logical_not(self.even_flags).astype(float)
+        self.flag_2_array = np.logical_not(self.odd_flags).astype(float)
+
+        if len(np.shape(self.data_1_array)) == 3:
+            self.cross_mult_axis = 0
+        else:
+            self.cross_mult_axis = 1
+
+        self.beam_area = uvb.get_beam_area()
+        self.beam_sq_area = uvb.get_beam_sq_area()
+
+        self.window = windows.blackmanharris
+
+    def calculate_delay_spectrum(self, window=self.window):
+        """Perform Delay tranform and cross multiplication of datas.
+
+        Arguments:
+            window: The window function to multiply onto the data.
+                    Accepts scipy.signal.windows functions or any function
+                    whose argument is the len(data) and returns a numpy array.
+                    Default: scipy.signal.windows.blackmanharris
+
+        Take the normalized Fourier transform of the data from uv1 and uv2
+        objects and cross multiplies.
+        Also generates white noie given the frequency range and trcvr and
+        calculates the expected noise power.
+        """
+        delta_f = np.diff(self.freqs)[0]
+
+        self.noise_1_array = calculate_noise_power(nsamples=self.nsample_1_array,
+                                                   freqs=self.freqs,
+                                                   inttime=self.inttime,
+                                                   trcvr=self.trcvr,
+                                                   npols=self.npols)
+        self.noise_2_array = calculate_noise_power(nsamples=self.nsample_2_array,
+                                                   freqs=self.freqs,
+                                                   inttime=self.inttime,
+                                                   trcvr=self.trcvr,
+                                                   npols=self.npols)
+
+        NEBW = utils.noise_equivalent_bandwidth(window(len(self.freqs)))
+        self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
+        unit_conversion = self.X2Y / self.bandwith.to('1/s') / sef.beam_sq_area
+
+        delay_1_array = normalized_fourier_transform((self.data_1_array
+                                                      * self.flag_1_array),
+                                                     delta_x=delta_f,
+                                                     window=window, axis=-1)
+        delay_2_array = normalized_fourier_transform((self.data_2_array
+                                                      * self.flag_2_array),
+                                                     delta_x=delta_f,
+                                                     window=window, axis=-1)
+
+        delay_power = utils.cross_multipy_array(array_1=delay_1_array,
+                                                array_2=delay_2_array,
+                                                axis=self.cross_mult_axis)
+
+        self.power_real = delay_power.real * unit_conversion * self.jy_to_mk**2
+        self.power_imag = delay_power.imag * unit_conversion * self.jy_to_mk**2
+
+        noise_1_delay = normalized_fourier_transform((self.noise_1_array
+                                                      * self.flag_1_array),
+                                                     delta_x=delta_f,
+                                                     window=window, axis=-1)
+
+        noise_2_delay = normalized_fourier_transform((self.noise_2_array
+                                                      * self.flag_2_array),
+                                                     delta_x=delta_f,
+                                                     window=window, axis=-1)
+
+        noise_power = utils.cross_multipy_array(array_1=noise_1_delay,
+                                                array_2=noise_2_delay,
+                                                axis=self.cross_mult_axis)
+        self.noise_real = noise_power.real * unit_conversion
+        self.noise_imag = noise_power.imag * unit_conversion
+
+    def calculate_thermal_sensitivity(self):
+        """Calculate the Thermal sensitivity for the power spectrum.
+
+        Uses the 21cmsense_calc formula:
+            Tsys**2/(inttime * Nbls * Npols * sqrt(N_lstbins * 2))
+
+        Divide by the following factors:
+            Nbls: baselines should coherently add together
+            sqrt(2): noise is split between even and odd
+            sqrt(lst_bins): noise power spectrum averages incoherently over time
+        """
+        thermal_noise_samples = combine_nsamples(self.nsample_1_array,
+                                                 self.nsample_2_array)
+        Tsys = 180. * units.K * np.power(self.freqs/(.18 * units.GHz), -2.55)
+        Tsys += trcvr.to('K')
+        thermal_power = (Tsys.to('mK')**2
+                         / (self.inttime.to('s') * thermal_noise_samples
+                            * self.npols * self.Nbls
+                            * np.sqrt(2 * self.lst_bins)))
+
+        thermal_power = thermal_power * self.X2Y
+        # This normalization of the thermal power comes from
+        # Parsons PSA32 paper appendix B
+        thermal_power *= self.beam_area**2 / self.beam_sq_area
+
+        self.thermal_power = thermal_power.to('mK ^2 Mpc ^3')
