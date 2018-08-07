@@ -198,6 +198,8 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
         reds: set of redundant baselines to calculate delay power spectrum.
         nboot: Number of boot strap re-samples to perform (0 to omit step)
         trcvr: Receiver Temperature of antenna to calculate noise power
+        window : Window function used in delay transform.
+                 Default is scipy.signal.windows.blackmanharris
 
     Returns:
         delays: Astropy quantity object of delays. Fourier dual to Frequency
