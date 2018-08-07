@@ -287,7 +287,7 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
     if not np.isclose(delta_t_1, delta_t_2):
         raise ValueError("The two UVData objects much have matching "
                          "time sample rates. "
-                         "values were uv1: {0} and uv2:{1}"
+                         "values were uv1: {0} and uv2: {1}"
                          .format(delta_t_1, delta_t_2))
     bl1 = uv1.baseline_array[0]
     bl2 = uv2.baseline_array[0]
