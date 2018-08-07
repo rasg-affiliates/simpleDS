@@ -28,6 +28,11 @@ def calc_z(freq):
     return (f21 / freq).si.value - 1
 
 
+def calc_freq(redshift):
+    """Calculate the frequency or frequencies of a given 21cm redshift."""
+    return f21 / (1 + redshift)
+
+
 def u2kperp(u, z, cosmo=little_h_cosmo):
     """Convert baseline length u to k_perpendicular."""
     return 2 * np.pi * u / cosmo.comoving_distance(z)

@@ -39,6 +39,21 @@ def test_calc_z_value():
     nt.assert_true(np.isclose(test_z, cosmo.calc_z(test_freq)))
 
 
+def test_calc_freq_value():
+    """Test frequency calculation value."""
+    test_freq = .15 * units.GHz
+    test_z = f21 / test_freq.to('Hz') - 1
+    nt.assert_true(np.isclose(test_freq.si.value,
+                              cosmo.calc_freq(test_z).value))
+
+
+def test_calc_freq_unit():
+    """Test calc_freq returns a Quantity with units Hz."""
+    test_z = 10
+    test_freq = cosmo.calc_freq(test_z)
+    nt.assert_equal(units.Hz, test_freq.si.unit)
+
+
 def test_u2kperp_unit():
     """Test units of u2kperp."""
     test_z = 7.6363125
