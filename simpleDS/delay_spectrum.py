@@ -323,7 +323,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # for all the units to be correct since we are multiplying them
     # on explicitly
 
-    delta_time = np.diff(np.unique(uv_even.time_array))[0] * units.sday
+    delta_time = np.diff(np.unique(uv_even.time_array))[0] * units.day
     lst_bins = uv_even.Ntimes * delta_time.to('s') / inttime.to('s')
     thermal_power = thermal_power * X2Y * np.diff(freqs)[0].to('1/s')
     # This normalization of the thermal power comes from
