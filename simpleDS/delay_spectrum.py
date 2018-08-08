@@ -250,8 +250,20 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     odd_flags = np.logical_not(odd_flags).astype(float)
 
     # Make all the data Quantity objects to help keep the units right
-    even_data = even_data * units.Jy
-    odd_data = odd_data * units.Jy
+    if not uv_even.vis_units == uv_odd.vis_units:
+        raise NotImplementedError(("You are trying to multiply two "
+                                   "visibilities with different units. This "
+                                   "is currently not a supported feature."))
+    if uv_even.vis_units == 'Jy':
+        unit = units.Jy
+    elif uv_even.vis_units == 'K str':
+        unit = units.K * units.sr
+    else:
+        # if the uv unit is uncalibrated give data a
+        # dimensionless_unit
+        unit = units.Unit('')
+    even_data = even_data * unit
+    odd_data = odd_data * unit
 
     even_noise = calculate_noise_power(nsamples=even_samples,
                                        freqs=freqs,
@@ -317,7 +329,16 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
 
     # the *= operator does not play nicely with multiplying a non-quantity
     # with a quantity
-    delay_power = delay_power * unit_conversion * jy_to_mk(freqs)**2
+    delay_power = delay_power * unit_conversion
+    if unit == units.Jy:
+        delay_power *= jy_to_mk(freqs)**2
+    elif unit == (units.K * units.sr):
+        # multiply by beam_area**2 / beam_square_area to properly normalized
+        # the power spectrum
+        delay_power *= (uvb.get_beam_area()**2
+                        / (uvb.get_beam_sq_area() * units.sr**2))
+        delay_power = delay_power.to('mK^2 Mpc^3')
+
     noise_power = noise_power * unit_conversion
     # The thermal expectation requires the additional delta_f**2 factor
     # for all the units to be correct since we are multiplying them

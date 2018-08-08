@@ -263,6 +263,29 @@ def test_calculate_delay_spectrum_mismatched_inttimes():
                      trcvr=144 * units.K, reds=reds)
 
 
+def test_calculate_delay_spectrum_mismatched_units():
+    """Test Exception is raised when integration times are not equal."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad_2 = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = utils.read_paper_miriad(test_miriad_2,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+
+    nt.assert_raises(NotImplementedError, dspec.calculate_delay_spectrum,
+                     uv_even=test_uv_1, uv_odd=test_uv_2, uvb=uvb,
+                     trcvr=144 * units.K, reds=reds)
+
+
 def test_delay_spectrum_units_delays_units():
     """Test the units on the output of calculate_delay_spectrum are correct."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
@@ -313,6 +336,57 @@ def test_delay_spectrum_power_units():
                                                   reds=reds)
     delays, delay_power, noise_power, thermal_power = output_array
     nt.assert_equal(units.mK**2 * units.Mpc**3, delay_power.unit)
+
+
+def test_delay_spectrum_power_units_input_kelvin_str():
+    """Test the units on the output power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(units.mK**2 * units.Mpc**3, delay_power.unit)
+
+def test_delay_spectrum_power_units_input_uncalib():
+    """Test the units on the output power are correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_uncalib_units.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+
+    test_uv_1 = utils.read_paper_miriad(test_miriad,
+                                        antpos_file=test_antpos_file,
+                                        skip_header=3, usecols=[1, 2, 3])
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
+                                                  uv_odd=test_uv_2, uvb=uvb,
+                                                  trcvr=144 * units.K,
+                                                  reds=reds)
+    delays, delay_power, noise_power, thermal_power = output_array
+    nt.assert_equal(units.Mpc**3, delay_power.unit)
 
 
 def test_delay_spectrum_noise_power_units():
