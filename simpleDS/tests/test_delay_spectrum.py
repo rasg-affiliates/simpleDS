@@ -34,14 +34,6 @@ def test_jy_to_mk_units():
                     jy_to_mk.unit.to_string())
 
 
-def test_data_2_wrong_shape():
-    """Test Exception is raised if shapes do not match."""
-    fake_data_1 = np.zeros((1, 13, 21))
-    fake_data_2 = np.zeros((2, 13, 21))
-    axis = 2
-    nt.assert_raises(ValueError, dspec.normalized_fourier_transform,
-                     fake_data_1, fake_data_2, axis=axis)
-
 
 def test_normalized_fourier_transform():
     """Test the delay transform and cross-multiplication function."""
