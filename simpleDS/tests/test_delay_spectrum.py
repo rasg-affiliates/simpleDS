@@ -40,6 +40,7 @@ def test_normalized_fourier_transform():
     fake_data = np.zeros((1, 13, 21))
     fake_data[0, 7, 11] += 1
     fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   1 * units.dimensionless_unscaled,
                                                    window=windows.boxcar,
                                                    axis=2)
     test_corr = np.fft.fft(fake_data, axis=-1)
@@ -53,6 +54,7 @@ def test_ft_with_pols():
     fake_data = np.zeros((3, 2, 13, 31))
     fake_data[:, 0, 7, 11] += 1.
     fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   1 * units.dimensionless_unscaled,
                                                    window=windows.boxcar,
                                                    axis=3)
     nt.assert_equal((3, 2, 13, 31), fake_corr.shape)
@@ -63,6 +65,7 @@ def test_delay_vals_with_pols():
     fake_data = np.zeros((3, 2, 13, 31))
     fake_data[:, 0, 7, 11] += 1.
     fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   1 * units.dimensionless_unscaled,
                                                    window=windows.boxcar,
                                                    axis=3)
     test_corr = np.fft.fft(fake_data, axis=-1)
@@ -72,10 +75,11 @@ def test_delay_vals_with_pols():
 
 
 def test_units_normalized_fourier_transform():
-    """Test units are returned squared from normalized_fourier_transform."""
+    """Test units are returned from normalized_fourier_transform."""
     fake_data = np.zeros((1, 13, 21)) * units.m
     fake_data[0, 7, 11] += 1 * units.m
     fake_corr = dspec.normalized_fourier_transform(fake_data,
+                                                   1 * units.Hz,
                                                    window=windows.boxcar,
                                                    axis=2)
     test_units = units.m * units.Hz

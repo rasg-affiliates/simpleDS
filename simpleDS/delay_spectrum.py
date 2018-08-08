@@ -20,7 +20,7 @@ def jy_to_mk(freqs):
     return jy2t.to('mK/Jy')
 
 
-def normalized_fourier_transform(data_array, delta_x=1. * units.Hz, axis=-1,
+def normalized_fourier_transform(data_array, delta_x, axis=-1,
                                  window=windows.blackmanharris):
     """Perform the Fourier transform over specified axis.
 
@@ -58,7 +58,7 @@ def normalized_fourier_transform(data_array, delta_x=1. * units.Hz, axis=-1,
     # accounted for in an fft.
     delay_array = np.fft.fft(data_array * win, axis=axis)
     delay_array = np.fft.fftshift(delay_array, axes=axis)
-    delay_array = delay_array * delta_x.to('1/s') * unit
+    delay_array = delay_array * delta_x.si * unit
 
     return delay_array
 
