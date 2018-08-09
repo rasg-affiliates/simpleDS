@@ -367,6 +367,7 @@ def test_delay_spectrum_power_units_input_kelvin_str():
     delays, delay_power, noise_power, thermal_power = output_array
     nt.assert_equal(units.mK**2 * units.Mpc**3, delay_power.unit)
 
+
 def test_delay_spectrum_power_units_input_uncalib():
     """Test the units on the output power are correct."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file_uncalib_units.uv')
