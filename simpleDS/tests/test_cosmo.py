@@ -29,7 +29,13 @@ little_h_cosmo = WMAP9.clone(name='WMAP9 h-units', H0=100)
 def test_calc_z_freq_unitless():
     """Test redshift calculation fails for non-quantity freqs."""
     test_freq = .15e9
-    nt.assert_raises(ValueError, cosmo.calc_z, test_freq)
+    nt.assert_raises(TypeError, cosmo.calc_z, test_freq)
+
+
+def test_calc_z_freq_wrong_unit():
+    """Test redshift calculation fails for non-quantity freqs."""
+    test_freq = .15e9 * units.m
+    nt.assert_raises(units.UnitsError, cosmo.calc_z, test_freq)
 
 
 def test_calc_z_value():
@@ -71,10 +77,17 @@ def test_u2kperp_val():
 
 
 def test_kperp2u_error():
+    """Test kperp must be a wavenumber Quantity."""
+    test_kperp = .01 * units.s
+    test_z = 7.6363125
+    nt.assert_raises(units.UnitsError, cosmo.kperp2u, test_kperp, test_z)
+
+
+def test_kperp2u_no_unit():
     """Test kperp must be a Quantity."""
     test_kperp = .01
     test_z = 7.6363125
-    nt.assert_raises(ValueError, cosmo.kperp2u, test_kperp, test_z)
+    nt.assert_raises(TypeError, cosmo.kperp2u, test_kperp, test_z)
 
 
 def test_kperp2u_unit():
@@ -106,11 +119,18 @@ def test_eta2kparr_error():
     """Test eta must be Quantity."""
     test_eta = 200 * 1e-9
     test_z = 9.19508
-    nt.assert_raises(ValueError, cosmo.eta2kparr, test_eta, test_z)
+    nt.assert_raises(TypeError, cosmo.eta2kparr, test_eta, test_z)
+
+
+def test_eta2kparr_wrong_unit():
+    """Test eta must be frequncy Quantity."""
+    test_eta = 200 * 1e-9 * units.m
+    test_z = 9.19508
+    nt.assert_raises(units.UnitsError, cosmo.eta2kparr, test_eta, test_z)
 
 
 def test_eta2kparr_val():
-    """Test eta must be Quantity."""
+    """Test eta2kaprr val."""
     test_eta = 200 * 1e-9 * units.s
     test_z = 9.19508
     test_kparr = cosmo.eta2kparr(test_eta, test_z)
@@ -129,7 +149,14 @@ def test_kparr2eta_error():
     """Test kparr2eta errors for non quantity objects."""
     test_kparr = .1
     test_z = 9.19508
-    nt.assert_raises(ValueError, cosmo.kparr2eta, test_kparr, test_z)
+    nt.assert_raises(TypeError, cosmo.kparr2eta, test_kparr, test_z)
+
+
+def test_kparr2eta_wrong_unit():
+    """Test kparr2eta errors for non quantity objects."""
+    test_kparr = .1 * units.s
+    test_z = 9.19508
+    nt.assert_raises(units.UnitsError, cosmo.kparr2eta, test_kparr, test_z)
 
 
 def test_kparr2eta_val():
