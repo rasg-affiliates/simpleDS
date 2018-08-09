@@ -42,9 +42,6 @@ def u2kperp(u, z, cosmo=None):
 @units.quantity_input(kperp='wavenumber')
 def kperp2u(kperp, z, cosmo=None):
     """Convert comsological k_perpendicular to baseline length u."""
-    if not isinstance(kperp, Quantity):
-        raise ValueError('input kperp must be an astropy Quantity object. '
-                         'value was: {0}'.format(kperp))
     if cosmo is None:
         cosmo = default_cosmology.get()
     return kperp * cosmo.comoving_distance(z) / (2 * np.pi)
