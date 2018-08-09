@@ -34,6 +34,17 @@ def test_jy_to_mk_units():
                     jy_to_mk.unit.to_string())
 
 
+def test_jy_to_mk_freq_unitless():
+    """Test the Jy to mK conversion factor."""
+    test_fq = np.array([.1])
+    nt.assert_raises(TypeError, dspec.jy_to_mk, test_fq)
+
+
+def test_jy_to_mk_freq_wrong_units():
+    """Test the Jy to mK conversion factor."""
+    test_fq = np.array([.1]) * units.m
+    nt.assert_raises(units.UnitsError, dspec.jy_to_mk, test_fq)
+
 
 def test_normalized_fourier_transform():
     """Test the delay transform and cross-multiplication function."""
@@ -145,37 +156,71 @@ def test_remove_autos_small_shape():
     nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
 
 
-def test_noise_power_inttime_unit():
+def test_noise_power_inttime_unitless():
     """Test Exception is raised if inttime is not a Quantity object."""
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 3) * units.GHz
     test_temp = 400 * units.K
     test_inttime = np.ones_like(test_sample) * 100
-    nt.assert_raises(ValueError, dspec.calculate_noise_power,
+    nt.assert_raises(TypeError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
 
 
-def test_noise_power_freq_unit():
+def test_noise_power_inttime_wrong_unit():
+    """Test Exception is raised if inttime is not physical_type time."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 3) * units.GHz
+    test_temp = 400 * units.K
+    test_inttime = np.ones_like(test_sample) * 100 * units.m
+    nt.assert_raises(units.UnitsError, dspec.calculate_noise_power,
+                     nsamples=test_sample, freqs=test_freqs,
+                     inttime=test_inttime, trcvr=test_temp, npols=1)
+
+
+def test_noise_power_freq_unitless():
     """Test Exception is raised if freq is not a Quantity object."""
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 3)
     test_temp = 400 * units.K
     test_inttime = np.ones_like(test_sample) * 100 * units.s
-    nt.assert_raises(ValueError, dspec.calculate_noise_power,
+    nt.assert_raises(TypeError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
 
 
-def test_noise_power_trcvr_unit():
-    """Test Exception is raised if trcvr is not a Quantity object."""
+def test_noise_power_freq_unitless():
+    """Test Exception is raised if freq is not a Quantity object."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 3)
+    test_temp = 400 * units.K
+    test_inttime = np.ones_like(test_sample) * 100 * units.s
+    nt.assert_raises(TypeError, dspec.calculate_noise_power,
+                     nsamples=test_sample, freqs=test_freqs,
+                     inttime=test_inttime, trcvr=test_temp, npols=1)
+
+
+def test_noise_power_trcvr_wrong_unit():
+    """Test Exception is raised if trcvr is not a physical_type temperature."""
+    test_sample = np.ones((2, 13, 21))
+    test_freqs = np.linspace(.1, .2, 3) * units.GHz
+    test_temp = 400 * units.m
+    test_inttime = np.ones_like(test_sample) * 100 * units.s
+    nt.assert_raises(units.UnitsError, dspec.calculate_noise_power,
+                     nsamples=test_sample, freqs=test_freqs,
+                     inttime=test_inttime, trcvr=test_temp, npols=1)
+
+
+def test_noise_power_trcvr_unitless():
+    """Test Exception is raised if trcvr is not Quantity object."""
     test_sample = np.ones((2, 13, 21))
     test_freqs = np.linspace(.1, .2, 3) * units.GHz
     test_temp = 400
     test_inttime = np.ones_like(test_sample) * 100 * units.s
-    nt.assert_raises(ValueError, dspec.calculate_noise_power,
+    nt.assert_raises(TypeError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
+
 
 
 def test_noise_power_shape():
@@ -537,6 +582,7 @@ def test_delay_spectrum_noise_shape_one_pol():
                                                   reds=reds)
     delays, delay_power, noise_power, thermal_power = output_array
     nt.assert_equal(out_shape, delay_power.shape)
+
 
 def test_delay_spectrum_thermal_power_shape():
     """Test the shape on the output thermal power are correct."""

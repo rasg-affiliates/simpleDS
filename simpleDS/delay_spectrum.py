@@ -12,9 +12,9 @@ from scipy.signal import windows
 from . import utils, cosmo
 
 
+@units.quantity_input(freqs='frequency')
 def jy_to_mk(freqs):
     """Calculate the Jy to mK conversion lambda^2/(2 * K_boltzman)."""
-    assert(isinstance(freqs, Quantity))
     jy2t = const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
                                    * const.k_B)
     return jy2t.to('mK/Jy')
@@ -135,6 +135,7 @@ def remove_auto_correlations(data_array):
     return data_out
 
 
+@units.quantity_input(freqs='frequency', inttime='time', trcvr=units.K)
 def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
     """Generate power as given by the radiometry equation.
 
@@ -149,16 +150,6 @@ def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
     Returns:
         noise_power: White noise with the same shape as nsamples input.
     """
-    if not isinstance(inttime, Quantity):
-        raise ValueError('inttime must be an astropy Quantity object. '
-                         'value was: {t}'.format(t=inttime))
-    if not isinstance(freqs, Quantity):
-        raise ValueError('freqs must be an astropy Quantity object. '
-                         'value was: {fq}'.format(fq=freqs))
-    if not isinstance(trcvr, Quantity):
-        raise ValueError('trcvr must be an astropy Quantity object. '
-                         ' value was: {temp}'.format(temp=trcvr))
-
     Tsys = 180. * units.K * np.power(freqs.to('GHz')/(.18 * units.GHz), -2.55)
     Tsys += trcvr.to('K')
     delta_f = np.diff(freqs)[0]
@@ -185,6 +176,7 @@ def generate_noise(noise_power):
     return noise
 
 
+@units.quantity_input(trcvr=units.K)
 def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                              squeeze=True, window=windows.blackmanharris):
     """Calculate delay cross-correlation between the uv_even and uv_odd.
