@@ -222,7 +222,6 @@ def test_noise_power_trcvr_unitless():
                      inttime=test_inttime, trcvr=test_temp, npols=1)
 
 
-
 def test_noise_power_shape():
     """Test shape of noise power is as expected."""
     test_sample = np.ones((2, 13, 21))
