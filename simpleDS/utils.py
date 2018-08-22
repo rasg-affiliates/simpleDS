@@ -6,7 +6,7 @@ import numpy as np
 from pyuvdata import UVData, utils as uvutils
 from builtins import range, map
 from astropy import constants as const
-from astropy.units import Quantity
+from astropy import units
 import copy
 
 
@@ -263,10 +263,10 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
         array_2 = np.asarray(array_2)
 
     unit_1, unit_2 = 1., 1.
-    if isinstance(array_1, Quantity):
+    if isinstance(array_1, units.Quantity):
         unit_1 = array_1.unit
 
-    if isinstance(array_2, Quantity):
+    if isinstance(array_2, units.Quantity):
         unit_2 = array_2.unit
 
     if array_2.shape != array_1.shape:
@@ -315,3 +315,102 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
     new_times_2 = times_2[inds_2]
     return (uv1.select(times=new_times_1, inplace=inplace),
             uv2.select(times=new_times_2, inplace=inplace))
+
+
+@units.quantity_input(delays='time', array='mK^2*Mpc^3')
+def fold_along_delay(array, delays, weights=None, axis=-1):
+    """Fold input array over the delay axis.
+
+    Arguments
+        array: An N-Dimensional numpy array or nested lists.
+        delays: A 1-Dimensional numpy array of interfometric delays.
+        weights: Weights to use while averaging the input array.
+                 Must have same shape as input array.
+                 Default: np.ones_like(array)
+        axis: The axis over which the input array is to be folded.
+              Must have the same shape as the size of input delays.
+    Returns
+        array: The N-Dimensional input array folded over the axis specified
+               give axis will have size np.shape(array)[axis]/2 if shape is even
+               or (np.shape(array)[axis] + 1)/2 if shape is odd
+        weights: The folded weights used corresponding to the input array.
+    """
+    # This function assumes your array is a block-square array,
+    # e.g. all delays are the same.
+    if array.shape[axis] != len(delays):
+        raise ValueError(("Input array must have same length as the "
+                          "delays along the specified axis."
+                          "Axis given was {0}, the array has length {1} "
+                          "but delays are length {2}".format(axis,
+                                                             array.shape[axis],
+                                                             len(delays))))
+    if (len(delays) % 2 != 0 and np.abs(delays).min() != 0):
+        raise ValueError(("Input delays must have either a delay=0 bin "
+                          "as the central value or have an even size."))
+
+    if weights is None:
+        no_input_weights = True
+        if not array.imag.value.any():
+            weights = np.ones_like(array)
+        else:
+            weights = np.ones_like(array) * (1 + 1j)
+
+    if np.abs(delays).min() == 0:
+        split_index = np.argmin(np.abs(delays), axis=axis)
+        split_inds = [split_index, split_index+1]
+
+        neg_vals, zero_bin, pos_vals = np.split(array, split_inds, axis=axis)
+        neg_vals = np.flip(neg_vals, axis=axis)
+
+        pos_vals = np.concatenate([zero_bin, pos_vals], axis=axis)
+        neg_vals = np.concatenate([zero_bin, neg_vals], axis=axis)
+
+        neg_weights, zero_weights, pos_weights = np.split(weights, split_inds,
+                                                          axis=axis)
+        neg_weights = np.flip(neg_weights, axis=axis)
+        pos_weights = np.concatenate([zero_weights, pos_weights], axis=axis)
+        neg_weights = np.concatenate([zero_weights, neg_weights], axis=axis)
+
+    else:
+        min_val_bool = np.abs(delays) == np.amin(np.abs(delays), axis=axis)
+        split_index = np.where(np.logical_and(delays > 0, min_val_bool))
+        split_inds = [np.squeeze(split_index)]
+
+        neg_vals, pos_vals = np.split(array, split_inds, axis=axis)
+        neg_vals = np.flip(neg_vals, axis=axis)
+
+        neg_weights, pos_weights = np.split(weights, split_inds, axis=axis)
+        neg_weights = np.flip(neg_weights, axis=axis)
+
+    _array = np.stack([pos_vals, neg_vals], axis=0)
+    _weights = np.stack([pos_weights, neg_weights], axis=0)
+
+    if _array.unit is None:
+        _array = _array.value * array.unit
+    if _weights.unit is None:
+        _weights = _weights.value * weights.unit
+
+    if not _array.imag.value.any():
+        out_array = np.average(_array.real, weights=1./_weights.real**2,
+                               axis=0)
+        out_weights = np.sqrt(np.average(_weights.real**2,
+                                         weights=1./_weights.real**2, axis=0))
+        return out_array, out_weights
+    else:
+        weight_check = _weights.imag.value.any()
+        if not weight_check:
+            try:
+                _weights.imag = np.ones_like(_weights.real)
+            except TypeError:
+                _weights = _weights.astype(np.complex)
+                _weights.imag = np.ones_like(_weights.real)
+        out_array = (np.average(_array.real, weights=1./_weights.real**2, axis=0)
+                     + 1j * np.average(_array.imag, weights=1./_weights.imag**2, axis=0))
+
+        out_weights = (np.sqrt(np.average(_weights.real**2, weights=1./_weights.real**2, axis=0))
+                       + 1j * np.sqrt(np.average(_weights.imag**2, weights=1./_weights.imag**2, axis=0)))
+
+        if not weight_check:
+            out_weights.imag = np.zeros_like(out_weights.real)
+
+        return out_array, out_weights
