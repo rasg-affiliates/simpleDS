@@ -38,7 +38,7 @@ install:
 script:
   - python setup.py build_ext --force --inplace
   - nosetests simpleDS --nologcapture --with-coverage --cover-package=simpleDS
-  - pycodestyle --ignore=E501,W503
+  - pycodestyle --ignore=E501,W503 simpleDS
 
 after_success:
   - coveralls
