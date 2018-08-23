@@ -151,7 +151,7 @@ def test_remove_autos_small_shape():
     nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
 
 
-def test_remove_autos_small_shape():
+def test_remove_autos_big_shape():
     """Test Exception is raised on an array which is too big."""
     test_array = np.ones((3, 12, 12, 21, 6, 7))
     nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
@@ -175,17 +175,6 @@ def test_noise_power_inttime_wrong_unit():
     test_temp = 400 * units.K
     test_inttime = np.ones_like(test_sample) * 100 * units.m
     nt.assert_raises(units.UnitsError, dspec.calculate_noise_power,
-                     nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp, npols=1)
-
-
-def test_noise_power_freq_unitless():
-    """Test Exception is raised if freq is not a Quantity object."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 3)
-    test_temp = 400 * units.K
-    test_inttime = np.ones_like(test_sample) * 100 * units.s
-    nt.assert_raises(TypeError, dspec.calculate_noise_power,
                      nsamples=test_sample, freqs=test_freqs,
                      inttime=test_inttime, trcvr=test_temp, npols=1)
 
