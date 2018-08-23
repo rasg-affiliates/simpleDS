@@ -516,16 +516,16 @@ class DelaySpectrum(object):
         """
         delta_f = np.diff(self.freqs)[0]
 
-        self.noise_1_array = calculate_noise_power(nsamples=self.nsample_1_array,
-                                                   freqs=self.freqs,
-                                                   inttime=self.inttime,
-                                                   trcvr=self.trcvr,
-                                                   npols=self.npols)
-        self.noise_2_array = calculate_noise_power(nsamples=self.nsample_2_array,
-                                                   freqs=self.freqs,
-                                                   inttime=self.inttime,
-                                                   trcvr=self.trcvr,
-                                                   npols=self.npols)
+        noise_1_array = calculate_noise_power(nsamples=self.nsample_1_array,
+                                              freqs=self.freqs,
+                                              inttime=self.inttime,
+                                              trcvr=self.trcvr,
+                                              npols=self.npols)
+        noise_2_array = calculate_noise_power(nsamples=self.nsample_2_array,
+                                              freqs=self.freqs,
+                                              inttime=self.inttime,
+                                              trcvr=self.trcvr,
+                                              npols=self.npols)
 
         NEBW = utils.noise_equivalent_bandwidth(window(len(self.freqs)))
         self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
@@ -544,8 +544,7 @@ class DelaySpectrum(object):
                                                 array_2=delay_2_array,
                                                 axis=self.cross_mult_axis)
 
-        self.power_real = delay_power.real * unit_conversion * self.jy_to_mk**2
-        self.power_imag = delay_power.imag * unit_conversion * self.jy_to_mk**2
+        self.power = delay_power * unit_conversion * self.jy_to_mk**2
 
         noise_1_delay = normalized_fourier_transform((self.noise_1_array
                                                       * self.flag_1_array),
@@ -560,8 +559,7 @@ class DelaySpectrum(object):
         noise_power = utils.cross_multipy_array(array_1=noise_1_delay,
                                                 array_2=noise_2_delay,
                                                 axis=self.cross_mult_axis)
-        self.noise_real = noise_power.real * unit_conversion
-        self.noise_imag = noise_power.imag * unit_conversion
+        self.noise_power = noise_power * unit_conversion
 
     def calculate_thermal_sensitivity(self):
         """Calculate the Thermal sensitivity for the power spectrum.
@@ -576,7 +574,7 @@ class DelaySpectrum(object):
         """
         thermal_noise_samples = combine_nsamples(self.nsample_1_array,
                                                  self.nsample_2_array)
-        Tsys = 180. * units.K * np.power(self.freqs/(.18 * units.GHz), -2.55)
+        Tsys = 180. * units.K * np.power(self.freqs / (.18 * units.GHz), -2.55)
         Tsys += trcvr.to('K')
         thermal_power = (Tsys.to('mK')**2
                          / (self.inttime.to('s') * thermal_noise_samples
