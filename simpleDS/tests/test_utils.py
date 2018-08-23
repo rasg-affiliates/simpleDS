@@ -16,44 +16,6 @@ from astropy import constants as const
 from astropy import units
 
 
-def test_read_no_calfile():
-    """Test ValueError when no file given."""
-    nt.assert_raises(ValueError, utils.import_calfile, None)
-
-
-def test_read_blank_calfile_():
-    """Test IOError when no file given exists."""
-    nt.assert_raises(IOError, utils.import_calfile, '')
-
-
-def test_calfile():
-    """Test the input calfile is read has same attributes."""
-    test_cal_dir = DATA_PATH
-    test_cal_base = 'paper_cal'
-    test_cal = os.path.join(test_cal_dir, test_cal_base)
-    cal_out = utils.import_calfile(test_cal)
-    aa_out = cal_out.get_aa(np.array([.1]))
-
-    sys.path.append(test_cal_dir)
-    exec('import {0} as test_cal'.format(test_cal_base))
-    test_aa = test_cal.get_aa(np.array([.1]))
-    nt.assert_dict_equal(test_aa.array_params, aa_out.array_params)
-
-
-def test_calfile_with_py():
-    """Test input calfile with appelation py is read has same attributes."""
-    test_cal_dir = DATA_PATH
-    test_cal_base = 'paper_cal'
-    test_cal = os.path.join(test_cal_dir, test_cal_base)
-    cal_out = utils.import_calfile(test_cal+'.py')
-    aa_out = cal_out.get_aa(np.array([.1]))
-
-    sys.path.append(test_cal_dir)
-    exec('import {0} as test_cal'.format(test_cal_base))
-    test_aa = test_cal.get_aa(np.array([.1]))
-    nt.assert_dict_equal(test_aa.array_params, aa_out.array_params)
-
-
 def test_read_no_file():
     """Test no file given."""
     warn_message = ['Antenna positions are not present in the file.',
@@ -65,14 +27,14 @@ def test_read_no_file():
                     'or miriad file types']
 
     nt.assert_raises(TypeError, uvtest.checkWarnings,
-                     utils.read_paper_miriad, func_args=[None, None, None],
+                     utils.read_paper_miriad, func_args=[None, None],
                      func_kwargs={'skip_header': 3, 'usecols': [1, 2, 3]},
                      category=UserWarning, nwarnings=4,
                      message=warn_message)
 
 
 def test_load_uv_no_antpos():
-    """Test an Exception is raised when no antpos or calfile is provided."""
+    """Test an Exception is raised when no antpos is provided."""
     test_file = os.path.join(DATA_PATH, 'paper_test_file.uv')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -84,45 +46,10 @@ def test_load_uv_no_antpos():
 
     nt.assert_raises(ValueError, uvtest.checkWarnings,
                      utils.read_paper_miriad,
-                     func_args=[test_file, None, None],
+                     func_args=[test_file, None],
                      func_kwargs={'skip_header': 3, 'usecols': [1, 2, 3]},
                      category=UserWarning, nwarnings=4,
                      message=warn_message)
-
-
-def test_antpos_from_cal():
-    """Test antpos and uvw from calfile."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
-    test_cal_dir = DATA_PATH
-    test_cal_base = 'paper_cal'
-    test_cal = os.path.join(test_cal_dir, test_cal_base)
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-
-    test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, test_cal, None],
-                                   category=UserWarning,
-                                   nwarnings=4,
-                                   message=warn_message)
-    # test_uv = utils.read_paper_miriad(test_miriad, calfile=test_cal)
-
-    sys.path.append(test_cal_dir)
-    exec('import {0} as test_cal'.format(test_cal_base))
-    test_aa = test_cal.get_aa(np.array([.1]))
-    test_uvws = np.zeros_like(test_uv.uvw_array)
-    for bl in list(set(test_uv.baseline_array)):
-        baseline_inds = np.where(test_uv.baseline_array == bl)[0]
-        ant_1, ant_2 = test_uv.baseline_to_antnums(bl)
-        uvw = test_aa.get_baseline(ant_1, ant_2, src='z')
-        uvw *= const.c.to('m/ns').value
-        test_uvws[baseline_inds, :] = uvw
-    test_uvws = np.array(test_uvws)
-    nt.assert_true(np.allclose(test_uvws, test_uv.uvw_array))
 
 
 def test_no_antpos_file():
@@ -140,7 +67,7 @@ def test_no_antpos_file():
 
     nt.assert_raises(IOError, uvtest.checkWarnings,
                      utils.read_paper_miriad,
-                     func_args=[test_miriad, None, dne_file],
+                     func_args=[test_miriad, dne_file],
                      category=UserWarning, nwarnings=4,
                      message=warn_message)
 
@@ -158,18 +85,16 @@ def test_antpos_from_file():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
                                    nwarnings=4,
                                    message=warn_message)
-    # test_uv = utils.read_paper_miriad(test_miriad,
-    #                                   antpos_file=test_antpos_file,
-    #                                   skip_header=3, usecols=[1, 2, 3])
+
     read_antpos = np.genfromtxt(test_antpos_file, skip_header=3,
                                 usecols=[1, 2, 3])
+
     test_uvws = np.zeros_like(test_uv.uvw_array)
     for bl in list(set(test_uv.baseline_array)):
         baseline_inds = np.where(test_uv.baseline_array == bl)[0]
@@ -193,8 +118,7 @@ def test_setting_frf_nebw_as_inttime():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad,  test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -218,8 +142,7 @@ def test_get_data_array():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -255,8 +178,7 @@ def test_get_data_no_squeeze():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -292,8 +214,7 @@ def test_get_nsamples_array():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -329,8 +250,7 @@ def test_get_nsamples_no_squeeze():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -366,8 +286,7 @@ def test_get_flag_array():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -403,8 +322,7 @@ def test_get_flag_array_no_squeeze():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -514,8 +432,7 @@ def test_align_lst_error():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -541,8 +458,7 @@ def test_align_lst_shapes_equal():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad,test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -579,8 +495,7 @@ def test_align_lst_shapes_equal_uv_2_longer():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -612,7 +527,6 @@ def test_align_lst_shapes_equal_uv_2_longer():
 
     test_uv_2 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[[test_miriad, test_miriad_2],
-                                                None,
                                                 test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
@@ -667,7 +581,6 @@ def test_align_lst_shapes_equal_uv_1_longer():
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[[test_miriad, test_miriad_2],
-                                              None,
                                               test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
@@ -683,8 +596,7 @@ def test_align_lst_shapes_equal_uv_1_longer():
                     'or miriad file types']
 
     test_uv_2 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, None,
-                                                test_antpos_file],
+                                     func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=UserWarning,
@@ -719,8 +631,7 @@ def test_get_integration_time_shape():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -746,8 +657,7 @@ def test_get_integration_time_shape_with_pol():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -774,8 +684,7 @@ def test_get_integration_time_vals():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -803,8 +712,7 @@ def test_get_integration_time_vals_with_pol():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad, None,
-                                              test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
