@@ -526,7 +526,7 @@ class DelaySpectrum(object):
 
         NEBW = utils.noise_equivalent_bandwidth(window(len(self.freqs)))
         self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
-        unit_conversion = self.X2Y / self.bandwith.to('1/s') / sef.beam_sq_area
+        unit_conversion = self.X2Y / self.bandwith.to('1/s') / self.beam_sq_area
 
         delay_1_array = normalized_fourier_transform((self.data_1_array
                                                       * self.flag_1_array),
