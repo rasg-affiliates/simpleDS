@@ -23,17 +23,39 @@ default_cosmology.set(little_h_cosmo)
 
 @units.quantity_input(freq='frequency')
 def calc_z(freq):
-    """Calculate the redshift from a given frequency or frequncies."""
+    """Calculate the redshift from a given frequency or frequncies.
+
+    Arguments
+        freq: The frequency to calculate the redshift of 21cm emission
+              Must be an astropy.units.Quantity object with units consistent with frequency.
+    Returns
+        redshift: The redshift consistent with 21cm observations of the input frequency.
+    """
     return (f21 / freq).si.value - 1
 
 
 def calc_freq(redshift):
-    """Calculate the frequency or frequencies of a given 21cm redshift."""
+    """Calculate the frequency or frequencies of a given 21cm redshift.
+
+    Arguments
+        redshift: The redshift of the expected 21cm emission
+    Returns
+        freq: Frequency of the emission in its rest frame as an astropy.units.Quantity object.
+    """
     return f21 / (1 + redshift)
 
 
 def u2kperp(u, z, cosmo=None):
-    """Convert baseline length u to k_perpendicular."""
+    """Convert baseline length u to k_perpendicular.
+
+    Arguments
+        u: The baseline separation of two interferometric antennas in units of wavelength
+        z: The redshift of the expected 21cm emission.
+        cosmo: The assumed cosmology of the universe.
+               Defaults to WMAP9 year in "little h" units
+    Returns
+        kperp: The spatial fluctuation scale perpendicular to the line of sight probed by the baseline length u.
+    """
     if cosmo is None:
         cosmo = default_cosmology.get()
     return 2 * np.pi * u / cosmo.comoving_distance(z)
@@ -41,7 +63,17 @@ def u2kperp(u, z, cosmo=None):
 
 @units.quantity_input(kperp='wavenumber')
 def kperp2u(kperp, z, cosmo=None):
-    """Convert comsological k_perpendicular to baseline length u."""
+    """Convert comsological k_perpendicular to baseline length u.
+
+    Arguments:
+        kperp: The spatial fluctuation scale perpendicular to the line of sight.
+               Must be an astropy.units.Quantity object with units consistent with wavenumber
+        z: The redshift of the expected 21cm emission.
+        cosmo: The assumed cosmology of the universe.
+               Defaults to WMAP9 year in "little h" units
+    Returns
+        u: The baseline separation of two interferometric antennas in units of wavelength which probes the spatial scale given by kperp
+    """
     if cosmo is None:
         cosmo = default_cosmology.get()
     return kperp * cosmo.comoving_distance(z) / (2 * np.pi)
@@ -49,7 +81,17 @@ def kperp2u(kperp, z, cosmo=None):
 
 @units.quantity_input(eta='time')
 def eta2kparr(eta, z, cosmo=None):
-    """Conver delay eta to k_parallel (comoving 1./Mpc along line of sight."""
+    """Conver delay eta to k_parallel (comoving 1./Mpc along line of sight).
+
+    Arguments
+        eta: The inteferometric delay observed in units compatible with time.
+             Must be an astropy.units.Quantity object with units consistent with time.
+        z: The redshift of the expected 21cm emission.
+        cosmo: The assumed cosmology of the universe.
+               Defaults to WMAP9 year in "little h" units
+    Returns
+        kparr: The spatial fluctuation scale parallel to the line of sight probed by the input delay eta.
+    """
     if cosmo is None:
         cosmo = default_cosmology.get()
     return (eta * (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z))
@@ -58,7 +100,17 @@ def eta2kparr(eta, z, cosmo=None):
 
 @units.quantity_input(kparr='wavenumber')
 def kparr2eta(kparr, z, cosmo=None):
-    """Convert k_parallel (comoving 1/Mpc along line of sight) to delay eta."""
+    """Convert k_parallel (comoving 1/Mpc along line of sight) to delay eta.
+
+    Arguments
+    kparr: The spatial fluctuation scale parallel to the line of sight
+           Must be an astropy.units.Quantity object with units consistent with wavenumber
+        z: The redshift of the expected 21cm emission.
+        cosmo: The assumed cosmology of the universe.
+               Defaults to WMAP9 year in "little h" units
+    Returns
+        eta: The inteferometric delay which probes the spatial scale given by kparr.
+    """
     if cosmo is None:
         cosmo = default_cosmology.get()
     return (kparr * const.c * (1 + z)**2
@@ -73,6 +125,8 @@ def X2Y(z, cosmo=None):
 
     Arguments:
         z: redshift for cosmological conversion
+        cosmo: The assumed cosmology of the universe.
+               Defaults to WMAP9 year in "little h" units
     Returns:
         X2Y: The power spectrum unit conversion factor
     """
