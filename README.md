@@ -18,9 +18,8 @@ This calculator requires `pyuvdata` for data handling and beam area calculation.
 First install dependencies.
 
 * numpy >= 1.10
-* astropy >= 2.0
 * scipy
-* aipy
+* astropy >= 2.0
 * six (for compatibility between python 2 and 3)
 * pyuvdata (`pip install pyuvdata` or use https://github.com/HERA-Team/pyuvdata.git)
 
