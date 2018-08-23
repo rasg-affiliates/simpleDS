@@ -118,7 +118,7 @@ def test_setting_frf_nebw_as_inttime():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad,  test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -367,14 +367,14 @@ def test_bootstrap_array_shape():
 def test_noise_equiv_bandwidth():
     """Test that relative noise equivalent bandwidth calculation converges."""
     win = windows.blackmanharris(2000)
-    nt.assert_true(np.isclose(2, 1./utils.noise_equivalent_bandwidth(win),
+    nt.assert_true(np.isclose(2, 1. / utils.noise_equivalent_bandwidth(win),
                    rtol=1e-2))
 
 
 def test_noise_equiv_bandwidth_boxcar():
     """Test that relative noise equivalent bandwidth is unity on boxcar."""
     win = windows.boxcar(2000)
-    nt.assert_equal(1, 1./utils.noise_equivalent_bandwidth(win))
+    nt.assert_equal(1, 1. / utils.noise_equivalent_bandwidth(win))
 
 
 def test_cross_multiply_array_different_shapes():
@@ -458,7 +458,7 @@ def test_align_lst_shapes_equal():
                     'or miriad file types']
 
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-                                   func_args=[test_miriad,test_antpos_file],
+                                   func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
@@ -469,7 +469,7 @@ def test_align_lst_shapes_equal():
 
     warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
-                    'or miriad file types']*2
+                    'or miriad file types'] * 2
 
     test_uv_out, test_uv_2_out = uvtest.checkWarnings(utils.lst_align,
                                                       func_args=[test_uv, test_uv_2],
@@ -537,7 +537,7 @@ def test_align_lst_shapes_equal_uv_2_longer():
 
     warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
-                    'or miriad file types']*2
+                    'or miriad file types'] * 2
 
     test_uv_out, test_uv_2_out = uvtest.checkWarnings(utils.lst_align,
                                                       func_args=[test_uv, test_uv_2],
@@ -606,7 +606,7 @@ def test_align_lst_shapes_equal_uv_1_longer():
 
     warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
-                    'or miriad file types']*2
+                    'or miriad file types'] * 2
 
     test_uv_out, test_uv_2_out = uvtest.checkWarnings(utils.lst_align,
                                                       func_args=[test_uv, test_uv_2],
@@ -808,7 +808,7 @@ def test_fold_along_delay_amplitude_check_with_weights():
                                                     weights=weights, axis=axis)
     test_value_array = np.ones((1, 10, 11))
     test_value_array[:, :, 1:] *= np.average([np.sqrt(2), 1],
-                                             weights=1./np.array([2., 1.])**2)
+                                             weights=1. / np.array([2., 1.])**2)
     test_value_array[:, :, 0] = 3
     nt.assert_true(np.allclose(test_value_array, array_out.value))
 
@@ -826,7 +826,7 @@ def test_fold_along_delay_weight_check():
                                                     weights=weights, axis=axis)
     test_weight_array = np.ones((1, 10, 11))
     test_weight_array[:, :, 1:] *= np.sqrt(np.average(np.array([2., 1.])**2,
-                                                      weights=1./np.array([2., 1.])**2))
+                                                      weights=1. / np.array([2., 1.])**2))
     test_weight_array[:, :, 0] = 1
     nt.assert_true(np.allclose(test_weight_array, weights_out.value))
 
@@ -862,7 +862,7 @@ def test_fold_along_delay_amplitude_check_complex_mismatched_weights():
     array_out, weights_out = utils.fold_along_delay(array, delays,
                                                     weights=weights, axis=axis)
     test_weight_array = np.ones((1, 10, 11)).astype(np.complex)
-    test_weight_array[:, :, 1:].real *= np.sqrt(np.average(np.array([2., 1.])**2, weights=1./np.array([2., 1.])**2))
+    test_weight_array[:, :, 1:].real *= np.sqrt(np.average(np.array([2., 1.])**2, weights=1. / np.array([2., 1.])**2))
     test_weight_array[:, :, 0] = 1 + 0j
     nt.assert_true(np.allclose(test_weight_array, weights_out.value))
 
@@ -881,6 +881,6 @@ def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
     array_out, weights_out = utils.fold_along_delay(array, delays,
                                                     weights=weights, axis=axis)
     test_weight_array = np.ones((1, 10, 11)).astype(np.complex)
-    test_weight_array[:, :, 1:].real *= np.sqrt(np.average(np.array([2., 1.])**2, weights=1./np.array([2., 1.])**2))
+    test_weight_array[:, :, 1:].real *= np.sqrt(np.average(np.array([2., 1.])**2, weights=1. / np.array([2., 1.])**2))
     test_weight_array[:, :, 0] = 1 + 0j
     nt.assert_true(np.allclose(test_weight_array, weights_out.value))

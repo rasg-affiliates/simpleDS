@@ -65,7 +65,7 @@ def test_u2kperp_unit():
     test_z = 7.6363125
     test_u = 10
     test_kperp = cosmo.u2kperp(test_u, test_z)
-    nt.assert_equal(1./units.Mpc, test_kperp.unit)
+    nt.assert_equal(1. / units.Mpc, test_kperp.unit)
 
 
 def test_u2kperp_val():
@@ -92,7 +92,7 @@ def test_kperp2u_no_unit():
 
 def test_kperp2u_unit():
     """Test kperp2u units."""
-    test_kperp = .01 * 1./units.Mpc
+    test_kperp = .01 * 1. / units.Mpc
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
     nt.assert_equal(test_u.unit.bases, [])
@@ -100,7 +100,7 @@ def test_kperp2u_unit():
 
 def test_kperp2u_value():
     """Test kperp2u value."""
-    test_kperp = .01 * 1./units.Mpc
+    test_kperp = .01 * 1. / units.Mpc
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
     nt.assert_true(np.isclose(10, test_u.value))
@@ -142,7 +142,7 @@ def test_eta2kparr_unit():
     test_eta = 200 * 1e-9 * units.s
     test_z = 9.19508
     test_kparr = cosmo.eta2kparr(test_eta, test_z)
-    nt.assert_equal(1./units.Mpc, test_kparr.unit)
+    nt.assert_equal(1. / units.Mpc, test_kparr.unit)
 
 
 def test_kparr2eta_error():
@@ -195,6 +195,6 @@ def tests_X2Y_val():
     """Test value of X2Y."""
     test_z = 7
     test_x2y = cosmo.X2Y(test_z)
-    compare_x2y = (2*np.pi)**3 / (cosmo.u2kperp(1, test_z)**2
-                                  * cosmo.eta2kparr(1 * units.s, test_z))
+    compare_x2y = (2 * np.pi)**3 / (cosmo.u2kperp(1, test_z)**2
+                                    * cosmo.eta2kparr(1 * units.s, test_z))
     nt.assert_true(np.isclose(compare_x2y.value, test_x2y.value))

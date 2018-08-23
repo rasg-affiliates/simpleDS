@@ -150,7 +150,7 @@ def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
     Returns:
         noise_power: White noise with the same shape as nsamples input.
     """
-    Tsys = 180. * units.K * np.power(freqs.to('GHz')/(.18 * units.GHz), -2.55)
+    Tsys = 180. * units.K * np.power(freqs.to('GHz') / (.18 * units.GHz), -2.55)
     Tsys += trcvr.to('K')
     delta_f = np.diff(freqs)[0]
     noise_power = (Tsys.to('K')
