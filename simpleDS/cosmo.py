@@ -118,9 +118,9 @@ def kparr2eta(kparr, z, cosmo=None):
 
 
 def X2Y(z, cosmo=None):
-    """Convert units from interfometric delay power to comsological power.
+    """Convert units from interferometric delay power to comsological power.
 
-    Converts power spectrum from interfometric units of eta, u to
+    Converts power spectrum from interferometric units of eta, u to
     cosmological k_par, k_perp.
 
     Arguments:

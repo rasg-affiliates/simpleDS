@@ -307,7 +307,7 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
 
     Arguments
         array: An N-Dimensional numpy array or nested lists.
-        delays: A 1-Dimensional numpy array of interfometric delays.
+        delays: A 1-Dimensional numpy array of interferometric delays.
         weights: Weights to use while averaging the input array.
                  Must have same shape as input array.
                  Default: np.ones_like(array)
