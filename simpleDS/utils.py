@@ -4,6 +4,7 @@ import os
 import sys
 import numpy as np
 from pyuvdata import UVData, utils as uvutils
+import six
 from six.moves import range, map
 from astropy import constants as const
 from astropy import units
@@ -23,8 +24,12 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
         uv: Correctly formatted pyuvdata object from input PAPER data
     """
     uv = UVData()
-    kwargs_uvdata = {key: kwargs[key] for key in kwargs
-                     if key in uv.read.func_code.co_varnames}
+    if six.PY2:
+        kwargs_uvdata = {key: kwargs[key] for key in kwargs
+                         if key in uv.read.func_code.co_varnames}
+    else:
+        kwargs_uvdata = {key: kwargs[key] for key in kwargs
+                         if key in uv.read.__code__.co_varnames}
     uv.read(filename, **kwargs_uvdata)
 
     if antpos_file is None:
@@ -33,8 +38,12 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
 
     if not os.path.exists(antpos_file):
         raise IOError("{0} not found.".format(antpos_file))
-    kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
-                         if key in np.genfromtxt.func_code.co_varnames}
+    if six.PY2:
+        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
+                             if key in np.genfromtxt.func_code.co_varnames}
+    else:
+        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
+                             if key in np.genfromtxt.__code__.co_varnames}
     antpos = np.genfromtxt(antpos_file, **kwargs_genfromtxt)
 
     antpos_ecef = uvutils.ECEF_from_ENU(antpos,
@@ -251,8 +260,8 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
                          "array_1 has shape {a1} but array_2 has shape {a2}"
                          .format(a1=np.shape(array_1), a2=np.shape(array_2)))
 
-    cross_array = (np.expand_dims(array_1, axis=axis).conj() *
-                   np.expand_dims(array_2, axis=axis+1))
+    cross_array = (np.expand_dims(array_1, axis=axis).conj()
+                   * np.expand_dims(array_2, axis=axis + 1))
 
     return cross_array * unit_1 * unit_2
 
@@ -282,11 +291,11 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
     diff = inds_1.sum() - inds_2.sum()
     if diff > 0:
         last_ind = inds_1.size - inds_1[::-1].argmax() - 1
-        inds_1[last_ind:last_ind-diff:-1] = False
+        inds_1[last_ind:last_ind - diff:-1] = False
     elif diff < 0:
         diff = np.abs(diff)
         last_ind = inds_2.size - inds_2[::-1].argmax() - 1
-        inds_2[last_ind:last_ind-diff:-1] = False
+        inds_2[last_ind:last_ind - diff:-1] = False
 
     new_times_1 = times_1[inds_1]
     new_times_2 = times_2[inds_2]
@@ -334,7 +343,7 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
 
     if np.abs(delays).min() == 0:
         split_index = np.argmin(np.abs(delays), axis=axis)
-        split_inds = [split_index, split_index+1]
+        split_inds = [split_index, split_index + 1]
 
         neg_vals, zero_bin, pos_vals = np.split(array, split_inds, axis=axis)
         neg_vals = np.flip(neg_vals, axis=axis)
@@ -368,10 +377,10 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         _weights = _weights.value * weights.unit
 
     if not _array.imag.value.any():
-        out_array = np.average(_array.real, weights=1./_weights.real**2,
+        out_array = np.average(_array.real, weights=1. / _weights.real**2,
                                axis=0)
         out_weights = np.sqrt(np.average(_weights.real**2,
-                                         weights=1./_weights.real**2, axis=0))
+                                         weights=1. / _weights.real**2, axis=0))
         return out_array, out_weights
     else:
         weight_check = _weights.imag.value.any()
@@ -381,11 +390,11 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
             except TypeError:
                 _weights = _weights.astype(np.complex)
                 _weights.imag = np.ones_like(_weights.real)
-        out_array = (np.average(_array.real, weights=1./_weights.real**2, axis=0)
-                     + 1j * np.average(_array.imag, weights=1./_weights.imag**2, axis=0))
+        out_array = (np.average(_array.real, weights=1. / _weights.real**2, axis=0)
+                     + 1j * np.average(_array.imag, weights=1. / _weights.imag**2, axis=0))
 
-        out_weights = (np.sqrt(np.average(_weights.real**2, weights=1./_weights.real**2, axis=0))
-                       + 1j * np.sqrt(np.average(_weights.imag**2, weights=1./_weights.imag**2, axis=0)))
+        out_weights = (np.sqrt(np.average(_weights.real**2, weights=1. / _weights.real**2, axis=0))
+                       + 1j * np.sqrt(np.average(_weights.imag**2, weights=1. / _weights.imag**2, axis=0)))
 
         if not weight_check:
             out_weights.imag = np.zeros_like(out_weights.real)
