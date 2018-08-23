@@ -33,14 +33,10 @@ install:
   # - conda install six
   - pip install coveralls
   - pip install git+https://github.com/HERA-Team/pyuvdata.git
-  - python setup.py install
-
-before_script:
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3
+  - conda list
 
 script:
+  - python setup.py build_ext --force --inplace
   - nosetests simpleDS --nologcapture --with-coverage --cover-package=simpleDS
   - pycodestyle --ignore=E501,W503
 
