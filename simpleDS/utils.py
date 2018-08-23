@@ -4,6 +4,7 @@ import os
 import sys
 import numpy as np
 from pyuvdata import UVData, utils as uvutils
+import six
 from six.moves import range, map
 from astropy import constants as const
 from astropy import units
@@ -23,8 +24,12 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
         uv: Correctly formatted pyuvdata object from input PAPER data
     """
     uv = UVData()
-    kwargs_uvdata = {key: kwargs[key] for key in kwargs
-                     if key in uv.read.func_code.co_varnames}
+    if six.PY2:
+        kwargs_uvdata = {key: kwargs[key] for key in kwargs
+                         if key in uv.read.func_code.co_varnames}
+    else:
+        kwargs_uvdata = {key: kwargs[key] for key in kwargs
+                         if key in uv.read.__code__.co_varnames}
     uv.read(filename, **kwargs_uvdata)
 
     if antpos_file is None:
@@ -33,8 +38,12 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
 
     if not os.path.exists(antpos_file):
         raise IOError("{0} not found.".format(antpos_file))
-    kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
-                         if key in np.genfromtxt.func_code.co_varnames}
+    if six.PY2:
+        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
+                             if key in np.genfromtxt.func_code.co_varnames}
+    else:
+        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
+                             if key in np.genfromtxt.__code__.co_varnames}
     antpos = np.genfromtxt(antpos_file, **kwargs_genfromtxt)
 
     antpos_ecef = uvutils.ECEF_from_ENU(antpos,

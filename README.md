@@ -21,7 +21,7 @@ First install dependencies.
 * astropy >= 2.0
 * scipy
 * aipy
-* future (for python3 forward compatibility)
+* six (for compatibility between python 2 and 3)
 * pyuvdata (`pip install pyuvdata` or use https://github.com/HERA-Team/pyuvdata.git)
 
 For anaconda users, we suggest using conda to install astropy, numpy and scipy.
