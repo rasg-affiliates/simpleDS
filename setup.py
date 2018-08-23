@@ -33,8 +33,7 @@ setup_args = {
     'version': version.version,
     'include_package_data': True,
     'install_requires': ['numpy>1.10', 'astropy>1.2', 'scipy',
-                         'nose', 'pyuvdata',
-                         'future', 'aipy'],
+                         'nose', 'pyuvdata', 'six'],
     'test_suite': 'nose'
 }
 

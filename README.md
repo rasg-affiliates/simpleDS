@@ -24,8 +24,7 @@ First install dependencies.
 * future (for python3 forward compatibility)
 * pyuvdata (`pip install pyuvdata` or use https://github.com/HERA-Team/pyuvdata.git)
 
-For anaconda users, we suggest using conda to install astropy, numpy and scipy and conda-forge
-for aipy (```conda install -c conda-forge aipy```).
+For anaconda users, we suggest using conda to install astropy, numpy and scipy.
 
 ### Installing hera_qm
 Clone the repo using

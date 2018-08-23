@@ -7,4 +7,4 @@ cd $DIR/..
 python setup.py install
 
 cd simpleDS/tests
-nosetests --with-coverage --cover-erase --cover-package=simpleDS --cover-html "$@"
+nosetests  --nologcapture --with-coverage --cover-erase --cover-package=simpleDS --cover-html "$@"
