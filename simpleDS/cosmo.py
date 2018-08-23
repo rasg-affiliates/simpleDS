@@ -12,7 +12,7 @@ from astropy import units
 from astropy.units import Quantity
 from astropy.cosmology import WMAP9, default_cosmology
 
-# the emission frequency of 21m photons
+# the emission frequency of 21m photons in the Hydrogen's rest frame
 f21 = 1420405751.7667 * units.Hz
 
 # Using WMAP 9-year cosmology as the default
@@ -40,7 +40,7 @@ def calc_freq(redshift):
     Arguments
         redshift: The redshift of the expected 21cm emission
     Returns
-        freq: Frequency of the emission in its rest frame as an astropy.units.Quantity object.
+        freq: Frequency of the emission in the rest frame of emission as an astropy.units.Quantity object.
     """
     return f21 / (1 + redshift)
 
