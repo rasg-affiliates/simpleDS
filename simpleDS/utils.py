@@ -260,8 +260,8 @@ def cross_multipy_array(array_1, array_2=None, axis=0):
                          "array_1 has shape {a1} but array_2 has shape {a2}"
                          .format(a1=np.shape(array_1), a2=np.shape(array_2)))
 
-    cross_array = (np.expand_dims(array_1, axis=axis).conj() *
-                   np.expand_dims(array_2, axis=axis + 1))
+    cross_array = (np.expand_dims(array_1, axis=axis).conj()
+                   * np.expand_dims(array_2, axis=axis + 1))
 
     return cross_array * unit_1 * unit_2
 
