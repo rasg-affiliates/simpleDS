@@ -374,31 +374,6 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
 class DelaySpectrum(object):
     """A Delay Spectrum object to hold relevant data."""
 
-    self.freqs = None
-    self.delays = None
-    self.redshift = None
-    self.wavelength = None
-    self.Nbls = None
-    self.reds = None
-    self.k_perpendicular = None
-    self.k_parallel = None
-    self.power_real = None
-    self.power_imag = None
-    self.noise_real = None
-    self.noise_imag = None
-    self.thermal_expectation = None
-    self.keep_autos = True
-    self.nboot = None
-    self.trcvr = None
-    self.data_1_array = None
-    self.data_2_array = None
-    self.nsample_1_array = None
-    self.nsample_2_array = None
-    self.flag_1_array = None
-    self.flag_2_array = None
-    self.beam_sq_area = None
-    self.beam_area = None
-
     def __init__(self, uv1, uv2, uvb, trcvr, reds, squeeze=True):
         """Initialize the Delay Spectrum Object.
 
@@ -412,6 +387,30 @@ class DelaySpectrum(object):
             trcvr: Receiver Temperature of antenna to calculate noise power
                    Must be an astropy Quantity object with units of temperature
         """
+        self.freqs = None
+        self.delays = None
+        self.redshift = None
+        self.wavelength = None
+        self.Nbls = None
+        self.reds = None
+        self.k_perpendicular = None
+        self.k_parallel = None
+        self.power_real = None
+        self.power_imag = None
+        self.noise_real = None
+        self.noise_imag = None
+        self.thermal_expectation = None
+        self.keep_autos = True
+        self.nboot = None
+        self.trcvr = None
+        self.data_1_array = None
+        self.data_2_array = None
+        self.nsample_1_array = None
+        self.nsample_2_array = None
+        self.flag_2_array = None
+        self.beam_sq_area = None
+        self.beam_area = None
+
         if not np.allclose(uv_even.freq_array, uv_odd.freq_array):
             raise ValueError("Both pyuvdata objects must have the same "
                              "frequencies in order to cross-correlate.")
@@ -500,7 +499,7 @@ class DelaySpectrum(object):
 
         self.window = windows.blackmanharris
 
-    def calculate_delay_spectrum(self, window=self.window):
+    def calculate_delay_spectrum(self, window=None):
         """Perform Delay tranform and cross multiplication of datas.
 
         Arguments:
@@ -514,6 +513,8 @@ class DelaySpectrum(object):
         Also generates white noie given the frequency range and trcvr and
         calculates the expected noise power.
         """
+        if window is None:
+            window = self.window
         delta_f = np.diff(self.freqs)[0]
 
         noise_1_array = calculate_noise_power(nsamples=self.nsample_1_array,
