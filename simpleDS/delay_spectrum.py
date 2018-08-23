@@ -395,13 +395,9 @@ class DelaySpectrum(object):
         self.reds = None
         self.k_perpendicular = None
         self.k_parallel = None
-        self.power_real = None
-        self.power_imag = None
-        self.noise_real = None
-        self.noise_imag = None
+        self.power = None
+        self.noise = None
         self.thermal_expectation = None
-        self.keep_autos = True
-        self.nboot = None
         self.trcvr = None
         self.data_1_array = None
         self.data_2_array = None
