@@ -2,13 +2,13 @@
 
 import os
 import sys
-import numpy as np
-from pyuvdata import UVData, utils as uvutils
+import copy
 import six
 from six.moves import range, map
+import numpy as np
 from astropy import constants as const
 from astropy import units
-import copy
+from pyuvdata import UVData, utils as uvutils
 
 
 def read_paper_miriad(filename, antpos_file=None, **kwargs):
@@ -24,12 +24,10 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
         uv: Correctly formatted pyuvdata object from input PAPER data
     """
     uv = UVData()
-    if six.PY2:
-        kwargs_uvdata = {key: kwargs[key] for key in kwargs
-                         if key in uv.read.func_code.co_varnames}
-    else:
-        kwargs_uvdata = {key: kwargs[key] for key in kwargs
-                         if key in uv.read.__code__.co_varnames}
+    # find keywords that pass to uv.read
+    uvdata_argspec = six.get_function_code(uv.read).co_varnames
+    kwargs_uvdata = {key: kwargs[key] for key in kwargs
+                     if key in uvdata_argspec}
     uv.read(filename, **kwargs_uvdata)
 
     if antpos_file is None:
@@ -38,12 +36,12 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
 
     if not os.path.exists(antpos_file):
         raise IOError("{0} not found.".format(antpos_file))
-    if six.PY2:
-        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
-                             if key in np.genfromtxt.func_code.co_varnames}
-    else:
-        kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
-                             if key in np.genfromtxt.__code__.co_varnames}
+
+    # find keywords that pass to np.genfromtxt
+    genfromtxt_argpsec = six.get_function_code(np.genfromtxt).co_varnames
+    kwargs_genfromtxt = {key: kwargs[key] for key in kwargs
+                         if key in genfromtxt_argpsec}
+
     antpos = np.genfromtxt(antpos_file, **kwargs_genfromtxt)
 
     antpos_ecef = uvutils.ECEF_from_ENU(antpos,
