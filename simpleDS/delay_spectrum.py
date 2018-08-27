@@ -156,10 +156,12 @@ def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
     Tsys = 180. * units.K * np.power(freqs.to('GHz') / (.18 * units.GHz), -2.55)
     Tsys += trcvr.to('K')
     delta_f = np.diff(freqs)[0]
-    noise_power = (Tsys.to('K')
-                   / np.sqrt(delta_f.to('1/s') * inttime.to('s')
-                             * nsamples * npols))
-    return noise_power.to('mK')
+    with np.errstate(divide='ignore', invalid='ignore'):
+        noise_power = np.ma.masked_invalid(Tsys.to('K')
+                                           / np.sqrt(delta_f.to('1/s')
+                                                     * inttime.to('s')
+                                                     * nsamples * npols))
+    return noise_power.filled(0).to('mK')
 
 
 def generate_noise(noise_power):
