@@ -1,3 +1,6 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Matthew Kolopanis
+# Licensed under the 3-clause BSD License
 """Relevent Cosmology units and transforms for Power Spectrum estimation.
 
 All cosmological calculations and converions follow from Liu et al 2014a

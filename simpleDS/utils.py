@@ -1,3 +1,6 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Matthew Kolopanis
+# Licensed under the 3-clause BSD License
 """Read and Write support for PAPER miriad files with pyuvdata."""
 
 import os

@@ -1,3 +1,6 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Matthew Kolopanis
+# Licensed under the 3-clause BSD License
 """Tests for cosmo module.
 
 Relevent Cosmology units and transforms for Power Spectrum estimation.
