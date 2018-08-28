@@ -304,7 +304,7 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
             uv2.select(times=new_times_2, inplace=inplace))
 
 
-@units.quantity_input(delays='time', array='mK^2*Mpc^3')
+@units.quantity_input(delays='time', array=['mK^2*Mpc^3', 'time'])
 def fold_along_delay(array, delays, weights=None, axis=-1):
     """Fold input array over the delay axis.
 
