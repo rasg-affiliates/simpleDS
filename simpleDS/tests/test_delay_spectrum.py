@@ -19,6 +19,10 @@ from astropy import units
 from scipy.signal import windows
 
 
+class TestDealySpectrumInit(object):
+    """A Test class to check DelaySpectrum objects are initialized."""
+
+
 def test_jy_to_mk_value():
     """Test the Jy to mK conversion factor."""
     test_fq = np.array([.1]) * units.GHz

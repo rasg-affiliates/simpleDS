@@ -374,126 +374,195 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
 class DelaySpectrum(object):
     """A Delay Spectrum object to hold relevant data."""
 
-    def __init__(self, uv1, uv2, uvb, trcvr, reds, squeeze=True):
+    @units.quantity_input(trcvr=units.K)
+    def __init__(self, uv1=None, uv2=None, uvb=None, trcvr=None, bls=None,
+                 squeeze=True, window=None):
         """Initialize the Delay Spectrum Object.
 
         Arguments
-            uv1: One of the pyuvdata objects to cross correlate
-            uv2: Other pyuvdata object to multiply with uv_even.
+            uv1: One of the pyuvdata objects to cross correlate.
+                 Optional can be added later
+            uv2: Other pyuvdata object to multiply with uv1.
+                 Optional can be added later
             uvb: UVBeam object with relevent beam info.
                  Currently assumes 1 beam object can describe all baselines
                  Must be power beam in healpix coordinates and peak normalized
+                 Optional can be added later.
             reds: set of redundant baselines to calculate delay power spectrum.
+                  Optional can be added later.
             trcvr: Receiver Temperature of antenna to calculate noise power
-                   Must be an astropy Quantity object with units of temperature
+                   Must be an astropy Quantity object with units of temperature.
+                   Optional can be added later.
         """
-        self.freqs = None
+        self.freq_array = None
         self.delays = None
         self.redshift = None
-        self.wavelength = None
+        self.baselines = None
         self.Nbls = None
-        self.reds = None
         self.k_perpendicular = None
         self.k_parallel = None
         self.power = None
         self.noise = None
         self.thermal_expectation = None
-        self.trcvr = None
-        self.data_1_array = None
-        self.data_2_array = None
-        self.nsample_1_array = None
-        self.nsample_2_array = None
-        self.flag_2_array = None
+        self.data_array = None
+        self.nsample_array = None
+        self.flag_array = None
         self.beam_sq_area = None
         self.beam_area = None
-
-        if not np.allclose(uv_even.freq_array, uv_odd.freq_array):
-            raise ValueError("Both pyuvdata objects must have the same "
-                             "frequencies in order to cross-correlate.")
-        if not np.allclose(uv1.freq_array, uvb.freq_array):
-            raise ValueError("The pyuvdata objects and the UVBream object "
-                             "must have the same frequencies for "
-                             "proper unit conversion.")
-
-        self.freqs = np.squeeze(uv_even.freq_array, axis=0) * units.Hz
-        delays = np.fft.fftfreq(len(freqs), d=np.diff(freqs)[0].value)
-        delays = np.fft.fftshift(delays) / freqs.unit
-        self.delays = delays.to('s')
-
-        self.redshift = cosmo.calc_z(self.freqs).mean()
-        self.X2Y = cosmo.X2Y(z_mean)
-
-        self.jy_to_mk = jy_to_mk(self.freqs)
-
-        if not np.allclose(uv1.integration_time, uv2.integration_time):
-            raise ValueError("Both pyuvdata objects must have the same "
-                             "integration time in order to cross-correlate.")
-        self.inttime = utils.get_integration_time(uv_even, reds=reds,
-                                                  squeeze=squeeze) * units.s
-
-        delta_t_1 = uv1._calc_single_integration_time()
-        delta_t_2 = uv2._calc_single_integration_time()
-        if not np.isclose(delta_t_1, delta_t_2):
-            raise ValueError("The two UVData objects much have matching "
-                             "time sampling rates. "
-                             "values were uv1: {0} and uv2: {1}"
-                             .format(delta_t_1, delta_t_2))
-        self.lst_bins = uv1.Ntimes * delta_time.to('s') / self.inttime.to('s')
-
-        if not isinstance(trcvr, Quantity):
-            raise ValueError('trcvr must be an astropy Quantity object. '
-                             ' value was: {temp}'.format(temp=trcvr))
+        self.squeeze = squeeze
         self.trcvr = trcvr
+        self.polarizatoin_array
+
+        if isinstance(uv1, UVData):
+            self.add_uv_object(uv1)
+        if isinstance(uv2, UVData):
+            self.add_uv_object(uv2)
+
         # Sometimes antenna pairs can be cast into weird types
         # If it is an array of anteanna pairs, convert to baseline numbers
-        if isinstance(reds[0], (tuple, np.ndaray, list)):
-            reds = list(map(uv1.antnums_to_baseline, reds))
-        self.reds = reds
-        self.Nbls = len(reds)
+        if bls is not None:
+            if isinstance(bls[0], (tuple, np.ndaray, list)):
+                bls = list(map(uv1.antnums_to_baseline, reds))
+            self.baselines = bls
+            self.Nbls = len(self.baslines)
         # Check if vibiliities are psuedo-Stokes parameters
         # This will affect the noise estimate
-        if np.intersect1d(uv1.polarization_array, np.arange(1, 5)):
-            self.npols = 2
+
+        if isinstance(uvb, UVBeam):
+            self.add_uv_beam(uvb)
+
+        if window is None:
+            self.window = windows.blackmanharris
+
+    def add_uv_object(self, uv):
+        """Add the uvdata object to internally help datasets.
+
+        Unloads the data, flags, and nsamples arrays from the input UVData
+        object (or subclass) into local storage.
+
+        Raises :
+            NotImplementedError: Two uv data objects have already been loaded.
+
+            ValueError: Baseline array is not specified before loading UVData object
+                        Input uv object has frequencies which differ from
+                            frequencies previously loaded.
+                        Input uv object has an integration time which differs
+                            from the integration time of uv object already loaded.
+                        Input uv object has a time sampling cadence different
+                            from currently loaded uv objects.
+
+        Arguments:
+            uv  : A UVData object or subclass of UVData to add to the existing
+                  datasets
+        """
+        if self.data_array.shape[0] == 2:
+            raise NotImplementedError("SimpleDS only allows for "
+                                      "cross-multiplying two data sets during "
+                                      "delay spectrum estimation.")
+
+        if self.baselines is None:
+            raise ValueError("The attribute Baselines must be instantiated "
+                             "before loading data from input UVData objects.")
+
+        if self.freq_array is not None:
+            if not np.allclose(self.freq_array, uv.freq_array):
+                raise ValueError("The input pyuvdata objects "
+                                 "must have the same frequencies "
+                                 "as previously input pyuvdata objects for "
+                                 "proper unit conversion.")
         else:
-            self.npols = 1
+            self.freq_array = np.squeeze(uv_even.freq_array, axis=0) * units.Hz
+            self.Nfreqs = len(self.freq_array)
+            delays = np.fft.fftfreq(self.Nfreqs,
+                                    d=np.diff(self.freq_array)[0].value)
+            delays = np.fft.fftshift(delays) / freqs.unit
+            self.delays = delays.to('s')
 
-        # Cast the data as Quantity objects for units to work.
-        if uv.vis_unit == 'Jy':
-            unit = units.Jy
-        elif uv.vis_unit == 'K str':
-            unit = units.K * units.sr
+        if self.integration_time is not None:
+            if not np.allclose(self.integration_time, uv.integration_time):
+                raise ValueError("The input pyuvdata objects "
+                                 "must have the same integration_time "
+                                 "as previously input pyuvdata objects in "
+                                 "order to cross-multiply.")
         else:
-            # if the uv unit is uncalibrated give data a
-            # dimensionless_unit
-            unit = units.Unit('')
-        self.data_1_array = utils.get_data_array(uv1, reds=reds,
-                                                 squeeze=squeeze) * unit
-        self.data_2_array = utils.get_data_array(uv2, reds=reds,
-                                                 squeeze=squeeze) * unit
-
-        self.nsample_1_array = utils.get_nsample_array(uv1, reds=reds,
-                                                       squeeze=squeeze)
-        self.nsample_2_array = utils.get_nsample_array(uv2, reds=reds,
-                                                       squeeze=squeeze)
-
-        self.flag_1_array = utils.get_flag_array(uv1, reds=reds,
-                                                 squeeze=squeeze)
-        self.flag_2_array = utils.get_flag_array(uv2, reds=reds,
-                                                 squeeze=squeeze)
-
-        # I'm not sure I want to cast them as float right now, but we'll see
-        self.flag_1_array = np.logical_not(self.even_flags).astype(float)
-        self.flag_2_array = np.logical_not(self.odd_flags).astype(float)
-
-        if len(np.shape(self.data_1_array)) == 3:
-            self.cross_mult_axis = 0
+            self.integration_time = utils.get_integration_time(uv, bls=self.baselines,
+                                                               squeeze=self.squeeze)
+        if self.delta_time is not None:
+            delta_t = uv._calc_single_integration_time()
+            if not np.isclose(self.delta_time, delta_t):
+                raise ValueError("The input UVData objects much have matching "
+                                 "time sampling rates. "
+                                 "values were self: {0} and uv: {1}"
+                                 .format(self.delta_time, delta_t))
         else:
-            self.cross_mult_axis = 1
+            self.delta_time = uv._calc_single_integration_time()
 
+        if self.npols is not None:
+            if self.Npols != uv.Npols:
+                raise ValueError("The input UVData object must have the same "
+                                 "polarizatoins as previosly loaded data."
+                                 "values were self: {0} and uv: {1}"
+                                 .format(self.Npols, uv.Npols))
+        else:
+            self.Npols = uv.Npols
+
+        if self.data_array is None:
+            self.data_shape = (1, uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
+            if self.Npols == 1:
+                self.data_shape = (1, uv.Nbls, uv.Ntimes, uv.Nfreqs)
+
+            self.data_array = np.zeros(shape=self.data_shape,
+                                       dtype=np.complex128)
+            self.data_array[0] = utils.get_data_array(uv, bls=self.baselines,
+                                                      squeeze=self.squeeze)
+            if len(np.shape(self.data_1_array)) == 4:
+                self.cross_mult_axis = 1
+            else:
+                self.cross_mult_axis = 2
+        else:
+            tmp = utils.get_data_array(uv, bls=self.baselines,
+                                       squeeze=self.squeeze)
+            self.data_array = np.append(self.data_array, tmp, axis=0)
+
+        if self.flag_array is None:
+            self.flag_array = np.zeros_like(self.data_array, dtype=np.float)
+            self.flag_array[0] = utils.get_flag_array(uv, bls=self.baselines,
+                                                      squeeze=self.squeeze)
+        else:
+            tmp = utils.get_flag_array(uv, bls=self.baselines,
+                                       squeeze=self.squeeze)
+            self.flag_array = np.append(self.flag_array, tmp, axis=0)
+
+        if self.nsample_array is None:
+            self.nsample_array = np.zeros_like(self.data_array, dtype=np.float)
+            self.nsample_array[0] = utils.get_nsample_array(uv,
+                                                            bls=self.baselines,
+                                                            squeeze=self.squeeze)
+        else:
+            tmp = utils.get_nsample_array(uv, bls=self.baselines,
+                                          squeeze=self.squeeze)
+            self.nsamples_array = np.append(self.nsamples_array, tmp, axis=0)
+
+        if self.vis_unit is None:
+            if uv.vis_unit == 'Jy':
+                self.unit = units.Jy
+            elif uv.vis_unit == 'K str':
+                self.unit = units.K * units.sr
+            else:
+                # if the uv unit is uncalibrated give data a
+                # dimensionless_unit
+                self.unit = units.Unit('')
+
+    def add_uv_beam(self, uvb):
+        """Add the beam_area and beam_square_area integrals into memory.
+
+        Arguments:
+            uvb: UVBeam object with relevent beam info.
+                 Currently assumes 1 beam object can describe all baselines
+                 Must be a power beam in healpix coordinates and peak normalized
+        """
         self.beam_area = uvb.get_beam_area()
         self.beam_sq_area = uvb.get_beam_sq_area()
-
-        self.window = windows.blackmanharris
 
     def calculate_delay_spectrum(self, window=None):
         """Perform Delay tranform and cross multiplication of datas.
@@ -511,18 +580,14 @@ class DelaySpectrum(object):
         """
         if window is None:
             window = self.window
-        delta_f = np.diff(self.freqs)[0]
 
-        noise_1_array = calculate_noise_power(nsamples=self.nsample_1_array,
-                                              freqs=self.freqs,
-                                              inttime=self.inttime,
-                                              trcvr=self.trcvr,
-                                              npols=self.npols)
-        noise_2_array = calculate_noise_power(nsamples=self.nsample_2_array,
-                                              freqs=self.freqs,
-                                              inttime=self.inttime,
-                                              trcvr=self.trcvr,
-                                              npols=self.npols)
+        delta_f
+
+        noise_array = calculate_noise_power(nsamples=self.nsample_1_array,
+                                            freqs=self.freqs,
+                                            inttime=self.inttime,
+                                            trcvr=self.trcvr,
+                                            npols=self.npols)
 
         NEBW = utils.noise_equivalent_bandwidth(window(len(self.freqs)))
         self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
@@ -557,6 +622,7 @@ class DelaySpectrum(object):
                                                 array_2=noise_2_delay,
                                                 axis=self.cross_mult_axis)
         self.noise_power = noise_power * unit_conversion
+        self.calculate_thermal_sensitivity()
 
     def calculate_thermal_sensitivity(self):
         """Calculate the Thermal sensitivity for the power spectrum.
@@ -583,4 +649,4 @@ class DelaySpectrum(object):
         # Parsons PSA32 paper appendix B
         thermal_power *= self.beam_area**2 / self.beam_sq_area
 
-        self.thermal_power = thermal_power.to('mK ^2 Mpc ^3')
+        self.thermal_power = thermal_power.to('mK^2 Mpc^3')
