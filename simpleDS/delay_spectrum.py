@@ -99,7 +99,7 @@ def combine_nsamples(nsample_1, nsample_2=None):
     else:
         axis = 1
 
-    samples_out = utils.cross_multipy_array(array_1=nsample_1,
+    samples_out = utils.cross_multiply_array(array_1=nsample_1,
                                             array_2=nsample_2,
                                             axis=axis)
 
@@ -291,7 +291,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                                                  delta_x=np.diff(freqs)[0],
                                                  window=window, axis=-1)
 
-    delay_power = utils.cross_multipy_array(array_1=delay_1_array,
+    delay_power = utils.cross_multiply_array(array_1=delay_1_array,
                                             array_2=delay_2_array,
                                             axis=cross_mult_axis)
 
@@ -305,7 +305,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                                                  delta_x=np.diff(freqs)[0],
                                                  window=window)
 
-    noise_power = utils.cross_multipy_array(array_1=noise_1_delay,
+    noise_power = utils.cross_multiply_array(array_1=noise_1_delay,
                                             array_2=noise_2_delay,
                                             axis=cross_mult_axis)
 

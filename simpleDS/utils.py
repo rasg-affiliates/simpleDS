@@ -226,7 +226,7 @@ def noise_equivalent_bandwidth(window):
     return np.sum(window)**2 / (np.sum(window**2) * len(window))
 
 
-def cross_multipy_array(array_1, array_2=None, axis=0):
+def cross_multiply_array(array_1, array_2=None, axis=0):
     """Cross multiply the arrays along the given axis.
 
     Cross multiplies along axis and computes array_1.conj() * array_2
