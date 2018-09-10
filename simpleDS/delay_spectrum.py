@@ -66,7 +66,7 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
     return delay_array
 
 
-def combine_nsamples(nsample_1, nsample_2=None):
+def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
     """Combine the nsample arrays for use in cross-multiplication.
 
     Uses numpy slicing to generate array of all sample cross-multiples.
@@ -93,11 +93,6 @@ def combine_nsamples(nsample_1, nsample_2=None):
                          'nsample_2 has shape {d2_s}'
                          .format(d1_s=nsample_1.shape,
                                  d2_s=nsample_2.shape))
-
-    if len(nsample_1.shape) == 3:
-        axis = 0
-    else:
-        axis = 1
 
     samples_out = utils.cross_multiply_array(array_1=nsample_1,
                                              array_2=nsample_2,
@@ -181,6 +176,7 @@ def generate_noise(noise_power):
     return noise
 
 
+<<<<<<< master
 @units.quantity_input(trcvr=units.K)
 def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                              squeeze=True, window=windows.blackmanharris,
@@ -371,6 +367,8 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     return delays, delay_power, noise_power, thermal_power
 
 
+=======
+>>>>>>> combine nsamples now takes axis instead of guessing
 class DelaySpectrum(object):
     """A Delay Spectrum object to hold relevant data."""
 
@@ -626,8 +624,9 @@ class DelaySpectrum(object):
             sqrt(2): noise is split between even and odd
             sqrt(lst_bins): noise power spectrum averages incoherently over time
         """
-        thermal_noise_samples = combine_nsamples(self.nsample_1_array,
-                                                 self.nsample_2_array)
+        thermal_noise_samples = combine_nsamples(self.nsample_array[0],
+                                                 self.nsample_array[1],
+                                                 axis=2)
         Tsys = 180. * units.K * np.power(self.freqs / (.18 * units.GHz), -2.55)
         Tsys += trcvr.to('K')
         thermal_power = (Tsys.to('mK')**2
