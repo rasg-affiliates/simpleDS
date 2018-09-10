@@ -100,8 +100,8 @@ def combine_nsamples(nsample_1, nsample_2=None):
         axis = 1
 
     samples_out = utils.cross_multiply_array(array_1=nsample_1,
-                                            array_2=nsample_2,
-                                            axis=axis)
+                                             array_2=nsample_2,
+                                             axis=axis)
 
     # The nsamples array is used to construct the thermal variance
     # Cross-correlation takes the geometric mean of thermal variance.
@@ -292,8 +292,8 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                                                  window=window, axis=-1)
 
     delay_power = utils.cross_multiply_array(array_1=delay_1_array,
-                                            array_2=delay_2_array,
-                                            axis=cross_mult_axis)
+                                             array_2=delay_2_array,
+                                             axis=cross_mult_axis)
 
     noise_1_delay = normalized_fourier_transform(data_array=(even_noise
                                                              * even_flags),
@@ -306,8 +306,8 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                                                  window=window)
 
     noise_power = utils.cross_multiply_array(array_1=noise_1_delay,
-                                            array_2=noise_2_delay,
-                                            axis=cross_mult_axis)
+                                             array_2=noise_2_delay,
+                                             axis=cross_mult_axis)
 
     thermal_power = calculate_noise_power(nsamples=thermal_noise_samples,
                                           freqs=freqs,
