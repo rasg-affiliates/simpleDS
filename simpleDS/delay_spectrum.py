@@ -581,7 +581,7 @@ class DelaySpectrum(object):
         if window is None:
             window = self.window
 
-        delta_f
+        delta_f = np.diff(self.freq_array)[0]
 
         noise_array = calculate_noise_power(nsamples=self.nsample_1_array,
                                             freqs=self.freqs,
@@ -593,33 +593,24 @@ class DelaySpectrum(object):
         self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
         unit_conversion = self.X2Y / self.bandwith.to('1/s') / self.beam_sq_area
 
-        delay_1_array = normalized_fourier_transform((self.data_1_array
-                                                      * self.flag_1_array),
-                                                     delta_x=delta_f,
-                                                     window=window, axis=-1)
-        delay_2_array = normalized_fourier_transform((self.data_2_array
-                                                      * self.flag_2_array),
-                                                     delta_x=delta_f,
-                                                     window=window, axis=-1)
+        delay_array = normalized_fourier_transform((self.data_array
+                                                    * self.flag_array),
+                                                   delta_x=delta_f,
+                                                   window=window, axis=-1)
 
-        delay_power = utils.cross_multipy_array(array_1=delay_1_array,
-                                                array_2=delay_2_array,
+        delay_power = utils.cross_multipy_array(array_1=delay_array[0],
+                                                array_2=delay_array[1],
                                                 axis=self.cross_mult_axis)
 
         self.power = delay_power * unit_conversion * self.jy_to_mk**2
 
-        noise_1_delay = normalized_fourier_transform((self.noise_1_array
-                                                      * self.flag_1_array),
-                                                     delta_x=delta_f,
-                                                     window=window, axis=-1)
+        noise_delay = normalized_fourier_transform((self.noise_array
+                                                    * self.flag_array),
+                                                   delta_x=delta_f,
+                                                   window=window, axis=-1)
 
-        noise_2_delay = normalized_fourier_transform((self.noise_2_array
-                                                      * self.flag_2_array),
-                                                     delta_x=delta_f,
-                                                     window=window, axis=-1)
-
-        noise_power = utils.cross_multipy_array(array_1=noise_1_delay,
-                                                array_2=noise_2_delay,
+        noise_power = utils.cross_multipy_array(array_1=noise_delay[0],
+                                                array_2=noise_delay[1],
                                                 axis=self.cross_mult_axis)
         self.noise_power = noise_power * unit_conversion
         self.calculate_thermal_sensitivity()
