@@ -321,18 +321,24 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # Calculate the effective bandwith for the given window function
     bandwidth = (freqs[-1] - freqs[0])
     bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
-    unit_conversion = X2Y / bandwidth.to('1/s') / uvb.get_beam_sq_area()
+    beam_sq_area = uvb.get_beam_sq_area()
+    if len(freqs) % 2 ==0:
+        mid = np.int(len(freqs)/2)
+    else:
+        mid = np.int((len(freqs) +1) /2)
+    beam_sq_area = beam_sq_area[mid]
+    unit_conversion = X2Y / bandwidth.to('1/s') / beam_sq_area
 
     # the *= operator does not play nicely with multiplying a non-quantity
     # with a quantity
     delay_power = delay_power * unit_conversion
     if unit == units.Jy:
-        delay_power *= jy_to_mk(freqs)**2
+        delay_power *= jy_to_mk(freqs.mean())**2
     elif unit == (units.K * units.sr):
         # multiply by beam_area**2 / beam_square_area to properly normalized
         # the power spectrum
-        delay_power *= (uvb.get_beam_area()**2
-                        / (uvb.get_beam_sq_area() * units.sr**2))
+        delay_power *= (uvb.get_beam_area()[mid]**2
+                        / (uvb.get_beam_sq_area()[mid] * units.sr**2))
         delay_power = delay_power.to('mK^2 Mpc^3')
 
     noise_power = noise_power * unit_conversion
