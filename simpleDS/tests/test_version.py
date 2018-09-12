@@ -27,12 +27,9 @@ def test_construct_version_info():
     simpleDS_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     def get_git_output(args, capture_stderr=False):
-        """Get output from Git.
+        """Get output from Git. ensuring that it is of the ``str`` type, not bytes."""
 
-        ensuring that it is of the ``str`` type, not bytes.
-        """
         argv = ['git', '-C', simpleDS_dir] + args
-
         if capture_stderr:
             data = subprocess.check_output(argv, stderr=subprocess.STDOUT)
         else:
