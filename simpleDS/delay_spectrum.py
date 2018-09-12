@@ -2,7 +2,7 @@
 # Copyright (c) 2018 Matthew Kolopanis
 # Licensed under the 3-clause BSD License
 """Calculate Delay Spectrum from pyuvdata object."""
-from __future__ import print_function
+from __future__ import print_function, absolute_import, division
 
 import os
 import sys
@@ -270,9 +270,20 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                                       inttime=inttime,
                                       trcvr=trcvr, npols=npols)
     # Conver the noise powers to white noise
-    even_noise = generate_noise(even_noise)
-    odd_noise = generate_noise(odd_noise)
+    even_noise = generate_noise(even_noise) / np.sqrt(uvb.get_beam_sq_area())
+    odd_noise = generate_noise(odd_noise) / np.sqrt(uvb.get_beam_sq_area())
 
+    if unit == units.Jy:
+        even_data *= jy_to_mk(freqs) / np.sqrt(uvb.get_beam_sq_area())
+        odd_data *= jy_to_mk(freqs) / np.sqrt(uvb.get_beam_sq_area())
+    elif unit == (units.K * units.sr):
+        # multiply by beam_area**2 / beam_square_area to properly normalized
+        # the power spectrum
+        even_data *= uvb.get_beam_area() / (np.sqrt(uvb.get_beam_sq_area()) * units.sr)
+        odd_data *= uvb.get_beam_area() / (np.sqrt(uvb.get_beam_sq_area()) * units.sr)
+
+        even_data = even_data.to('mK')
+        odd_data = odd_data.to('mK')
     # save cross-multiplication axis
     if len(np.shape(even_data)) == 3:
         cross_mult_axis = 0
@@ -321,26 +332,11 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     # Calculate the effective bandwith for the given window function
     bandwidth = (freqs[-1] - freqs[0])
     bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
-    beam_sq_area = uvb.get_beam_sq_area()
-    if len(freqs) % 2 ==0:
-        mid = np.int(len(freqs)/2)
-    else:
-        mid = np.int((len(freqs) +1) /2)
-    beam_sq_area = beam_sq_area[mid]
-    unit_conversion = X2Y / bandwidth.to('1/s') / beam_sq_area
+    unit_conversion = X2Y / bandwidth.to('1/s')
 
     # the *= operator does not play nicely with multiplying a non-quantity
     # with a quantity
     delay_power = delay_power * unit_conversion
-    if unit == units.Jy:
-        delay_power *= jy_to_mk(freqs.mean())**2
-    elif unit == (units.K * units.sr):
-        # multiply by beam_area**2 / beam_square_area to properly normalized
-        # the power spectrum
-        delay_power *= (uvb.get_beam_area()[mid]**2
-                        / (uvb.get_beam_sq_area()[mid] * units.sr**2))
-        delay_power = delay_power.to('mK^2 Mpc^3')
-
     noise_power = noise_power * unit_conversion
     # The thermal expectation requires the additional delta_f**2 factor
     # for all the units to be correct since we are multiplying them
@@ -351,7 +347,16 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     thermal_power = thermal_power * X2Y * np.diff(freqs)[0].to('1/s')
     # This normalization of the thermal power comes from
     # Parsons PSA32 paper appendix B
-    thermal_power *= uvb.get_beam_area()**2 / uvb.get_beam_sq_area()
+    beam_factor_array = uvb.get_beam_area()**2 / uvb.get_beam_sq_area()
+
+    if beam_factor_array.shape[0] % 2 == 0:
+        mid_index = beam_factor_array.shape[0] // 2
+        beam_factor = np.mean(beam_factor_array[mid_index - 1:mid_index + 1])
+    else:
+        mid_index = (beam_factor_array.shape[0] - 1) // 2
+        beam_factor = beam_factor_array[mid_index]
+
+    thermal_power *= beam_factor
     # Divide by the following factors:
     #   Nbls: baselines should coherently add together
     #   sqrt(2): noise is split between even and odd
