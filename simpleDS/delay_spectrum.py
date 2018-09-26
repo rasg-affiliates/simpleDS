@@ -12,7 +12,7 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy import constants as const
 from scipy.signal import windows
-from . import utils, cosmo
+from . import utils, cosmo as simple_cosmo
 
 
 @units.quantity_input(freqs='frequency')
@@ -331,8 +331,8 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     thermal_power *= thermal_power
 
     # Convert from visibility Units (Jy) to comological units (mK^2/(h/Mpc)^3)
-    z_mean = np.mean(cosmo.calc_z(freqs))
-    X2Y = cosmo.X2Y(z_mean, cosmo=cosmo)
+    z_mean = np.mean(simple_cosmo.calc_z(freqs))
+    X2Y = simple_cosmo.X2Y(z_mean, cosmo=cosmo)
     # Calculate the effective bandwith for the given window function
     bandwidth = (freqs[-1] - freqs[0])
     bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
