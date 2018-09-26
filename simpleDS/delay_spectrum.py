@@ -183,7 +183,8 @@ def generate_noise(noise_power):
 
 @units.quantity_input(trcvr=units.K)
 def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
-                             squeeze=True, window=windows.blackmanharris):
+                             squeeze=True, window=windows.blackmanharris,
+                             cosmo=None):
     """Calculate delay cross-correlation between the uv_even and uv_odd.
 
     Arguments:
@@ -196,6 +197,9 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
         trcvr: Receiver Temperature of antenna to calculate noise power
         window : Window function used in delay transform.
                  Default is scipy.signal.windows.blackmanharris
+        cosmo : astropy.cosmology object to specify the assumed cosmology
+                for X2Y conversion and cosmological calculations
+                Default is WMAP9 in "little h" units (H0=100 Km/s/Mpc)
 
     Returns:
         delays: Astropy quantity object of delays. Fourier dual to Frequency
@@ -328,7 +332,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
 
     # Convert from visibility Units (Jy) to comological units (mK^2/(h/Mpc)^3)
     z_mean = np.mean(cosmo.calc_z(freqs))
-    X2Y = cosmo.X2Y(z_mean)
+    X2Y = cosmo.X2Y(z_mean, cosmo=cosmo)
     # Calculate the effective bandwith for the given window function
     bandwidth = (freqs[-1] - freqs[0])
     bandwidth *= utils.noise_equivalent_bandwidth(window(len(freqs)))
