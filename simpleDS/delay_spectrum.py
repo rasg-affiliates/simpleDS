@@ -268,11 +268,11 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     even_noise = calculate_noise_power(nsamples=even_samples,
                                        freqs=freqs,
                                        inttime=inttime,
-                                       trcvr=trcvr, npols=npols)
+                                       trcvr=trcvr, npols=1)
     odd_noise = calculate_noise_power(nsamples=odd_samples,
                                       freqs=freqs,
                                       inttime=inttime,
-                                      trcvr=trcvr, npols=npols)
+                                      trcvr=trcvr, npols=1)
     # Conver the noise powers to white noise
     even_noise = generate_noise(even_noise) * uvb.get_beam_area() / np.sqrt(uvb.get_beam_sq_area())
     odd_noise = generate_noise(odd_noise) * uvb.get_beam_area() / np.sqrt(uvb.get_beam_sq_area())
