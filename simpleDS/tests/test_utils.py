@@ -32,7 +32,8 @@ def test_read_no_file():
     nt.assert_raises(TypeError, uvtest.checkWarnings,
                      utils.read_paper_miriad, func_args=[None, None],
                      func_kwargs={'skip_header': 3, 'usecols': [1, 2, 3]},
-                     category=UserWarning, nwarnings=4,
+                     category=UserWarning,
+                     nwarnings=len(warn_message),
                      message=warn_message)
 
 
@@ -51,7 +52,8 @@ def test_load_uv_no_antpos():
                      utils.read_paper_miriad,
                      func_args=[test_file, None],
                      func_kwargs={'skip_header': 3, 'usecols': [1, 2, 3]},
-                     category=UserWarning, nwarnings=4,
+                     category=UserWarning,
+                     nwarnings=len(warn_message),
                      message=warn_message)
 
 
@@ -71,7 +73,8 @@ def test_no_antpos_file():
     nt.assert_raises(IOError, uvtest.checkWarnings,
                      utils.read_paper_miriad,
                      func_args=[test_miriad, dne_file],
-                     category=UserWarning, nwarnings=4,
+                     category=UserWarning,
+                     nwarnings=len(warn_message),
                      message=warn_message)
 
 
@@ -92,7 +95,7 @@ def test_antpos_from_file():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     read_antpos = np.genfromtxt(test_antpos_file, skip_header=3,
@@ -125,11 +128,51 @@ def test_setting_frf_nebw_as_inttime():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
     frf_nebw_array = np.ones_like(test_uv.integration_time)
     frf_nebw_array *= test_uv.extra_keywords['FRF_NEBW']
     nt.assert_true(np.allclose(frf_nebw_array, test_uv.integration_time))
+
+
+def test_paper_test_file_requires_bl_conjugation():
+    """Test the input paper test file has baselines which require conjugation."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    warn_message = ['Antenna positions are not present in the file.',
+                    'Antenna positions are not present in the file.',
+                    'Ntimes does not match the number of unique '
+                    'times in the data',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types']
+    uv1 = UVData()
+    _ = uvtest.checkWarnings(uv1.read_miriad, func_args=[test_miriad],
+                             category=UserWarning,
+                             nwarnings=len(warn_message),
+                             message=warn_message)
+    nt.assert_true(np.logical_not(np.all(uv1.uvw_array[:, 0] > 0)))
+
+
+def test_conjugating_baselines_in_paper_read():
+    """Test that baslines are properly cojugated when read with utils."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+    warn_message = ['Antenna positions are not present in the file.',
+                    'Antenna positions are not present in the file.',
+                    'Ntimes does not match the number of unique '
+                    'times in the data',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types']
+
+    test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
+                                   func_args=[test_miriad, test_antpos_file],
+                                   func_kwargs={'skip_header': 3,
+                                                'usecols': [1, 2, 3]},
+                                   category=UserWarning,
+                                   nwarnings=len(warn_message),
+                                   message=warn_message)
+    nt.assert_true(np.all(test_uv.uvw_array[:, 0] > 0))
 
 
 def test_get_data_array():
@@ -149,7 +192,7 @@ def test_get_data_array():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -185,7 +228,7 @@ def test_get_data_no_squeeze():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -221,7 +264,7 @@ def test_get_nsamples_array():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -257,7 +300,7 @@ def test_get_nsamples_no_squeeze():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -293,7 +336,7 @@ def test_get_flag_array():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -329,7 +372,7 @@ def test_get_flag_array_no_squeeze():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -439,7 +482,7 @@ def test_align_lst_error():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
     test_uv_2 = copy.deepcopy(test_uv)
     test_uv_2.time_array = 2 * test_uv_2.time_array
@@ -465,7 +508,7 @@ def test_align_lst_shapes_equal():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
     test_uv_2 = copy.deepcopy(test_uv)
     ra_range = [0, 12]
@@ -502,7 +545,7 @@ def test_align_lst_shapes_equal_uv_2_longer():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -603,7 +646,7 @@ def test_align_lst_shapes_equal_uv_1_longer():
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=UserWarning,
-                                     nwarnings=4,
+                                     nwarnings=len(warn_message),
                                      message=warn_message)
     ra_range = [0, 12]
 
@@ -638,7 +681,7 @@ def test_get_integration_time_shape():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -664,7 +707,7 @@ def test_get_integration_time_shape_with_pol():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -691,7 +734,7 @@ def test_get_integration_time_vals():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
@@ -719,7 +762,7 @@ def test_get_integration_time_vals_with_pol():
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
                                    category=UserWarning,
-                                   nwarnings=4,
+                                   nwarnings=len(warn_message),
                                    message=warn_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))

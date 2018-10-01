@@ -55,6 +55,17 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     setattr(uv, 'antenna_positions', antpos_itrf)
     uv.set_uvws_from_antenna_positions()
 
+    # PAPER uses Eastward pointing baselines, look for and baselines
+    # facing west, conjugate them and flip the antenna order in the UV
+    # object.
+    conj_bls = np.argwhere(uv.uvw_array.squeeze()[:, 0] < 0)
+
+    uv.data_array[conj_bls] = np.conj(uv.data_array[conj_bls])
+    uv.ant_1_array[conj_bls], uv.ant_2_array[conj_bls] = uv.ant_2_array[conj_bls], uv.ant_1_array[conj_bls]
+    uv.baseline_array = uv.antnums_to_baseline(uv.ant_1_array, uv.ant_2_array)
+    # Rebuild the uvw array
+    uv.set_uvws_from_antenna_positions()
+
     if 'FRF_NEBW' in uv.extra_keywords:
         uv.integration_time = np.ones_like(uv.integration_time)
         uv.integration_time *= uv.extra_keywords['FRF_NEBW']
