@@ -274,17 +274,17 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
                                       inttime=inttime,
                                       trcvr=trcvr, npols=1)
     # Conver the noise powers to white noise
-    even_noise = generate_noise(even_noise) * uvb.get_beam_area() / np.sqrt(uvb.get_beam_sq_area())
-    odd_noise = generate_noise(odd_noise) * uvb.get_beam_area() / np.sqrt(uvb.get_beam_sq_area())
+    even_noise = generate_noise(even_noise) * uvb.get_beam_area(pol=uv_even.polarization_array) / np.sqrt(uvb.get_beam_sq_area(pol=uv_even.polarization_array))
+    odd_noise = generate_noise(odd_noise) * uvb.get_beam_area(pol=uv_odd.polarization_array) / np.sqrt(uvb.get_beam_sq_area(pol=uv_odd.polarization_array))
 
     if unit == units.Jy:
-        even_data *= jy_to_mk(freqs) / np.sqrt(uvb.get_beam_sq_area())
-        odd_data *= jy_to_mk(freqs) / np.sqrt(uvb.get_beam_sq_area())
+        even_data *= jy_to_mk(freqs) / np.sqrt(uvb.get_beam_sq_area(pol=uv_even.polarization_array))
+        odd_data *= jy_to_mk(freqs) / np.sqrt(uvb.get_beam_sq_area(pol=uv_odd.polarization_array))
     elif unit == (units.K * units.sr):
         # multiply by beam_area**2 / beam_square_area to properly normalized
         # the power spectrum
-        even_data *= uvb.get_beam_area() / (np.sqrt(uvb.get_beam_sq_area()) * units.sr)
-        odd_data *= uvb.get_beam_area() / (np.sqrt(uvb.get_beam_sq_area()) * units.sr)
+        even_data *= uvb.get_beam_area(pol=uv_even.polarization_array) / (np.sqrt(uvb.get_beam_sq_area(pol=uv_even.polarization_array)) * units.sr)
+        odd_data *= uvb.get_beam_area(pol=uv_odd.polarization_array) / (np.sqrt(uvb.get_beam_sq_area(pol=uv_odd.polarization_array)) * units.sr)
 
         even_data = even_data.to('mK')
         odd_data = odd_data.to('mK')
@@ -351,7 +351,7 @@ def calculate_delay_spectrum(uv_even, uv_odd, uvb, trcvr, reds,
     thermal_power = thermal_power * X2Y * np.diff(freqs)[0].to('1/s')
     # This normalization of the thermal power comes from
     # Parsons PSA32 paper appendix B
-    beam_factor_array = uvb.get_beam_area()**2 / uvb.get_beam_sq_area()
+    beam_factor_array = uvb.get_beam_area(pol=uv_even.polarization_array)**2 / uvb.get_beam_sq_area(pol=uv_even.polarization_array)
 
     if beam_factor_array.shape[0] % 2 == 0:
         mid_index = beam_factor_array.shape[0] // 2
