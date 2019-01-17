@@ -89,14 +89,17 @@ def test_antpos_from_file():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     read_antpos = np.genfromtxt(test_antpos_file, skip_header=3,
                                 usecols=[1, 2, 3])
@@ -122,14 +125,17 @@ def test_setting_frf_nebw_as_inttime():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
     frf_nebw_array = np.ones_like(test_uv.integration_time)
     frf_nebw_array *= test_uv.extra_keywords['FRF_NEBW']
     nt.assert_true(np.allclose(frf_nebw_array, test_uv.integration_time))
@@ -145,11 +151,16 @@ def test_paper_test_file_requires_bl_conjugation():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
+
     uv1 = UVData()
     _ = uvtest.checkWarnings(uv1.read_miriad, func_args=[test_miriad],
-                             category=UserWarning,
-                             nwarnings=len(warn_message),
-                             message=warn_message)
+                             category=[UserWarning] * len(warn_message)
+                             + [PendingDeprecationWarning],
+                             nwarnings=len(warn_message) + 1,
+                             message=warn_message + pend_dep_message)
     nt.assert_true(np.logical_not(np.all(uv1.uvw_array[:, 0] > 0)))
 
 
@@ -164,14 +175,17 @@ def test_conjugating_baselines_in_paper_read():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
     nt.assert_true(np.all(test_uv.uvw_array[:, 0] > 0))
 
 
@@ -186,14 +200,17 @@ def test_get_data_array():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     data_array = utils.get_data_array(test_uv, reds=baseline_array)
@@ -222,14 +239,17 @@ def test_get_data_no_squeeze():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     data_array = utils.get_data_array(test_uv, reds=baseline_array,
@@ -258,14 +278,17 @@ def test_get_nsamples_array():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array)
@@ -294,14 +317,17 @@ def test_get_nsamples_no_squeeze():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array,
@@ -330,14 +356,17 @@ def test_get_flag_array():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     flag_array = utils.get_flag_array(test_uv, reds=baseline_array)
@@ -366,14 +395,17 @@ def test_get_flag_array_no_squeeze():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     flag_array = utils.get_flag_array(test_uv, reds=baseline_array,
@@ -476,14 +508,17 @@ def test_align_lst_error():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv)
     test_uv_2.time_array = 2 * test_uv_2.time_array
 
@@ -502,14 +537,17 @@ def test_align_lst_shapes_equal():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv)
     ra_range = [0, 12]
 
@@ -540,45 +578,35 @@ def test_align_lst_shapes_equal_uv_2_longer():
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
 
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
                     'Ntimes does not match the number of unique '
                     'times in the data',
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
-                    'or miriad file types',
-                    'Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv_2 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[[test_miriad, test_miriad_2],
-                                                test_antpos_file],
+                                     func_args=[test_miriad_2, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
-                                     category=UserWarning,
-                                     nwarnings=len(warn_message),
-                                     message=warn_message)
+                                     category=[UserWarning] * len(warn_message)
+                                     + [PendingDeprecationWarning],
+                                     nwarnings=len(warn_message) + 1,
+                                     message=warn_message + pend_dep_message)
     ra_range = [0, 12]
 
     warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
@@ -608,6 +636,9 @@ def test_align_lst_shapes_equal_uv_1_longer():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
                     'Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
                     'Ntimes does not match the number of unique '
@@ -615,22 +646,36 @@ def test_align_lst_shapes_equal_uv_1_longer():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
-                    'or miriad file types']
-
+                    'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.']
+    warn_category = [UserWarning, UserWarning, UserWarning, UserWarning,
+                     PendingDeprecationWarning] * 2
+    warn_category += [UserWarning, PendingDeprecationWarning] * 4
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[[test_miriad, test_miriad_2],
                                               test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
+                                   category=warn_category,
                                    nwarnings=len(warn_message),
                                    message=warn_message)
     warn_message = ['Antenna positions are not present in the file.',
@@ -640,14 +685,17 @@ def test_align_lst_shapes_equal_uv_1_longer():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv_2 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
-                                     category=UserWarning,
-                                     nwarnings=len(warn_message),
-                                     message=warn_message)
+                                     category=[UserWarning] * len(warn_message)
+                                     + [PendingDeprecationWarning],
+                                     nwarnings=len(warn_message) + 1,
+                                     message=warn_message + pend_dep_message)
     ra_range = [0, 12]
 
     warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
@@ -675,14 +723,17 @@ def test_get_integration_time_shape():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array)
@@ -701,14 +752,17 @@ def test_get_integration_time_shape_with_pol():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array,
@@ -728,14 +782,17 @@ def test_get_integration_time_vals():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array)
@@ -756,14 +813,17 @@ def test_get_integration_time_vals_with_pol():
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
                     'or miriad file types']
-
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
                                    func_args=[test_miriad, test_antpos_file],
                                    func_kwargs={'skip_header': 3,
                                                 'usecols': [1, 2, 3]},
-                                   category=UserWarning,
-                                   nwarnings=len(warn_message),
-                                   message=warn_message)
+                                   category=[UserWarning] * len(warn_message)
+                                   + [PendingDeprecationWarning],
+                                   nwarnings=len(warn_message) + 1,
+                                   message=warn_message + pend_dep_message)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array,
