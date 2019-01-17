@@ -497,6 +497,14 @@ def test_cross_multiply_quantity():
     nt.assert_equal((1, 3, 3), array_out.shape)
 
 
+def test_cross_multiply_quantity_units():
+    """Test that cross mulitplying quantities have the right units."""
+    array_1 = np.ones((1, 3)) * units.Hz
+    axis = 1
+    array_out = utils.cross_multiply_array(array_1, axis=1)
+    nt.assert_equal(units.Hz**2, array_out.unit)
+
+
 def test_align_lst_error():
     """Test lst_align enforces same sampling rate."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
