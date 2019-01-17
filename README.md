@@ -25,7 +25,7 @@ First install dependencies.
 
 For anaconda users, we suggest using conda to install astropy, numpy and scipy.
 
-### Installing hera_qm
+### Installing simpleDS
 Clone the repo using
 `git clone https://github.com/mkolopanis/simpleDS.git`
 
