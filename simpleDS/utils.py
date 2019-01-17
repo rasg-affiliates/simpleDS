@@ -263,9 +263,11 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
     unit_1, unit_2 = 1., 1.
     if isinstance(array_1, units.Quantity):
         unit_1 = array_1.unit
+        array_1 = array_1.value
 
     if isinstance(array_2, units.Quantity):
         unit_2 = array_2.unit
+        array_2 = array_2.value
 
     if array_2.shape != array_1.shape:
         raise ValueError("array_1 and array_2 must have the same shapes. "
