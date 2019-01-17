@@ -32,7 +32,7 @@ install:
   - conda install numpy scipy nose pip matplotlib coverage astropy six coveralls coverage pycodestyle pip
   - conda install -y 'libgfortran =3.0.0'
   - pip install coveralls
-  - pip install git+https://github.com/HERA-Team/pyuvdata.git
+  - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - conda list
 
 script:
@@ -44,4 +44,3 @@ after_success:
   - coveralls
 notifications:
     webhooks: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
-
