@@ -113,40 +113,10 @@ class UnitParameter(uvp.UVParameter):
                     return False
                 else:
                     return True
-            elif isinstance(self.value, list):
-                if self.value.shape != other.value.shape:
-                    print('{name} parameter value is a list, shapes are '
-                          'different'.format(name=self.name))
-                    return False
-                elif not (any(isinstance(_val, units.Quantity) for _val in self.value) and any(isinstance(_val, units.Quantity) for _val in other.value)):
-                    print("{name} is a list, but one has Quantities "
-                          "and the other does not".format(name=self.name))
-                    return False
-                else:
-                    if not (all(isinstance(_val, units.Quantity) for _val in self.value)
-                            and all(isinstance(_val, units.Quantity) for _val in other.value)):
-                        raise NotImplementedError("Comparison of lists whose "
-                                                  "elements are not all Quantity "
-                                                  "objects is not currently "
-                                                  "supported.")
-                    else:
-                        for (_self_val, _other_val) in zip(self.value, other.value):
-                            if _self_val.unit != _other_val.unit:
-                                print('{name} parameter is a list of Quantities, '
-                                      'but have different units'
-                                      .format(name=self.name))
-                                return False
-                            elif not units.allclose(_self_val, _other_val,
-                                                    rtol=self.tols[0],
-                                                    atol=self.tols[1]):
-                                print("{name} parameter value are lists, values "
-                                      "are not close".format(name=self.name))
-                                return False
-                            else:
-                                return True
+
             else:
                 return super(UnitParameter, self).__eq__(other)
 
-    def __neq__(self, other):
+    def __ne__(self, other):
         """Not Equal."""
         return not self.__eq__(other)

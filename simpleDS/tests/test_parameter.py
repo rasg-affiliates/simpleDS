@@ -101,3 +101,10 @@ def test_value_equality():
     unp2 = unp.UnitParameter(name='unp2', value=np.array([1, 2, 3]) * units.m,
                              tols=(1e-05, 1e-08 * units.m))
     nt.assert_equal(unp1, unp2)
+
+
+def test_calls_to_super_class_are_equal():
+    """Test that calls to the super class equalit function work."""
+    unp1 = unp.UnitParameter(name='unp1', value=3, value_not_quantity=True)
+    unp2 = unp.UnitParameter(name='unp2', value=3, value_not_quantity=True)
+    nt.assert_equal(unp1, unp2)
