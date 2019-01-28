@@ -78,6 +78,13 @@ def test_value_unit_inequality():
     nt.assert_not_equal(unp1, unp2)
 
 
+def test_value_unit_compatibility():
+    """Test parameters with compatible units can be compared as equal."""
+    unp1 = unp.UnitParameter(name='unp1', value=np.array(3) * units.ns)
+    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * 1. / units.GHz)
+    nt.assert_equal(unp1, unp2)
+
+
 def test_not_equal_shapes():
     """Test parameters with different Quantity shapes are not equal."""
     unp1 = unp.UnitParameter(name='unp1', value=np.array([1, 2]) * units.m)

@@ -102,9 +102,9 @@ class UnitParameter(uvp.UVParameter):
                     print('{name} parameter value is array, shapes are '
                           'different'.format(name=self.name))
                     return False
-                elif self.value.unit != other.value.unit:
-                    print('{name} parameter is Quantity, but have different '
-                          'units '.format(name=self.name))
+                elif not self.value.unit.is_equivalent(other.value.unit):
+                    print('{name} parameter is Quantity, but have '
+                          'non-compatible units '.format(name=self.name))
                     return False
                 elif not units.allclose(self.value, other.value,
                                         rtol=self.tols[0], atol=self.tols[1]):
