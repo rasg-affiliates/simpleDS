@@ -7,12 +7,13 @@ from __future__ import print_function, absolute_import, division
 import os
 import sys
 import numpy as np
-from pyuvdata import UVData
+from pyuvdata import UVData, UVBase
 import astropy.units as units
 from astropy.units import Quantity
 from astropy import constants as const
 from scipy.signal import windows
 from . import utils, cosmo as simple_cosmo
+from .parameter import UnitParameter
 
 
 @units.quantity_input(freqs='frequency')
@@ -24,10 +25,10 @@ def jy_to_mk(freqs):
 
 
 def normalized_fourier_transform(data_array, delta_x, axis=-1,
-                                 window=windows.blackmanharris):
+                                 taper=windows.blackmanharris):
     """Perform the Fourier transform over specified axis.
 
-    Perform the FFT over frequency using the specified window function
+    Perform the FFT over frequency using the specified taper function
     and normalizes by delta_x (the discrete of sampling rate along the axis).
 
     Arguments:
@@ -36,7 +37,7 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
         delta_x: The difference between frequency channels in the data.
                  This is used to properly normalize the Fourier Transform.
                  Must be an astropy Quantity object
-        window : Window function used in delay transform.
+        taper : Window function used in delay transform.
                  Default is scipy.signal.windows.blackmanharris
     Returns:
         delay_arry: (Nbls, Ntimes, Nfreqs) array of the Fourier transform along
@@ -54,7 +55,7 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
                          'value was : {df}'.format(df=delta_x))
 
     n_axis = data_array.shape[axis]
-    win = window(n_axis).reshape(1, n_axis)
+    win = taper(n_axis).reshape(1, n_axis)
 
     # Fourier Transforms should have a delta_x term multiplied
     # This is the proper normalization of the FT but is not
@@ -176,70 +177,232 @@ def generate_noise(noise_power):
     return noise
 
 
-class DelaySpectrum(object):
+class DelaySpectrum(UVBase):
     """A Delay Spectrum object to hold relevant data."""
 
-    @units.quantity_input(trcvr=units.K)
-    def __init__(self, uv1=None, uv2=None, uvb=None, trcvr=None, bls=None,
-                 squeeze=True, window=None):
+    # @units.quantity_input(trcvr=units.K)
+    def __init__(self, uv1=None, uv2=None, uvb=None, taper=None):
         """Initialize the Delay Spectrum Object.
+
+        If only one UVData Object is specified, data is multiplied by itself.
 
         Arguments
             uv1: One of the pyuvdata objects to cross correlate.
-                 Optional can be added later
+                 Optional, can be added later
+                 If given assumes all baselines in UVData object will be
+                 cross multiplied togeter.
             uv2: Other pyuvdata object to multiply with uv1.
-                 Optional can be added later
+                 Optional, can be added later
+                 Assunmes baselines are identical to uv1.
             uvb: UVBeam object with relevent beam info.
                  Currently assumes 1 beam object can describe all baselines
                  Must be power beam in healpix coordinates and peak normalized
                  Optional can be added later.
-            reds: set of redundant baselines to calculate delay power spectrum.
-                  Optional can be added later.
             trcvr: Receiver Temperature of antenna to calculate noise power
                    Must be an astropy Quantity object with units of temperature.
                    Optional can be added later.
+            taper: Spectral taper function used during frequency Fourier Transforms
+                    Accepts scipy.signal.windows functions or any function
+                    whose argument is the len(data) and returns a numpy array.
+                    Default: scipy.signal.windows.blackmanharris
+                    Optional
         """
-        self.freq_array = None
-        self.delays = None
-        self.redshift = None
-        self.baselines = None
-        self.Nbls = None
-        self.k_perpendicular = None
-        self.k_parallel = None
-        self.power = None
+        # standard angle tolerance: 10 mas in radians.
+        # Should perhaps be decreased to 1 mas in the future
+        radian_tol = 10 * 2 * np.pi * 1e-3 / (60.0 * 60.0 * 360.0)
+        self._Ntimes = UnitParameter('Ntimes', description='Number of times',
+                                     value_not_quantity=True, expected_type=int)
+        self._Nbls = UnitParameter('Nbls', description='Number of baselines',
+                                   value_not_quantity=True, expected_type=int)
+        # self._Nblts = UnitParameter('Nblts', description='Number of baseline-times '
+        #                            '(i.e. number of spectra). Not necessarily '
+        #                            'equal to Nbls * Ntimes', expected_type=int)
+        self._Nfreqs = UnitParameter('Nfreqs', description='Number of frequency channels',
+                                     value_not_quantity=True, expected_type=int)
+        self._Npols = UnitParameter('Npols', description='Number of polarizations',
+                                    value_not_quantity=True, expected_type=int)
+        self._Ndelays = UnitParameter('Ndelays', description='Number of delay channels.'
+                                      'Must be equal to (Nfreqs) with FFT usage. '
+                                      'However may differ if a more intricate '
+                                      'Fourier Transform is used.',
+                                      value_not_quantity=True, expected_type=int)
+
+        desc = ('Array of the visibility data, shape: (2, Nbls, Ntimes, Nfreqs,'
+                ' Npols), type = complex float, in units of self.vis_units')
+        self._data_array = UnitParameter('data_array', description=desc,
+                                         form=(2, 'Nbls', 'Ntimes',
+                                               'Nfreqs', 'Npols'),
+                                         expected_type=np.complex)
+
+        desc = 'Visibility units, options are: "uncalib", "Jy" or "K str"'
+        self._vis_units = UnitParameter('vis_units', description=desc,
+                                        value_not_quantity=True,
+                                        form='str', expected_type=str,
+                                        acceptable_vals=["uncalib", "Jy", "K str"])
+
+        desc = ('Number of data points averaged into each data elementself. '
+                'Uses the same convention as a UVData object:'
+                'NOT required to be an integer, type = float, same shape as data_array.'
+                'The product of the integration_time and the nsample_array '
+                'value for a visibility reflects the total amount of time '
+                'that went into the visibility.')
+        self._nsample_array = UnitParameter('nsample_array', description=desc,
+                                            value_not_quantity=True,
+                                            form=(2, 'Nbls', 'Ntimes',
+                                                  'Nfreqs', 'Npols'),
+                                            expected_type=(np.float))
+
+        desc = 'Boolean flag, True is flagged, same shape as data_array.'
+        self._flag_array = UnitParameter('flag_array', description=desc,
+                                         value_not_quantity=True,
+                                         form=('Nbls', 'Ntimes',
+                                               'Nfreqs', 'Npols'))
+
+        desc = ('Array of lsts, center of integration, shape (Ntimes), '
+                'UVData objects must be LST aligned before adding data '
+                'to the DelaySpectrum object.'
+                'units radians')
+        self._lst_array = UnitParameter('lst_array', description=desc,
+                                        form=('Ntimes',),
+                                        expected_type=np.float,
+                                        tols=radian_tol)
+
+        desc = ('Array of first antenna indices, shape (Nbls), '
+                'type = int, 0 indexed')
+        self._ant_1_array = UnitParameter('ant_1_array', description=desc,
+                                          value_not_quantity=True,
+                                          expected_type=int, form=('Nbls',))
+        desc = ('Array of second antenna indices, shape (Nbls), '
+                'type = int, 0 indexed')
+        self._ant_2_array = UnitParameter('ant_2_array', description=desc,
+                                          value_not_quantity=True,
+                                          expected_type=int, form=('Nbls',))
+
+        desc = ('Array of baseline indices, shape (Nbls), '
+                'type = int; baseline = 2048 * (ant1+1) + (ant2+1) + 2^16')
+        self._baseline_array = UnitParameter('baseline_array',
+                                             description=desc,
+                                             value_not_quantity=True,
+                                             expected_type=int, form=('Nbls',))
+
+        desc = 'Array of frequencies, shape (Nfreqs), units Hz'
+        self._freq_array = UnitParameter('freq_array', description=desc,
+                                         form=('Nfreqs'),
+                                         expected_type=np.float,
+                                         tols=1e-3)
+
+        dest = 'Array of delay, shape (Ndelays), units ns'
+        self._delay_array = UnitParameter('delay_array', description=desc,
+                                          form=('Ndelays'),
+                                          expected_type=np.float,
+                                          tols=self._freq_array.tols)
+
+        desc = ('Array of polarization integers, shape (Npols). '
+                'Uses same convention as pyuvdata: '
+                'pseudo-stokes 1:4 (pI, pQ, pU, pV);  '
+                'circular -1:-4 (RR, LL, RL, LR); linear -5:-8 (XX, YY, XY, YX).')
+        self._polarization_array = UnitParameter('polarization_array',
+                                                 description=desc,
+                                                 value_not_quantity=True,
+                                                 expected_type=int,
+                                                 acceptable_vals=list(np.arange(-8, 0)) + list(np.arange(1, 5)),
+                                                 form=('Npols',))
+        desc = ('Nominal (u,v,w) vector of baselines in units of meters')
+        self._uvw = UnitParameter('uvw', description=desc,
+                                  expected_type=np.float,
+                                  form=(3))
+
+        desc = ('System receiver temperature used in noise simulation. '
+                'Stored as array of length (Nfreqs), but may be passed as a '
+                'single scalar. Must be a Quantity with units compatible to K.')
+        self._trcvr = UnitParameter('trcvr', description=desc,
+                                    expected_type=np.float, form=('Nfreqs'))
+
+        desc = ('Mean redshift of given frequencies. Calculated with assumed '
+                'cosmology.')
+        self._redshift = UnitParameter('redshift', description=desc,
+                                       expected_type=np.float, form=(1))
+
+        desc = ('Cosmological wavenumber of spatial modes probed perpendicular '
+                ' to the line of sight.')
+        self._k_perpendicular = UnitParameter('k_perpendicular',
+                                              description=desc,
+                                              expected_type=np.float, form=(1))
+
+        desc = ('Cosmological wavenumber of spatial modes probed along the line of sight. '
+                'This value is awlays calculated, however it is not a realistic '
+                'probe of k_perpendicular over large bandwidths. This code '
+                'assumes k_tau >> k_perpendicular and as a results '
+                'k_tau  is interpreted as k_parallel.')
+        self._k_parallel = UnitParameter('k_parallel', description=desc,
+                                         expected_type=np.float, form=(1))
+
+        desc = ('The cross-multiplied power spectrum estimates. '
+                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
+        self._power_array = UnitParameter('power_array', description=desc,
+                                          expected_type=np.complex,
+                                          form=('Nbls', 'Nbls', 'Ntimes',
+                                                'Ndelays', 'Npols'))
+
+        desc = ('Array of delay transformed visibility data used in power '
+                'spectrum estimation. shape: (2, Nbls, Ntimes, Ndelays, '
+                'Npols), type = complex float, in units of self.vis_units * Hz')
+        self._delay_data_array = UnitParameter('delay_data_array',
+                                               description=desc,
+                                               expected_type=np.complex,
+                                               form=(2, 'Nbls', 'Ntimes',
+                                                     'Ndelays', 'Npols'))
+
+        desc = ('The integral of the power beam area. Shape = (Nfreqs, Npols)')
+        self._beam_area = UnitParameter('beam_area', description=desc,
+                                        form=('Nfreqs', 'Npols'),
+                                        expected_type=np.float)
+        desc = ('The integral of the squared power beam squared area. '
+                'Shape = (Nfreqs, Npols)')
+        self._beam_sq_area = UnitParameter('beam_sq_area', description=desc,
+                                           form=('Nfreqs', 'Npols'),
+                                           expected_type=np.float)
         self.noise = None
         self.thermal_expectation = None
-        self.data_array = None
-        self.nsample_array = None
-        self.flag_array = None
-        self.beam_sq_area = None
-        self.beam_area = None
-        self.squeeze = squeeze
-        self.trcvr = trcvr
-        self.polarizatoin_array
+
+        desc = ('Spectral taper function used during Fourier Transform')
+        if taper is not None:
+            if not isinstance(taper, function):
+                raise ValueError("Input spectral taper must be a function."
+                                 "function args are the length of the band "
+                                 "over which Fourier Transform is taken.")
+            else:
+                self._taper = UnitParameter('taper', description=desc,
+                                            form=(1),
+                                            value=taper,
+                                            value_not_quantity=True)
+        else:
+            self._taper = UnitParameter('taper', description=desc,
+                                        form=(1),
+                                        value=windows.blackmanharris,
+                                        value_not_quantity=True)
 
         if isinstance(uv1, UVData):
-            self.add_uv_object(uv1)
+            self.add_uvdata_object(uv1)
         if isinstance(uv2, UVData):
-            self.add_uv_object(uv2)
+            self.add_uvdata_object(uv2)
 
         # Sometimes antenna pairs can be cast into weird types
         # If it is an array of anteanna pairs, convert to baseline numbers
-        if bls is not None:
-            if isinstance(bls[0], (tuple, np.ndaray, list)):
-                bls = list(map(uv1.antnums_to_baseline, reds))
-            self.baselines = bls
-            self.Nbls = len(self.baslines)
+        # if bls is not None:
+        #     if isinstance(bls[0], (tuple, np.ndaray, list)):
+        #         bls = list(map(uv1.antnums_to_baseline, reds))
+        #     self.baselines = bls
+        #     self.Nbls = len(self.baslines)
         # Check if vibiliities are psuedo-Stokes parameters
         # This will affect the noise estimate
 
-        if isinstance(uvb, UVBeam):
-            self.add_uv_beam(uvb)
+        # if isinstance(uvb, UVBeam):
+            # self.add_uv_beam(uvb)
 
-        if window is None:
-            self.window = windows.blackmanharris
+        super(DelaySpectrum, self).__init__()
 
-    def add_uv_object(self, uv):
+    def add_uvdata_object(self, uv):
         """Add the uvdata object to internally help datasets.
 
         Unloads the data, flags, and nsamples arrays from the input UVData
@@ -366,14 +529,14 @@ class DelaySpectrum(object):
                  Currently assumes 1 beam object can describe all baselines
                  Must be a power beam in healpix coordinates and peak normalized
         """
-        self.beam_area = uvb.get_beam_area()
-        self.beam_sq_area = uvb.get_beam_sq_area()
+        self.beam_area = uvb.get_beam_area(pol=self.polarization_array)
+        self.beam_sq_area = uvb.get_beam_sq_area(pol=self.polarization_array)
 
-    def calculate_delay_spectrum(self, window=None):
+    def calculate_delay_spectrum(self, taper=None):
         """Perform Delay tranform and cross multiplication of datas.
 
         Arguments:
-            window: The window function to multiply onto the data.
+            taper: The spectral taper function to multiply onto the data.
                     Accepts scipy.signal.windows functions or any function
                     whose argument is the len(data) and returns a numpy array.
                     Default: scipy.signal.windows.blackmanharris
@@ -383,8 +546,8 @@ class DelaySpectrum(object):
         Also generates white noie given the frequency range and trcvr and
         calculates the expected noise power.
         """
-        if window is None:
-            window = self.window
+        if taper is None:
+            taper = self.taper
 
         delta_f = np.diff(self.freq_array)[0]
 
@@ -394,14 +557,14 @@ class DelaySpectrum(object):
                                             trcvr=self.trcvr,
                                             npols=self.npols)
 
-        NEBW = utils.noise_equivalent_bandwidth(window(len(self.freqs)))
+        NEBW = utils.noise_equivalent_bandwidth(taper(len(self.freqs)))
         self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
         unit_conversion = self.X2Y / self.bandwith.to('1/s') / self.beam_sq_area
 
         delay_array = normalized_fourier_transform((self.data_array
                                                     * self.flag_array),
                                                    delta_x=delta_f,
-                                                   window=window, axis=-1)
+                                                   taper=taper, axis=-1)
 
         delay_power = utils.cross_multipy_array(array_1=delay_array[0],
                                                 array_2=delay_array[1],
@@ -412,7 +575,7 @@ class DelaySpectrum(object):
         noise_delay = normalized_fourier_transform((self.noise_array
                                                     * self.flag_array),
                                                    delta_x=delta_f,
-                                                   window=window, axis=-1)
+                                                   taper=taper, axis=-1)
 
         noise_power = utils.cross_multipy_array(array_1=noise_delay[0],
                                                 array_2=noise_delay[1],
