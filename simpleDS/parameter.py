@@ -32,6 +32,7 @@ class UnitParameter(uvp.UVParameter):
                                 is not an astropy Quantity object, but a
                                 UnitParameter is desired over a UVParameter.
         """
+        self.value_not_quantity = value_not_quantity
         if isinstance(value, list) and isinstance(value[0], units.Quantity):
             try:
                 value = units.Quantity(value)
@@ -117,6 +118,66 @@ class UnitParameter(uvp.UVParameter):
             else:
                 return super(UnitParameter, self).__eq__(other)
 
+        elif issubclass(self.__class__, other.__class__):
+            # If trying to compare a UnitParameter to a UVParameter
+            # value of the quantity must match the UVParameter
+            return self.to_uvp().__eq__(other)
+        else:
+            print('{name} parameter value classes are different and one '
+                  'is not a subclass of the other. Left is '
+                  '{lclass}, right is {rclass}'.format(name=self.name,
+                                                       lclass=self.__class__,
+                                                       rclass=other.__class__))
+            return False
+
     def __ne__(self, other):
         """Not Equal."""
         return not self.__eq__(other)
+
+    def to_uvp(self):
+        """Cast self as a UVParameter."""
+        if self.value_not_quantity:
+            if self.required:
+                return uvp.UVParameter(name=self.name, required=self.required,
+                                       value=self.value, form=self.form,
+                                       description=self.description,
+                                       expected_type=self.expected_type,
+                                       acceptable_vals=self.acceptable_vals,
+                                       acceptable_range=self.acceptable_range,
+                                       tols=(self.tols[0], self.tols[1]))
+            else:
+                return uvp.UVParameter(name=self.name, required=self.required,
+                                       value=self.value, spoof_val=self.spoof_val,
+                                       form=self.form, description=self.description,
+                                       expected_type=self.expected_type,
+                                       acceptable_vals=self.acceptable_vals,
+                                       acceptable_range=self.acceptable_range,
+                                       tols=(self.tols[0], self.tols[1]))
+        else:
+            # what sould happen here? Warn the user we are comparing a qunatity
+            # back to a UVP? might lose units or something. Should it be cast to si?
+            # That could mess up things that are intentionally not stored in si.
+            warnings.warn('A UnitParameter with quantity value is being cast to '
+                          'UVParameter. All quantity information will be lost. '
+                          'If this is a comparison that fails, you may need '
+                          'to alter the unit of the value to match expected '
+                          'UVParameter units.', UserWarning)
+            if self.required:
+                return uvp.UVParameter(name=self.name, required=self.required,
+                                       value=self.value.astype(self.expected_type).value,
+                                       form=self.form,
+                                       description=self.description,
+                                       expected_type=self.expected_type,
+                                       acceptable_vals=self.acceptable_vals,
+                                       acceptable_range=self.acceptable_range,
+                                       tols=(self.tols[0], self.tols[1].value))
+
+            else:
+                return uvp.UVParameter(name=self.name, required=self.required,
+                                       value=self.value.astype(self.expected_type).value,
+                                       spoof_val=self.spoof_val,
+                                       form=self.form, description=self.description,
+                                       expected_type=self.expected_type,
+                                       acceptable_vals=self.acceptable_vals,
+                                       acceptable_range=self.acceptable_range,
+                                       tols=(self.tols[0], self.tols[1].value))
