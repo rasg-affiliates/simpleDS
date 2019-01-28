@@ -6,7 +6,8 @@
 
 from __future__ import print_function, absolute_import
 
-from . import version
-from .utils import *
+from . import version  # noqa
+from .utils import *  # noqa
+from .delay_spectrum import *  # noqa
 
 __version__ = version.version
