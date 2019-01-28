@@ -72,7 +72,7 @@ class UnitParameter(uvp.UVParameter):
 
             self.tols = (tols[0], tols[1] * tol_unit)
         else:
-            if value_not_quantity:
+            if value_not_quantity or value is None:
                 super(UnitParameter, self).__init__(name=name, required=required,
                                                     value=value,
                                                     spoof_val=spoof_val, form=form,
