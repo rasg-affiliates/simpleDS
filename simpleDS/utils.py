@@ -12,6 +12,7 @@ import numpy as np
 from astropy import constants as const
 from astropy import units
 from pyuvdata import UVData, utils as uvutils
+from scipy.signal import windows
 
 
 def read_paper_miriad(filename, antpos_file=None, **kwargs):
@@ -315,6 +316,60 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
     new_times_2 = times_2[inds_2]
     return (uv1.select(times=new_times_1, inplace=inplace),
             uv2.select(times=new_times_2, inplace=inplace))
+
+
+@units.quantity_input(freqs='frequency')
+def jy_to_mk(freqs):
+    """Calculate the Jy/sr to mK conversion lambda^2/(2 * K_boltzman)."""
+    jy2t = const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
+                                   * const.k_B)
+    return jy2t.to('mK/Jy')
+
+
+def normalized_fourier_transform(data_array, delta_x, axis=-1,
+                                 taper=windows.blackmanharris, inverse=False):
+    """Perform the Fourier transform over specified axis.
+
+    Perform the FFT over frequency using the specified taper function
+    and normalizes by delta_x (the discrete of sampling rate along the axis).
+
+    Arguments:
+        data_array : (N-dimenaional) array of data to Fourier Transform
+        delta_x: The difference between frequency channels in the data.
+                 This is used to properly normalize the Fourier Transform.
+                 Must be an astropy Quantity object
+        taper : Window function used in delay transform.
+                 Default is scipy.signal.windows.blackmanharris
+        inverse: (bool; Default False) Perform the inverse Fourier Transform
+    Returns:
+        fourier_arry: (N-Dimenaional) array of the Fourier transform along
+                       specified axis, and normalized by the provided delta_x
+    """
+    if isinstance(data_array, units.Quantity):
+        unit = data_array.unit
+    else:
+        unit = 1.
+
+    if not isinstance(delta_x, units.Quantity):
+        raise ValueError('delta_x must be an astropy Quantity object. '
+                         'value was : {df}'.format(df=delta_x))
+
+    n_axis = data_array.shape[axis]
+    win = taper(n_axis).reshape(1, n_axis)
+
+    # Fourier Transforms should have a delta_x term multiplied
+    # This is the proper normalization of the FT but is not
+    # accounted for in an fft.
+    if not inverse:
+        fourier_array = np.fft.fft(data_array * win, axis=axis)
+        fourier_array = np.fft.fftshift(fourier_array, axes=axis)
+        fourier_array = fourier_array * delta_x.si * unit
+    else:
+        fourier_array = np.fft.ifft(data_array * win, axis=axis)
+        fourier_array = np.fft.ifftshift(fourier_array, axes=axis)
+        fourier_array = fourier_array * delta_x.si * unit
+
+    return fourier_array
 
 
 @units.quantity_input(delays='time', array=['mK^2*Mpc^3', 'time'])

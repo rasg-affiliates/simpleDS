@@ -1,7 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Matthew Kolopanis
 # Licensed under the 3-clause BSD License
-"""Test PAPER miriad io."""
+"""Test utils."""
 from __future__ import print_function
 
 import os
@@ -597,24 +597,65 @@ def test_align_lst_shapes_equal_uv_2_longer():
                                    + [PendingDeprecationWarning],
                                    nwarnings=len(warn_message) + 1,
                                    message=warn_message + pend_dep_message)
+    # warn_message = ['Antenna positions are not present in the file.',
+    #                 'Antenna positions are not present in the file.',
+    #                 'Ntimes does not match the number of unique '
+    #                 'times in the data',
+    #                 'Xantpos in extra_keywords is a list, array or dict, '
+    #                 'which will raise an error when writing uvfits '
+    #                 'or miriad file types']
+    # pend_dep_message = ['antenna_positions are not defined. '
+    #                     'antenna_positions will be a required parameter in '
+    #                     'future versions.']
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
                     'Ntimes does not match the number of unique '
                     'times in the data',
                     'Xantpos in extra_keywords is a list, array or dict, '
                     'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
+                    'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
+                    'Antenna positions are not present in the file.',
+                    'Antenna positions are not present in the file.',
+                    'Ntimes does not match the number of unique '
+                    'times in the data',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types',
+                    'antenna_positions are not defined. '
+                    'antenna_positions will be a required parameter in '
+                    'future versions.']
+    warn_category = [UserWarning, UserWarning, UserWarning, UserWarning,
+                     PendingDeprecationWarning] * 2
+    warn_category += [UserWarning, PendingDeprecationWarning] * 4
     test_uv_2 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad_2, test_antpos_file],
+                                     func_args=[[test_miriad, test_miriad_2],
+                                                test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
+                                     category=warn_category,
+                                     nwarnings=len(warn_message),
+                                     message=warn_message)
     ra_range = [0, 12]
 
     warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
@@ -840,6 +881,108 @@ def test_get_integration_time_vals_with_pol():
     test_array = test_uv.integration_time.copy()
     test_array = test_array.reshape(test_shape)
     nt.assert_true(np.allclose(test_array, inttime_array))
+
+
+def test_jy_to_mk_value():
+    """Test the Jy to mK conversion factor."""
+    test_fq = np.array([.1]) * units.GHz
+    jy_to_mk = utils.jy_to_mk(test_fq)
+    test_conversion = const.c**2 / (2 * test_fq.to('1/s')**2 * const.k_B)
+    test_conversion = test_conversion.to('mK/Jy')
+    nt.assert_true(np.allclose(test_conversion.value, jy_to_mk.value))
+
+
+def test_jy_to_mk_units():
+    """Test the Jy to mK conversion factor."""
+    test_fq = np.array([.1]) * units.GHz
+    jy_to_mk = utils.jy_to_mk(test_fq)
+    test_conversion = const.c**2 / (2 * test_fq.to('1/s')**2 * const.k_B)
+    test_conversion = test_conversion.to('mK/Jy')
+    nt.assert_equal(test_conversion.unit.to_string(),
+                    jy_to_mk.unit.to_string())
+
+
+def test_jy_to_mk_freq_unitless():
+    """Test the Jy to mK conversion factor."""
+    test_fq = np.array([.1])
+    nt.assert_raises(TypeError, utils.jy_to_mk, test_fq)
+
+
+def test_jy_to_mk_freq_wrong_units():
+    """Test the Jy to mK conversion factor."""
+    test_fq = np.array([.1]) * units.m
+    nt.assert_raises(units.UnitsError, utils.jy_to_mk, test_fq)
+
+
+def test_normalized_fourier_transform():
+    """Test the delay transform and cross-multiplication function."""
+    fake_data = np.zeros((1, 13, 21))
+    fake_data[0, 7, 11] += 1
+    fake_corr = utils.normalized_fourier_transform(fake_data,
+                                                   1 * units.dimensionless_unscaled,
+                                                   taper=windows.boxcar,
+                                                   axis=2)
+    test_corr = np.fft.fft(fake_data, axis=-1)
+    test_corr = np.fft.fftshift(test_corr, axes=-1)
+    fake_corr = fake_corr.value
+    nt.assert_true(np.allclose(test_corr, fake_corr))
+
+
+def test_ft_with_pols():
+    """Test fourier transform is correct shape when pols are present."""
+    fake_data = np.zeros((3, 2, 13, 31))
+    fake_data[:, 0, 7, 11] += 1.
+    fake_corr = utils.normalized_fourier_transform(fake_data,
+                                                   1 * units.dimensionless_unscaled,
+                                                   taper=windows.boxcar,
+                                                   axis=3)
+    nt.assert_equal((3, 2, 13, 31), fake_corr.shape)
+
+
+def test_delay_vals_with_pols():
+    """Test values in normalized_fourier_transform when pols present."""
+    fake_data = np.zeros((3, 2, 13, 31))
+    fake_data[:, 0, 7, 11] += 1.
+    fake_corr = utils.normalized_fourier_transform(fake_data,
+                                                   1 * units.dimensionless_unscaled,
+                                                   taper=windows.boxcar,
+                                                   axis=3)
+    test_corr = np.fft.fft(fake_data, axis=-1)
+    test_corr = np.fft.fftshift(test_corr, axes=-1)
+    fake_corr = fake_corr.value
+    nt.assert_true(np.allclose(test_corr, fake_corr))
+
+
+def test_units_normalized_fourier_transform():
+    """Test units are returned from normalized_fourier_transform."""
+    fake_data = np.zeros((1, 13, 21)) * units.m
+    fake_data[0, 7, 11] += 1 * units.m
+    fake_corr = utils.normalized_fourier_transform(fake_data,
+                                                   1 * units.Hz,
+                                                   taper=windows.boxcar,
+                                                   axis=2)
+    test_units = units.m * units.Hz
+    nt.assert_equal(test_units, fake_corr.unit)
+
+
+def test_units_normalized_inverse_fourier_transform():
+    """Test units are returned from normalized_fourier_transform."""
+    fake_data = np.zeros((1, 13, 21)) * units.Jy * units.Hz
+    fake_data[0, 7, 11] += 1 * units.Jy * units.Hz
+    fake_corr = utils.normalized_fourier_transform(fake_data,
+                                                   1 * units.s,
+                                                   taper=windows.boxcar,
+                                                   axis=2, inverse=True)
+    test_units = units.Jy
+    nt.assert_equal(test_units, fake_corr.unit)
+
+
+def test_delta_x_unitless():
+    """Test delta_x is unitless raises exception."""
+    fake_data = np.zeros((1, 13, 21)) * units.m
+    fake_data[0, 7, 11] += 1 * units.m
+    nt.assert_raises(ValueError, utils.normalized_fourier_transform, fake_data,
+                     delta_x=2., axis=2)
 
 
 def test_fold_along_delay_mismatched_sizes():
