@@ -484,6 +484,24 @@ def test_delay_spectrum_power_shape():
     nt.assert_equal(power_shape, dspec_object.power_array.shape)
 
 
+def test_delay_spectrum_power_shape_two_uvdata_objects_read():
+    """Test the shape of the output power are correct."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd] * 2)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum()
+    power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
+                   dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
+    nt.assert_equal(power_shape, dspec_object.power_array.shape)
+
+
+
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units_input_kelvin_str():
     """Test the units on the output power are correct when input kelvin*str."""
