@@ -13,40 +13,50 @@ import unittest
 from simpleDS import DelaySpectrum, delay_spectrum as dspec
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
-from pyuvdata import UVBeam
+from pyuvdata.data import DATA_PATH as UVDATA_PATH
+from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 from astropy import constants as const
 from astropy import units
 from scipy.signal import windows
 
 
+class TestClass(object):
+    """A Dummy object for comparison."""
+
+    def __init__(self):
+        """Do Nothing."""
+        pass
+
+
 class TestDealySpectrumInit(object):
-    """A Test class to check DelaySpectrum objects are initialized."""
+    """A test class to check DelaySpectrum objects."""
 
     def setUp(self):
         """Setup for basic parameter, property and iterator tests."""
         self.required_parameters = ['_Ntimes', '_Nbls', '_Nfreqs',
-                                    '_Npols', '_Ndelays', '_data_array',
-                                    '_vis_units', '_nsample_array',
+                                    '_Npols', '_vis_units', '_Ndelays',
+                                    '_freq_array', '_delay_array',
+                                    '_data_array', '_nsample_array',
                                     '_flag_array', '_lst_array', '_ant_1_array',
                                     '_ant_2_array', '_baseline_array',
-                                    '_freq_array', '_delay_array',
                                     '_polarization_array', '_uvw', '_trcvr',
                                     '_redshift', '_k_perpendicular',
-                                    '_k_parallel', '_power_array',
-                                    '_delay_data_array', '_beam_area',
+                                    '_k_parallel', '_beam_area',
                                     '_beam_sq_area', '_taper']
 
         self.required_properties = ['Ntimes', 'Nbls', 'Nfreqs', 'Npols',
-                                    'Ndelays', 'data_array', 'nsample_array',
-                                    'vis_units', 'flag_array', 'lst_array',
+                                    'vis_units', 'Ndelays',
+                                    'freq_array', 'delay_array',
+                                    'data_array', 'nsample_array',
+                                    'flag_array', 'lst_array',
                                     'ant_1_array', 'ant_2_array',
-                                    'baseline_array', 'freq_array',
-                                    'delay_array', 'polarization_array', 'uvw',
+                                    'baseline_array', 'polarization_array', 'uvw',
                                     'trcvr', 'redshift', 'k_perpendicular',
-                                    'k_parallel', 'power_array',
-                                    'delay_data_array', 'beam_area',
+                                    'k_parallel', 'beam_area',
                                     'beam_sq_area', 'taper']
+        self.extra_parameters = ['_power_array']
+        self.extra_properties = ['power_array']
         self.dspec_object = DelaySpectrum()
 
     def teardown(self):
@@ -62,95 +72,373 @@ class TestDealySpectrumInit(object):
             nt.assert_true(a in required, msg='expected attribute ' + a
                            + ' not returned in required iterator')
 
-
-def test_jy_to_mk_value():
-    """Test the Jy to mK conversion factor."""
-    test_fq = np.array([.1]) * units.GHz
-    jy_to_mk = dspec.jy_to_mk(test_fq)
-    test_conversion = const.c**2 / (2 * test_fq.to('1/s')**2 * const.k_B)
-    test_conversion = test_conversion.to('mK/Jy')
-    nt.assert_true(np.allclose(test_conversion.value, jy_to_mk.value))
-
-
-def test_jy_to_mk_units():
-    """Test the Jy to mK conversion factor."""
-    test_fq = np.array([.1]) * units.GHz
-    jy_to_mk = dspec.jy_to_mk(test_fq)
-    test_conversion = const.c**2 / (2 * test_fq.to('1/s')**2 * const.k_B)
-    test_conversion = test_conversion.to('mK/Jy')
-    nt.assert_equal(test_conversion.unit.to_string(),
-                    jy_to_mk.unit.to_string())
+    def test_properties(self):
+        """Test that properties can be get and set properly."""
+        prop_dict = dict(list(zip(self.required_properties,
+                                  self.required_parameters)))
+        for k, v in prop_dict.items():
+            rand_num = np.random.rand()
+            setattr(self.dspec_object, k, rand_num)
+            this_param = getattr(self.dspec_object, v)
+            try:
+                nt.assert_equal(rand_num, this_param.value)
+            except(AssertionError):
+                print('setting {prop_name} to a random number failed'.format(prop_name=k))
+                raise(AssertionError)
 
 
-def test_jy_to_mk_freq_unitless():
-    """Test the Jy to mK conversion factor."""
-    test_fq = np.array([.1])
-    nt.assert_raises(TypeError, dspec.jy_to_mk, test_fq)
+def test_errors_when_taper_not_function():
+    """Test that init errors if taper not a function."""
+    nt.assert_raises(ValueError, DelaySpectrum, taper='test')
 
 
-def test_jy_to_mk_freq_wrong_units():
-    """Test the Jy to mK conversion factor."""
-    test_fq = np.array([.1]) * units.m
-    nt.assert_raises(units.UnitsError, dspec.jy_to_mk, test_fq)
+def test_error_for_multiple_baselines():
+    """Test an error is raised if there are more than one unique baseline in input UVData."""
+    # testfile = os.path.join(UVDATA_PATH, 'hera19_8hrs_uncomp_10MHz_000_05.003111-05.033750.uvfits')
+    uvd = UVData()
+    uvd.baseline_array = np.array([1, 2])
+    uvd.uvw_array = np.array([[0, 1, 0], [1, 0, 0]])
+    # uvd.read(testfile)
+    # uvd.unphase_to_drift(use_ant_pos=True)
+    nt.assert_raises(ValueError, DelaySpectrum, uv=uvd)
 
 
-def test_normalized_fourier_transform():
-    """Test the delay transform and cross-multiplication function."""
-    fake_data = np.zeros((1, 13, 21))
-    fake_data[0, 7, 11] += 1
-    fake_corr = dspec.normalized_fourier_transform(fake_data,
-                                                   1 * units.dimensionless_unscaled,
-                                                   taper=windows.boxcar,
-                                                   axis=2)
-    test_corr = np.fft.fft(fake_data, axis=-1)
-    test_corr = np.fft.fftshift(test_corr, axes=-1)
-    fake_corr = fake_corr.value
-    nt.assert_true(np.allclose(test_corr, fake_corr))
+def test_error_if_uv_not_uvdata():
+    """Test error is raised when input uv is not a UVData object."""
+    bad_input = TestClass()
+    nt.assert_raises(ValueError, DelaySpectrum, uv=bad_input)
 
 
-def test_ft_with_pols():
-    """Test fourier transform is correct shape when pols are present."""
-    fake_data = np.zeros((3, 2, 13, 31))
-    fake_data[:, 0, 7, 11] += 1.
-    fake_corr = dspec.normalized_fourier_transform(fake_data,
-                                                   1 * units.dimensionless_unscaled,
-                                                   taper=windows.boxcar,
-                                                   axis=3)
-    nt.assert_equal((3, 2, 13, 31), fake_corr.shape)
+def test_custom_taper():
+    """Test setting custom taper."""
+    test_win = windows.blackman
+    dspec = DelaySpectrum(taper=test_win)
+    nt.assert_equal(test_win, dspec.taper)
 
 
-def test_delay_vals_with_pols():
-    """Test values in normalized_fourier_transform when pols present."""
-    fake_data = np.zeros((3, 2, 13, 31))
-    fake_data[:, 0, 7, 11] += 1.
-    fake_corr = dspec.normalized_fourier_transform(fake_data,
-                                                   1 * units.dimensionless_unscaled,
-                                                   taper=windows.boxcar,
-                                                   axis=3)
-    test_corr = np.fft.fft(fake_data, axis=-1)
-    test_corr = np.fft.fftshift(test_corr, axes=-1)
-    fake_corr = fake_corr.value
-    nt.assert_true(np.allclose(test_corr, fake_corr))
+class TestBasicFunctions(object):
+    """Test basic equality functions."""
+
+    def setUp(self):
+        """Setup for tests of basic methods."""
+        self.uvdata_object = UVData()
+        self.testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+        self.uvdata_object.read(self.testfile)
+        self.dspec_object = DelaySpectrum(uv=self.uvdata_object)
+        self.dspec_object2 = copy.deepcopy(self.dspec_object)
+
+    def teardown(self):
+        """Test teardown: delete objects."""
+        del(self.dspec_object)
+        del(self.dspec_object2)
+        del(self.uvdata_object)
+
+    def test_equality(self):
+        """Basic equality test."""
+        print(self.dspec_object._power_array == self.dspec_object2._power_array)
+        nt.assert_equal(self.dspec_object, self.dspec_object2)
+
+    def test_check(self):
+        """Test that check function operates as expected."""
+        nt.assert_true(self.dspec_object.check())
+
+        # test that it fails if we change values
+        self.dspec_object.Ntimes += 1
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Ntimes -= 1
+
+        self.dspec_object.Nbls += 1
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Nbls -= 1
+
+        self.dspec_object.Nfreqs += 1
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Nfreqs -= 1
+
+        self.dspec_object.Npols += 1
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Npols -= 1
+
+        self.dspec_object.Ndelays += 1
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Ndelays -= 1
+
+        self.dspec_object.Ndelays = np.float(self.dspec_object.Ndelays)
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Ndelays = np.int(self.dspec_object.Ndelays)
+
+        self.dspec_object.polarization_array = self.dspec_object.polarization_array.astype(np.float)
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.polarization_array = self.dspec_object.polarization_array.astype(np.int)
+
+        Nfreqs = copy.deepcopy(self.dspec_object.Nfreqs)
+        self.dspec_object.Nfreqs = None
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Nfreqs = Nfreqs
+
+        self.dspec_object.vis_units = 2
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.vis_units = 'Jy'
+
+        self.dspec_object.Nfreqs = (2, 1, 2)
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Nfreqs = Nfreqs
+
+        self.dspec_object.Nfreqs = np.complex(2)
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Nfreqs = Nfreqs
+
+        freq_back = copy.deepcopy(self.dspec_object.freq_array)
+        self.dspec_object.freq_array = np.arange(self.dspec_object.Nfreqs).reshape(1, Nfreqs).tolist()
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.freq_array = freq_back
+
+        self.dspec_object.freq_array = freq_back.value.astype(np.complex) * freq_back.unit
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.freq_array = freq_back
+
+        integration_time_back = copy.deepcopy(self.dspec_object.integration_time)
+        self.dspec_object.integration_time = integration_time_back.astype(complex)
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.integration_time = integration_time_back
+
+        Nuv = self.dspec_object.Nuv
+        self.dspec_object.Nuv = 10
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.Nuv = Nuv
+
+        self.dspec_object.data_type = 'delay'
+        nt.assert_raises(ValueError, self.dspec_object.check)
+        self.dspec_object.data_type = 'frequency'
+
+        self.dspec_object.data_array = self.dspec_object.data_array * units.Hz
+        nt.assert_raises(ValueError, self.dspec_object.check)
+
+        self.dspec_object.data_type = 'delay'
+        nt.assert_true(self.dspec_object.check())
+        self.dspec_object.data_type = 'frequency'
+        self.dspec_object.data_array = self.dspec_object.data_array.value * units.Jy
+        nt.assert_true(self.dspec_object.check())
+
+    def test_add_wrong_units(self):
+        """Test error is raised when adding a uvdata_object with the wrong units."""
+        uvd = UVData()
+        uvd.read(self.testfile)
+        uvd.vis_units = 'K str'
+        nt.assert_raises(units.UnitConversionError, self.dspec_object.add_uvdata_object, uvd)
+        uvd.vis_units = 'uncalib'
+        warn_message = ['Data is uncalibrated. Unable to covert '
+                        'noise array to unicalibrated units.']
+
+        nt.assert_raises(units.UnitConversionError, uvtest.checkWarnings,
+                         self.dspec_object.add_uvdata_object, func_args=[uvd],
+                         category=UserWarning,
+                         nwarnings=len(warn_message),
+                         message=warn_message)
+
+    def test_add_too_many_UVData(self):
+        """Test error is raised when adding too many UVData objects."""
+        uvd = UVData()
+        uvd.read(self.testfile)
+        self.dspec_object.Nuv = 2
+        nt.assert_raises(ValueError, self.dspec_object.add_uvdata_object, uvd)
+
+    def test_incompatible_parameters(self):
+        """Test UVData objects with incompatible paramters are rejected."""
+        uvd = UVData()
+        uvd.read(self.testfile)
+        uvd.select(freq_chans=np.arange(12))
+        nt.assert_raises(ValueError, self.dspec_object.add_uvdata_object, uvd)
+
+    def test_adding_spectral_windows_different_tuple_shape(self):
+        """Test error is raised if spectral windows have different shape input."""
+        nt.assert_raises(ValueError, self.dspec_object.select_spectral_windows,
+                         spectral_windows=((2, 3), (1, 2, 4)))
+
+    def test_adding_spectral_windows_different_lengths(self):
+        """Test error is raised if spectral windows have different shape input."""
+        nt.assert_raises(ValueError, self.dspec_object.select_spectral_windows,
+                         spectral_windows=((2, 3), (2, 6)))
+
+    def test_add_second_uvdata_object(self):
+        """Test a second UVdata object can be added correctly."""
+        uvd = UVData()
+        uvd.read(self.testfile)
+        # multiply by a scalar here to track if it gets set in the correct slot
+        uvd.data_array *= np.sqrt(2)
+        self.dspec_object.add_uvdata_object(uvd)
+        nt.assert_equal(self.dspec_object.Nuv, 2)
+        nt.assert_true(units.allclose(self.dspec_object.data_array[:, 0],
+                                      self.dspec_object.data_array[:, 1] / np.sqrt(2)))
 
 
-def test_units_normalized_fourier_transform():
-    """Test units are returned from normalized_fourier_transform."""
-    fake_data = np.zeros((1, 13, 21)) * units.m
-    fake_data[0, 7, 11] += 1 * units.m
-    fake_corr = dspec.normalized_fourier_transform(fake_data,
-                                                   1 * units.Hz,
-                                                   taper=windows.boxcar,
-                                                   axis=2)
-    test_units = units.m * units.Hz
-    nt.assert_equal(test_units, fake_corr.unit)
+def test_adding_spectral_window_one_tuple():
+    """Test spectral window can be added when only one tuple given."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object.select_spectral_windows(spectral_windows=(3, 12))
+    nt.assert_equal(dspec_object.Nfreqs, 10)
+    nt.assert_equal(dspec_object.Ndelays, 10)
+    nt.assert_true(units.allclose(dspec_object.freq_array,
+                                  uvd.freq_array[:, 3:13] * units.Hz))
 
 
-def test_delta_x_unitless():
-    """Test delta_x is unitless raises exception."""
-    fake_data = np.zeros((1, 13, 21)) * units.m
-    fake_data[0, 7, 11] += 1 * units.m
-    nt.assert_raises(ValueError, dspec.normalized_fourier_transform, fake_data,
-                     delta_x=2., axis=2)
+def test_adding_spectral_window_between_uvdata():
+    """Test that adding a spectral window between uvdata objects is handled."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
+    uvd1 = copy.deepcopy(uvd)
+    dspec_object.add_uvdata_object(uvd1)
+    nt.assert_true(dspec_object.check())
+
+
+def test_adding_new_uvdata_with_different_freqs():
+    """Test error is raised when trying to add a uvdata object with the same freqs."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
+    uvd1 = copy.deepcopy(uvd)
+    uvd1.freq_array *= 11.1
+    nt.assert_raises(ValueError, dspec_object.add_uvdata_object, uvd1)
+
+
+def test_select_spectral_window_not_inplace():
+    """Test it is possible to return a different object from select spectral window."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    new_dspec = dspec_object.select_spectral_windows(spectral_windows=[(3, 12)],
+                                                     inplace=False)
+    nt.assert_not_equal(dspec_object, new_dspec)
+
+
+def test_loading_different_arrays():
+    """Test error is raised trying to combine different arrays."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    bls = np.unique(uvd.baseline_array)[:-1]
+    ants = [uvd.baseline_to_antnums(bl) for bl in bls]
+    ants = [(a1, a2) for a1, a2 in ants]
+    uvd.select(bls=ants)
+    nt.assert_raises(ValueError, dspec_object.add_uvdata_object, uvd)
+
+
+def test_loading_uvb_object():
+    """Test a uvb object can have the beam_area and beam_sq_area read."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uv_beam(uvb=uvb)
+    uvb.select(frequencies=uvd.freq_array[0])
+    nt.assert_true(units.allclose(uvb.get_beam_area(pol='pI') * units.sr, dspec_object.beam_area))
+
+
+def test_noise_shape():
+    """Test the generate noise and calculate_noise_power produce correct shape."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    print(dspec_object.polarization_array)
+    dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
+    dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
+    dspec_object.generate_noise()
+    nt.assert_equal(dspec_object._noise_array.expected_shape(dspec_object),
+                    dspec_object.noise_array.shape)
+
+
+def test_noise_shape():
+    """Test the generate noise and calculate_noise_power produce correct units."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    print(dspec_object.polarization_array)
+    dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
+    dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
+    dspec_object.generate_noise()
+    nt.assert_equal(dspec_object.noise_array.unit, units.Jy)
+
+
+def test_noise_amplitude():
+    """Test noise amplitude with a fixed seed."""
+    np.random.seed(0)
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    print(dspec_object.polarization_array)
+    dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
+    dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
+    dspec_object.nsample_array = np.ones_like(dspec_object.nsample_array)
+    dspec_object.integration_time = np.ones_like(self.integration_time)
+    dspec_object.polarization_array = np.array([-5])
+
+    dspec_object.generate_noise()
+    var = np.var(dspec_object.noise_array, axis=(0, 1, 2, 3)).mean(0)
+    test_amplitue = (180 * units.K * np.power((dspec.freq_array.to('GHz') / (.18 * units.GHz)), -2.55)
+                     / jy_to_mk(dspec.freq_array) / np.sqrt(np.diff(dspec.freq_array[0])[0].value))
+    test_var = test_amplitude.to('Jy')**2
+    # this was from running this test by hand
+    ratio = np.array([[1.07735447, 1.07082788, 1.07919504, 1.04992591, 1.02254714,
+                       0.99884931, 0.94861011, 1.01908474, 1.03877442, 1.00549461,
+                       1.09642801, 1.01100747, 1.0201933, 1.05762868, 0.95156612,
+                       1.00190002, 1.00046522, 1.02796162, 1.04277506, 0.98373618,
+                       1.01235802]]) * units.dimensionless_unscaled
+    nt.assert_equal(ratio, test_var / var)
+
+
+def test_delay_transform_units():
+    """Test units after calling delay_transform are correct."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object.delay_transform()
+    nt.assert_true(dspec_object.data_array.unit.is_equivalent(units.Jy * units.Hz))
+    dspec_object.delay_transform()
+    nt.assert_true(dspec_object.data_array.unit.is_equivalent(units.Jy))
+
+
+def test_warning_from_uncalibrated_data():
+    """Test scaling warning is raised when delay transforming uncalibrated data."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    uvd.vis_units = 'uncalib'
+    warn_message = ["Data is uncalibrated. Unable to covert noise array "
+                    "to unicalibrated units."]
+    dspec_object = uvtest.checkWarnings(DelaySpectrum, func_args=[uvd],
+                                        category=[UserWarning],
+                                        nwarnings=1,
+                                        message=warn_message)
+    warn_message = ["Fourier Transforming uncalibrated data. Units will "
+                    "not have physical meaning. "
+                    "Data will be arbitrarily scaled."]
+    uvtest.checkWarnings(dspec_object.delay_transform,
+                         category=[UserWarning],
+                         nwarnings=1,
+                         message=warn_message)
 
 
 def test_combine_nsamples_different_shapes():
@@ -287,11 +575,11 @@ def test_noise_power_unit():
     nt.assert_equal(units.mK, test_noise_power.unit)
 
 
-def test_noise_shape():
-    """Test shape of generate_noise matches nsample array."""
-    test_sample = np.ones((2, 13, 21)) * 3
-    test_noise = dspec.generate_noise(test_sample)
-    nt.assert_equal(test_sample.shape, test_noise.shape)
+# def test_noise_shape():
+#     """Test shape of generate_noise matches nsample array."""
+#     test_sample = np.ones((2, 13, 21)) * 3
+#     test_noise = dspec.generate_noise(test_sample)
+#     nt.assert_equal(test_sample.shape, test_noise.shape)
 
 
 def test_noise_amplitude():
@@ -308,7 +596,7 @@ def test_noise_amplitude():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_calculate_delay_spectrum_mismatched_freqs():
     """Test Exception is raised when freq arrays are not equal."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -345,7 +633,7 @@ def test_calculate_delay_spectrum_mismatched_freqs():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_calculate_delay_spectrum_mismatched_inttimes():
     """Test Exception is raised when integration times are not equal."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -383,8 +671,8 @@ def test_calculate_delay_spectrum_mismatched_inttimes():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_calculate_delay_spectrum_mismatched_units():
     """Test Exception is raised when data units are not equal."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
-    test_miriad_2 = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
+    test_miriad_2 = os.path.join(DATA_PATH, 'paper_testfile_k_units.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -430,7 +718,7 @@ def test_calculate_delay_spectrum_mismatched_units():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_units_delays_units():
     """Test the units on the output delays are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
 
     warn_message = ['Antenna positions are not present in the file.',
@@ -486,7 +774,7 @@ def test_delay_spectrum_units_delays_units():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units():
     """Test the units on the output power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -541,7 +829,7 @@ def test_delay_spectrum_power_units():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units_input_kelvin_str():
     """Test the units on the output power are correct when input kelvin*str."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile_k_units.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.']
@@ -579,7 +867,7 @@ def test_delay_spectrum_power_units_input_kelvin_str():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units_input_uncalib():
     """Test the units on the output power are correct if input uncalib."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_uncalib_units.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile_uncalib_units.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.']
@@ -617,7 +905,7 @@ def test_delay_spectrum_power_units_input_uncalib():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_noise_power_units():
     """Test the units on the output noise power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -672,7 +960,7 @@ def test_delay_spectrum_noise_power_units():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_thermal_power_units():
     """Test the units on the output thermal power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -727,7 +1015,7 @@ def test_delay_spectrum_thermal_power_units():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_shape():
     """Test the shape of the output delay power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -788,7 +1076,7 @@ def test_delay_spectrum_power_shape():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_noise_shape():
     """Test the shape of the output noise power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -848,7 +1136,7 @@ def test_delay_spectrum_noise_shape():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_noise_shape_one_pol():
     """Test the shape of the output noise power are correct with one pol."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -912,7 +1200,7 @@ def test_delay_spectrum_noise_shape_one_pol():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_thermal_power_shape():
     """Test the shape of the output thermal power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -973,7 +1261,7 @@ def test_delay_spectrum_thermal_power_shape():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_shape_pols():
     """Test the shape of the output delay power are correct with pols."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -1033,7 +1321,7 @@ def test_delay_spectrum_power_shape_pols():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_noise_shape_pols():
     """Test the shape of the output noise power are correct with pols."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -1093,7 +1381,7 @@ def test_delay_spectrum_noise_shape_pols():
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_thermal_power_shape_pols():
     """Test the shape of the output thermal power are correct with pols."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
