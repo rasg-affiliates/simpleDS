@@ -16,57 +16,6 @@ from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
 
 
-@units.quantity_input(freqs='frequency')
-def jy_to_mk(freqs):
-    """Calculate the Jy to mK conversion lambda^2/(2 * K_boltzman)."""
-    jy2t = const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
-                                   * const.k_B)
-    return jy2t.to('mK/Jy')
-
-
-def normalized_fourier_transform(data_array, delta_x, axis=-1,
-                                 taper=windows.blackmanharris):
-    """Perform the Fourier transform over specified axis.
-
-    Perform the FFT over frequency using the specified taper function
-    and normalizes by delta_x (the discrete of sampling rate along the axis).
-
-    Arguments:
-        data_array : (Nbls, Ntimes, Nfreqs) array from utils.get_data_array
-                        Can also have shape (Npols, Nbls, Ntimes, Nfreqs)
-        delta_x: The difference between frequency channels in the data.
-                 This is used to properly normalize the Fourier Transform.
-                 Must be an astropy Quantity object
-        taper : Window function used in delay transform.
-                 Default is scipy.signal.windows.blackmanharris
-    Returns:
-        delay_arry: (Nbls, Ntimes, Nfreqs) array of the Fourier transform along
-                    specified axis, and normalized by the provided delta_x
-                    if pols are present returns
-                    (Npols, Nbls, Ntimes, Nfreqs)
-    """
-    if isinstance(data_array, Quantity):
-        unit = data_array.unit
-    else:
-        unit = 1.
-
-    if not isinstance(delta_x, Quantity):
-        raise ValueError('delta_x must be an astropy Quantity object. '
-                         'value was : {df}'.format(df=delta_x))
-
-    n_axis = data_array.shape[axis]
-    win = taper(n_axis).reshape(1, n_axis)
-
-    # Fourier Transforms should have a delta_x term multiplied
-    # This is the proper normalization of the FT but is not
-    # accounted for in an fft.
-    delay_array = np.fft.fft(data_array * win, axis=axis)
-    delay_array = np.fft.fftshift(delay_array, axes=axis)
-    delay_array = delay_array * delta_x.si * unit
-
-    return delay_array
-
-
 def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
     """Combine the nsample arrays for use in cross-multiplication.
 
