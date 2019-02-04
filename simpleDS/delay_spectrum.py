@@ -86,34 +86,6 @@ def remove_auto_correlations(data_array):
     return data_out
 
 
-@units.quantity_input(freqs='frequency', inttime='time', trcvr=units.K)
-def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
-    """Generate power as given by the radiometry equation.
-
-    noise_power = Tsys/sqrt(delta_frequency * inttime )
-
-    Computes the system temperature using the equation:
-        T_sys = 180K * (nu/180MHz)^(-2.55) + T_receiver
-    Arguments:
-        nsamples: The nsamples array from which to compute thermal variance
-        freqs: The observed frequncies
-        trcvr: The receiver temperature of the instrument in K
-    Returns:
-        noise_power: White noise with the same shape as nsamples input.
-    """
-    Tsys = 180. * units.K * np.power(freqs.to('GHz') / (.18 * units.GHz), -2.55)
-    Tsys += trcvr.to('K')
-    delta_f = np.diff(freqs)[0]
-    with np.errstate(divide='ignore', invalid='ignore'):
-        noise_power = np.ma.masked_invalid(Tsys.to('K')
-                                           / np.sqrt(delta_f.to('1/s')
-                                                     * inttime.to('s')
-                                                     * nsamples * npols))
-    return noise_power.filled(0).to('mK')
-
-
-
-
 class DelaySpectrum(UVBase):
     """A Delay Spectrum object to hold relevant data."""
 
