@@ -13,7 +13,7 @@ from pyuvdata import parameter as uvp
 import pyuvdata.tests as uvtest
 
 
-class NonnParameter(object):
+class NonParameter(object):
     """A Dummy object for comparison."""
 
     def __init__(self):
@@ -197,5 +197,5 @@ def test_calls_to_super_class_are_equal():
 def test_not_equal_to_different_object():
     """Test object is not equal to general other object."""
     unp1 = unp.UnitParameter(name='unp1', value=3, value_not_quantity=True)
-    test_obj = NonnParameter()
+    test_obj = NonParameter()
     nt.assert_not_equal(unp1, test_obj)

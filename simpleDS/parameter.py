@@ -99,6 +99,8 @@ class UnitParameter(uvp.UVParameter):
                 return False
             if isinstance(self.value, units.Quantity):
                 # check shapes are the same
+                if not isinstance(self.tols[1], units.Quantity):
+                    self.tols = (self.tols[0], self.tols[1] * self.value.unit)
                 if self.value.shape != other.value.shape:
                     print('{name} parameter value is array, shapes are '
                           'different'.format(name=self.name))
