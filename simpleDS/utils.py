@@ -122,7 +122,7 @@ def get_nsample_array(uv, reds, squeeze=True):
                         (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    nsample_array = np.zeros(nsample_shape, dtype=np.complex)
+    nsample_array = np.zeros(nsample_shape, dtype=np.float)
 
     for count, baseline in enumerate(reds):
         tmp_data = uv.get_nsamples(baseline, squeeze='none')
@@ -154,7 +154,7 @@ def get_flag_array(uv, reds, squeeze=True):
                      (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    flag_array = np.zeros(flag_shape, dtype=np.complex)
+    flag_array = np.zeros(flag_shape, dtype=np.bool)
     reds = np.array(reds)
 
     for count, baseline in enumerate(reds):
@@ -188,7 +188,7 @@ def get_integration_time(uv, reds, squeeze=True):
                            (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     shape = (uv.Nbls, uv.Ntimes)
-    integration_time = np.zeros(shape, dtype=np.complex)
+    integration_time = np.zeros(shape, dtype=np.float)
     reds = np.array(reds)
 
     for count, baseline in enumerate(reds):
