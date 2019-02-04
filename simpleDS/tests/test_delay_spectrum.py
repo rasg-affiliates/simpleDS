@@ -135,7 +135,6 @@ class TestBasicFunctions(object):
 
     def test_equality(self):
         """Basic equality test."""
-        print(self.dspec_object._power_array == self.dspec_object2._power_array)
         nt.assert_equal(self.dspec_object, self.dspec_object2)
 
     def test_check(self):
@@ -355,7 +354,6 @@ def test_noise_shape():
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
-    print(dspec_object.polarization_array)
     dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
     dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
     dspec_object.generate_noise()
@@ -370,7 +368,6 @@ def test_noise_shape():
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
-    print(dspec_object.polarization_array)
     dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
     dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
     dspec_object.generate_noise()
@@ -385,17 +382,16 @@ def test_noise_amplitude():
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
-    print(dspec_object.polarization_array)
     dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
     dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
     dspec_object.nsample_array = np.ones_like(dspec_object.nsample_array)
-    dspec_object.integration_time = np.ones_like(self.integration_time)
+    dspec_object.integration_time = np.ones_like(dspec_object.integration_time)
     dspec_object.polarization_array = np.array([-5])
 
     dspec_object.generate_noise()
     var = np.var(dspec_object.noise_array, axis=(0, 1, 2, 3)).mean(0)
-    test_amplitue = (180 * units.K * np.power((dspec.freq_array.to('GHz') / (.18 * units.GHz)), -2.55)
-                     / jy_to_mk(dspec.freq_array) / np.sqrt(np.diff(dspec.freq_array[0])[0].value))
+    test_amplitude = (180 * units.K * np.power((dspec_object.freq_array.to('GHz') / (.18 * units.GHz)), -2.55)
+                      / utils.jy_to_mk(dspec_object.freq_array) / np.sqrt(np.diff(dspec_object.freq_array[0])[0].value))
     test_var = test_amplitude.to('Jy')**2
     # this was from running this test by hand
     ratio = np.array([[1.07735447, 1.07082788, 1.07919504, 1.04992591, 1.02254714,
@@ -403,7 +399,7 @@ def test_noise_amplitude():
                        1.09642801, 1.01100747, 1.0201933, 1.05762868, 0.95156612,
                        1.00190002, 1.00046522, 1.02796162, 1.04277506, 0.98373618,
                        1.01235802]]) * units.dimensionless_unscaled
-    nt.assert_equal(ratio, test_var / var)
+    nt.assert_true(units.allclose(ratio, test_var / var))
 
 
 def test_delay_transform_units():
@@ -502,89 +498,6 @@ def test_remove_autos_big_shape():
     """Test Exception is raised on an array which is too big."""
     test_array = np.ones((3, 12, 12, 21, 6, 7))
     nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
-
-
-def test_noise_power_inttime_unitless():
-    """Test Exception is raised if inttime is not a Quantity object."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 3) * units.GHz
-    test_temp = 400 * units.K
-    test_inttime = np.ones_like(test_sample) * 100
-    nt.assert_raises(TypeError, dspec.calculate_noise_power,
-                     nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp, npols=1)
-
-
-def test_noise_power_inttime_wrong_unit():
-    """Test Exception is raised if inttime is not physical_type time."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 3) * units.GHz
-    test_temp = 400 * units.K
-    test_inttime = np.ones_like(test_sample) * 100 * units.m
-    nt.assert_raises(units.UnitsError, dspec.calculate_noise_power,
-                     nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp, npols=1)
-
-
-def test_noise_power_freq_unitless():
-    """Test Exception is raised if freq is not a Quantity object."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 3)
-    test_temp = 400 * units.K
-    test_inttime = np.ones_like(test_sample) * 100 * units.s
-    nt.assert_raises(TypeError, dspec.calculate_noise_power,
-                     nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp, npols=1)
-
-
-def test_noise_power_trcvr_wrong_unit():
-    """Test Exception is raised if trcvr is not a physical_type temperature."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 3) * units.GHz
-    test_temp = 400 * units.m
-    test_inttime = np.ones_like(test_sample) * 100 * units.s
-    nt.assert_raises(units.UnitsError, dspec.calculate_noise_power,
-                     nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp, npols=1)
-
-
-def test_noise_power_trcvr_unitless():
-    """Test Exception is raised if trcvr is not Quantity object."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 3) * units.GHz
-    test_temp = 400
-    test_inttime = np.ones_like(test_sample) * 100 * units.s
-    nt.assert_raises(TypeError, dspec.calculate_noise_power,
-                     nsamples=test_sample, freqs=test_freqs,
-                     inttime=test_inttime, trcvr=test_temp, npols=1)
-
-
-def test_noise_power_shape():
-    """Test shape of noise power is as expected."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 21) * units.GHz
-    test_temp = 400 * units.K
-    test_inttime = np.ones_like(test_sample) * 100 * units.s
-    test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
-                                                   freqs=test_freqs,
-                                                   trcvr=test_temp,
-                                                   inttime=test_inttime,
-                                                   npols=1)
-    nt.assert_equal(test_sample.shape, test_noise_power.shape)
-
-
-def test_noise_power_unit():
-    """Test unit of noise power is as expected."""
-    test_sample = np.ones((2, 13, 21))
-    test_freqs = np.linspace(.1, .2, 21) * units.GHz
-    test_temp = 400 * units.K
-    test_inttime = np.ones_like(test_sample) * 100 * units.s
-    test_noise_power = dspec.calculate_noise_power(nsamples=test_sample,
-                                                   freqs=test_freqs,
-                                                   trcvr=test_temp,
-                                                   inttime=test_inttime,
-                                                   npols=1)
-    nt.assert_equal(units.mK, test_noise_power.unit)
 
 
 @unittest.skip('Skipping some of detailed tests during conversion')
