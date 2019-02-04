@@ -29,7 +29,7 @@ install:
 
   # install dependencies
   #- conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy nose pip matplotlib coverage
-  - conda install numpy scipy nose pip matplotlib coverage astropy six coveralls coverage pycodestyle pip
+  - conda install numpy scipy nose pip matplotlib coverage astropy six coveralls coverage pycodestyle pip h5py
   - conda install -y 'libgfortran =3.0.0'
   - pip install coveralls
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git

@@ -20,6 +20,7 @@ First install dependencies.
 * numpy >= 1.10
 * scipy
 * astropy >= 2.0
+* h5py (for uvh5 compatibility with pyuvdata)
 * six (for compatibility between python 2 and 3)
 * pyuvdata (`pip install pyuvdata` or use https://github.com/HERA-Team/pyuvdata.git)
 
