@@ -526,7 +526,7 @@ class DelaySpectrum(UVBase):
         this.integration_time = copy.deepcopy(temp_data) * units.s
         # initialize the beam_area and beam_sq_area to help with selections later
         this.beam_area = np.ones(this._beam_area.expected_shape(this)) * np.inf * units.sr
-        this.beam_sq_area = np.ones(this._beam_sq_area.expected_shape(this)) * np.inf * units.sr
+        this.beam_sq_area = np.ones(this._beam_sq_area.expected_shape(this)) * np.inf * units.sr**2
 
         this.trcvr = np.ones(shape=this._trcvr.expected_shape(this)) * np.inf * units.K
 
@@ -537,7 +537,7 @@ class DelaySpectrum(UVBase):
 
         if this.data_array.unit == units.K * units.sr:
             # if the visibilities are in K steradian then the noise should be too.
-            this.noise_array = this.noise_array * utils.jy_to_mk(this.freq_array) * units.sr
+            this.noise_array = this.noise_array * utils.jy_to_mk(this.freq_array)
         elif this.data_array.unit == units.dimensionless_unscaled:
             warnings.warn("Data is uncalibrated. Unable to covert noise array "
                           "to unicalibrated units.", UserWarning)
@@ -578,17 +578,17 @@ class DelaySpectrum(UVBase):
                 my_parm = getattr(self, p)
                 other_parm = getattr(this, p)
                 if my_parm.value is not None and my_parm != other_parm:
-                        raise ValueError("Input data differs from previously "
-                                         "loaded data. Parameter {name} is not "
-                                         "the same.".format(name=p))
+                    raise ValueError("Input data differs from previously "
+                                     "loaded data. Parameter {name} is not "
+                                     "the same.".format(name=p))
             elif p in ['_beam_area, _beam_sq_area']:
                 my_parm = getattr(self, p)
                 other_parm = getattr(this, p)
                 if my_parm.value is not None and my_parm != other_parm:
                     if all(np.isfinite(my_parm.value)) and all(np.isfinite(other_parm.value)):
-                            raise ValueError("Input data differs from previously "
-                                             "loaded data. Parameter {name} is not "
-                                             "the same".format(name=p))
+                        raise ValueError("Input data differs from previously "
+                                         "loaded data. Parameter {name} is not "
+                                         "the same".format(name=p))
 
         # Increment by one the number of read uvdata objects
         self._Nuv.value += 1
@@ -767,7 +767,7 @@ class DelaySpectrum(UVBase):
             _beam = uvb.select(frequencies=freqs.to('Hz').value, inplace=False)
             for pol_cnt, pol in enumerate(self.polarization_array):
                 self.beam_area[spw, pol_cnt, :] = _beam.get_beam_area(pol=pol) * units.sr
-                self.beam_sq_area[spw, pol_cnt, :] = _beam.get_beam_sq_area(pol=pol) * units.sr
+                self.beam_sq_area[spw, pol_cnt, :] = _beam.get_beam_sq_area(pol=pol) * units.sr**2
 
     def delay_transform(self):
         """Perform a delay transform on the stored data array.
@@ -835,64 +835,43 @@ class DelaySpectrum(UVBase):
                                                  * self.nsample_array
                                                  * npols_noise)
         # Want to put noise into Jy units
-        noise_power = np.ma.masked_invalid(noise_power.to('mK')
-                                           / utils.jy_to_mk(self.freq_array))
         # the normalization of noise is defined to have this 1/beam_integral
         # factor in temperature units, so we need to multiply it get them into
         # Janskys
-        noise_power *= self.beam_area / units.sr
+        noise_power = np.ma.masked_invalid(noise_power.to('mK') * self.beam_area
+                                           / utils.jy_to_mk(self.freq_array))
         noise_power = noise_power.filled(0)
         return noise_power.to('Jy')
 
-    def calculate_delay_spectrum(self, taper=None):
+    def calculate_delay_spectrum(self):
         """Perform Delay tranform and cross multiplication of datas.
 
-        Arguments:
-            taper: The spectral taper function to multiply onto the data.
-                    Accepts scipy.signal.windows functions or any function
-                    whose argument is the len(data) and returns a numpy array.
-                    Default: scipy.signal.windows.blackmanharris
-
-        Take the normalized Fourier transform of the data from uv1 and uv2
-        objects and cross multiplies.
-        Also generates white noie given the frequency range and trcvr and
-        calculates the expected noise power.
+        Take the normalized Fourier transform of the data in objects and cross multiplies baselines.
+        Also generates white noise given the frequency range and trcvr and calculates the expected noise power.
         """
-        if taper is None:
-            taper = self.taper
+        if self.data_type == 'frequency':
+            self.delay_transform()
 
-        delta_f = np.diff(self.freq_array)[0]
+        NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
+        self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
+        unit_conversion = simple_cosmo.X2Y(self.redshift) / self.bandwidth.to('1/s') / self.beam_sq_area
+        unit_conversion *= utils.jy_to_mk(self.freq_array)**2
 
-        self.noise_array = calculate_noise_power(nsamples=self.nsample_array,
-                                                 freqs=self.freqs,
-                                                 inttime=self.integration_time,
-                                                 trcvr=self.trcvr,
-                                                 npols=self.npols)
-
-        NEBW = utils.noise_equivalent_bandwidth(taper(self.Nfreqs))
-        self.bandwidth = (self.freqs[-1] - self.freqs[0]) * NEBW
-        unit_conversion = self.X2Y / self.bandwith.to('1/s') / self.beam_sq_area
-
-        self.data_array = normalized_fourier_transform((self.data_array
-                                                        * self.flag_array),
-                                                       delta_x=delta_f,
-                                                       taper=taper, axis=-1)
-
-        self.noise_array = normalized_fourier_transform((self.noise_array
-                                                         * self.flag_array),
-                                                        delta_x=delta_f,
-                                                        taper=taper, axis=-1)
         self.set_delay()
+        if self.Nuv == 1:
+            delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
+                                                     axis=3)
+            noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
+                                                     axis=3)
+        else:
+            delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
+                                                     array_2=self.data_array[:, 1],
+                                                     axis=3)
+            noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
+                                                     array_2=self.noise_array[:, 1],
+                                                     axis=3)
 
-        delay_power = utils.cross_multipy_array(array_1=delay_array[0],
-                                                array_2=delay_array[1],
-                                                axis=self.cross_mult_axis)
-
-        self.power = delay_power * unit_conversion * self.jy_to_mk**2
-
-        noise_power = utils.cross_multipy_array(array_1=noise_delay[0],
-                                                array_2=noise_delay[1],
-                                                axis=self.cross_mult_axis)
+        self.power_array = delay_power * unit_conversion
         self.noise_power = noise_power * unit_conversion
         self.calculate_thermal_sensitivity()
 
@@ -907,21 +886,30 @@ class DelaySpectrum(UVBase):
             sqrt(2): noise is split between even and odd
             sqrt(lst_bins): noise power spectrum averages incoherently over time
         """
-        thermal_noise_samples = combine_nsamples(self.nsample_array[0],
-                                                 self.nsample_array[1],
-                                                 axis=2)
+        if self.Nuv == 1:
+            thermal_noise_samples = combine_nsamples(self.nsample_array[:, 0],
+                                                     self.nsample_array[:, 0],
+                                                     axis=2)
+        else:
+            thermal_noise_samples = combine_nsamples(self.nsample_array[:, 0],
+                                                     self.nsample_array[:, 1],
+                                                     axis=2)
         # lst_array is stored in radians, multiply by 12*3600/np.pi to convert
         # to seconds
-        lst_bins = (np.len(self.lst_array) * np.diff(self.lst_array)[0] * 12.
+        lst_bins = (np.size(self.lst_array) * np.diff(self.lst_array)[0] * 12.
                     / np.pi * 3600 * units.s / self.integration_time.to('s'))
-        Tsys = 180. * units.K * np.power(self.freqs / (.18 * units.GHz), -2.55)
-        Tsys += trcvr.to('K')
+        npols_noise = np.array([2 if p in np.arange(1, 5) else 1
+                                for p in self.polarization_array])
+        npols_noise = npols_noise.reshape(1, 1, self.Npols, 1, 1, 1)
+
+        Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
+        Tsys += self.trcvr.to('K')
         thermal_power = (Tsys.to('mK')**2
                          / (self.integration_time.to('s') * thermal_noise_samples
-                            * self.npols * self.Nbls
-                            * np.sqrt(2 * self.lst_bins)))
+                            * npols_noise * self.Nbls
+                            * np.sqrt(2 * lst_bins)))
 
-        thermal_power = thermal_power * self.X2Y
+        thermal_power = thermal_power * simple_cosmo.X2Y(self.redshift)
         # This normalization of the thermal power comes from
         # Parsons PSA32 paper appendix B
         thermal_power *= self.beam_area**2 / self.beam_sq_area

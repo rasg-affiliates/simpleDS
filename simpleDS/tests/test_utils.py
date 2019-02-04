@@ -905,8 +905,8 @@ def test_jy_to_mk_units():
     """Test the Jy to mK conversion factor."""
     test_fq = np.array([.1]) * units.GHz
     jy_to_mk = utils.jy_to_mk(test_fq)
-    test_conversion = const.c**2 / (2 * test_fq.to('1/s')**2 * const.k_B)
-    test_conversion = test_conversion.to('mK/Jy')
+    test_conversion = const.c**2 / (2 * test_fq.to('1/s')**2 * const.k_B) * units.sr
+    test_conversion = test_conversion.to('mK*sr/Jy')
     nt.assert_equal(test_conversion.unit.to_string(),
                     jy_to_mk.unit.to_string())
 

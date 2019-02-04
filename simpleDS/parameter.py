@@ -109,13 +109,19 @@ class UnitParameter(uvp.UVParameter):
                     print('{name} parameter is Quantity, but have '
                           'non-compatible units '.format(name=self.name))
                     return False
-                elif not units.allclose(self.value, other.value,
-                                        rtol=self.tols[0], atol=self.tols[1]):
-                    print('{name} parameter value is array, values are not '
-                          'close'.format(name=self.name))
-                    return False
                 else:
-                    return True
+                    # astropy.units has a units.allclose but only for python 3
+                    # already konw the units are compatible so
+                    # Convert other to self's units and compare values
+                    other.value = other.value.to(self.value.unit)
+
+                    if not np.allclose(self.value.value, other.value.value,
+                                       rtol=self.tols[0], atol=self.tols[1].value):
+                        print('{name} parameter value is array, values are not '
+                              'close'.format(name=self.name))
+                        return False
+                    else:
+                        return True
 
             else:
                 return super(UnitParameter, self).__eq__(other)

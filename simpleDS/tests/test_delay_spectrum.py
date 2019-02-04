@@ -267,8 +267,8 @@ class TestBasicFunctions(object):
         uvd.data_array *= np.sqrt(2)
         self.dspec_object.add_uvdata_object(uvd)
         nt.assert_equal(self.dspec_object.Nuv, 2)
-        nt.assert_true(units.allclose(self.dspec_object.data_array[:, 0],
-                                      self.dspec_object.data_array[:, 1] / np.sqrt(2)))
+        nt.assert_true(np.allclose(self.dspec_object.data_array[:, 0].value,
+                                   self.dspec_object.data_array[:, 1].value / np.sqrt(2)))
 
 
 def test_adding_spectral_window_one_tuple():
@@ -280,8 +280,8 @@ def test_adding_spectral_window_one_tuple():
     dspec_object.select_spectral_windows(spectral_windows=(3, 12))
     nt.assert_equal(dspec_object.Nfreqs, 10)
     nt.assert_equal(dspec_object.Ndelays, 10)
-    nt.assert_true(units.allclose(dspec_object.freq_array,
-                                  uvd.freq_array[:, 3:13] * units.Hz))
+    nt.assert_true(np.allclose(dspec_object.freq_array.to('Hz').value,
+                               uvd.freq_array[:, 3:13]))
 
 
 def test_adding_spectral_window_between_uvdata():
@@ -344,7 +344,8 @@ def test_loading_uvb_object():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uv_beam(uvb=uvb)
     uvb.select(frequencies=uvd.freq_array[0])
-    nt.assert_true(units.allclose(uvb.get_beam_area(pol='pI') * units.sr, dspec_object.beam_area))
+    nt.assert_true(np.allclose(uvb.get_beam_area(pol='pI'),
+                               dspec_object.beam_area.to('sr').value))
 
 
 def test_noise_shape():
@@ -391,15 +392,16 @@ def test_noise_amplitude():
     dspec_object.generate_noise()
     var = np.var(dspec_object.noise_array, axis=(0, 1, 2, 3)).mean(0)
     test_amplitude = (180 * units.K * np.power((dspec_object.freq_array.to('GHz') / (.18 * units.GHz)), -2.55)
-                      / utils.jy_to_mk(dspec_object.freq_array) / np.sqrt(np.diff(dspec_object.freq_array[0])[0].value))
+                      / np.sqrt(np.diff(dspec_object.freq_array[0])[0].value)).reshape(1, 1, dspec_object.Nfreqs)
+    test_amplitude *= dspec_object.beam_area / utils.jy_to_mk(dspec_object.freq_array)
     test_var = test_amplitude.to('Jy')**2
     # this was from running this test by hand
     ratio = np.array([[1.07735447, 1.07082788, 1.07919504, 1.04992591, 1.02254714,
                        0.99884931, 0.94861011, 1.01908474, 1.03877442, 1.00549461,
                        1.09642801, 1.01100747, 1.0201933, 1.05762868, 0.95156612,
                        1.00190002, 1.00046522, 1.02796162, 1.04277506, 0.98373618,
-                       1.01235802]]) * units.dimensionless_unscaled
-    nt.assert_true(units.allclose(ratio, test_var / var))
+                       1.01235802]])
+    nt.assert_true(np.allclose(ratio, (test_var / var).value))
 
 
 def test_delay_transform_units():
@@ -409,6 +411,7 @@ def test_delay_transform_units():
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
+
     dspec_object.delay_transform()
     nt.assert_true(dspec_object.data_array.unit.is_equivalent(units.Jy * units.Hz))
     dspec_object.delay_transform()
@@ -500,237 +503,19 @@ def test_remove_autos_big_shape():
     nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
 
 
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_calculate_delay_spectrum_mismatched_freqs():
-    """Test Exception is raised when freq arrays are not equal."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    # add 10MHz to make frequencies different
-    test_uv_2.freq_array += np.ones_like(test_uv_2.freq_array) * 10e6
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-    nt.assert_raises(ValueError, dspec.calculate_delay_spectrum,
-                     uv_even=test_uv_1, uv_odd=test_uv_2, uvb=uvb,
-                     trcvr=144 * units.K, reds=reds)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_calculate_delay_spectrum_mismatched_inttimes():
-    """Test Exception is raised when integration times are not equal."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    # change the integration_time so they do not match
-    test_uv_2.integration_time += test_uv_2.integration_time * 2
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    nt.assert_raises(ValueError, dspec.calculate_delay_spectrum,
-                     uv_even=test_uv_1, uv_odd=test_uv_2, uvb=uvb,
-                     trcvr=144 * units.K, reds=reds)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_calculate_delay_spectrum_mismatched_units():
-    """Test Exception is raised when data units are not equal."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_miriad_2 = os.path.join(DATA_PATH, 'paper_testfile_k_units.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.']
-    test_uv_2 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad_2,
-                                                test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    nt.assert_raises(NotImplementedError, dspec.calculate_delay_spectrum,
-                     uv_even=test_uv_1, uv_odd=test_uv_2, uvb=uvb,
-                     trcvr=144 * units.K, reds=reds)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_units_delays_units():
-    """Test the units on the output delays are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(units.s, delays.unit)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units():
     """Test the units on the output power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
 
     uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(units.mK**2 * units.Mpc**3, delay_power.unit)
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum()
+    nt.assert_equal(units.mK**2 * units.Mpc**3, dspec_object.power_array.unit)
 
 
 @unittest.skip('Skipping some of detailed tests during conversion')
@@ -917,430 +702,3 @@ def test_delay_spectrum_thermal_power_units():
                                                   reds=reds)
     delays, delay_power, noise_power, thermal_power = output_array
     nt.assert_equal(units.mK**2 * units.Mpc**3, thermal_power.unit)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_power_shape():
-    """Test the shape of the output delay power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, thermal_power.shape)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_noise_shape():
-    """Test the shape of the output noise power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, delay_power.shape)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_noise_shape_one_pol():
-    """Test the shape of the output noise power are correct with one pol."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    test_uv_1.polarization_array = np.array([-4])
-    test_uv_2.polarization_array = np.array([-4])
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-    uvb.polarization_array = np.array([-4])
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, delay_power.shape)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_thermal_power_shape():
-    """Test the shape of the output thermal power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, noise_power.shape)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_power_shape_pols():
-    """Test the shape of the output delay power are correct with pols."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (1, Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds, squeeze=False)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, thermal_power.shape)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_noise_shape_pols():
-    """Test the shape of the output noise power are correct with pols."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (1, Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds, squeeze=False)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, delay_power.shape)
-
-
-@unittest.skip('Skipping some of detailed tests during conversion')
-def test_delay_spectrum_thermal_power_shape_pols():
-    """Test the shape of the output thermal power are correct with pols."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
-    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-    warn_message = ['Antenna positions are not present in the file.',
-                    'Antenna positions are not present in the file.',
-                    'Ntimes does not match the number of unique '
-                    'times in the data',
-                    'Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    pend_dep_message = ['antenna_positions are not defined. '
-                        'antenna_positions will be a required parameter in '
-                        'future versions.']
-
-    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
-                                     func_args=[test_miriad, test_antpos_file],
-                                     func_kwargs={'skip_header': 3,
-                                                  'usecols': [1, 2, 3]},
-                                     category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
-                                     nwarnings=len(warn_message) + 1,
-                                     message=warn_message + pend_dep_message)
-    test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
-
-    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
-
-    uvb = UVBeam()
-    uvb.read_beamfits(beam_file)
-
-    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
-                    'which will raise an error when writing uvfits '
-                    'or miriad file types']
-    uvtest.checkWarnings(test_uv_1.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    uvtest.checkWarnings(test_uv_2.select, func_args=[],
-                         func_kwargs={'freq_chans': np.arange(95, 116)},
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
-
-    Nbls = len(reds)
-    Ntimes = test_uv_2.Ntimes
-    Nfreqs = test_uv_2.Nfreqs
-    out_shape = (1, Nbls, Nbls, Ntimes, Nfreqs)
-
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds,
-                                                  squeeze=False)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(out_shape, noise_power.shape)

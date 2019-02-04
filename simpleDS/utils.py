@@ -321,9 +321,9 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
 @units.quantity_input(freqs='frequency')
 def jy_to_mk(freqs):
     """Calculate the Jy/sr to mK conversion lambda^2/(2 * K_boltzman)."""
-    jy2t = const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
-                                   * const.k_B)
-    return jy2t.to('mK/Jy')
+    jy2t = units.sr * const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
+                                              * const.k_B)
+    return jy2t.to('mK*sr/Jy')
 
 
 def generate_noise(noise_power):
