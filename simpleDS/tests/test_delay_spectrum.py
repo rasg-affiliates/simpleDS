@@ -452,57 +452,6 @@ def test_delay_transform_bad_data_type():
     nt.assert_raises(ValueError, dspec_object.delay_transform)
 
 
-def test_combine_nsamples_different_shapes():
-    """Test an error is raised if nsample_arrays have different shapes."""
-    test_sample_1 = np.ones((2, 13, 21))
-    test_sample_2 = np.ones((3, 13, 21))
-    nt.assert_raises(ValueError, dspec.combine_nsamples,
-                     test_sample_1, test_sample_2)
-
-
-def test_combine_nsamples_one_array():
-    """Test that if only one array is given the samples are the same."""
-    test_samples = np.ones((2, 13, 21)) * 3
-    samples_out = dspec.combine_nsamples(test_samples, axis=0)
-    test_full_samples = np.ones((2, 2, 13, 21)) * 3
-    nt.assert_true(np.allclose(test_full_samples, samples_out))
-
-
-def test_combine_nsamples_with_pols():
-    """Test that if only one array is given the samples are the same."""
-    test_samples_1 = np.ones((3, 2, 13, 21)) * 3
-    test_samples_2 = np.ones((3, 2, 13, 21)) * 2
-    samples_out = dspec.combine_nsamples(test_samples_1, test_samples_2, axis=1)
-    test_full_samples = np.ones((3, 2, 2, 13, 21)) * np.sqrt(6)
-    nt.assert_true(np.all(test_full_samples == samples_out))
-
-
-def test_remove_autos():
-    """Test that the remove auto_correlations function returns right shape."""
-    test_array = np.ones((3, 3, 11, 21))
-    out_array = dspec.remove_auto_correlations(test_array)
-    nt.assert_equal((6, 11, 21), out_array.shape)
-
-
-def test_remove_autos_with_pols():
-    """Test remove auto_correlations function returns right shape with pols."""
-    test_array = np.ones((4, 3, 3, 11, 21))
-    out_array = dspec.remove_auto_correlations(test_array)
-    nt.assert_equal((4, 6, 11, 21), out_array.shape)
-
-
-def test_remove_autos_small_shape():
-    """Test Exception is raised on an array which is too small."""
-    test_array = np.ones((3))
-    nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
-
-
-def test_remove_autos_big_shape():
-    """Test Exception is raised on an array which is too big."""
-    test_array = np.ones((3, 12, 12, 21, 6, 7))
-    nt.assert_raises(ValueError, dspec.remove_auto_correlations, test_array)
-
-
 def test_delay_spectrum_power_units():
     """Test the units on the output power are correct."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
@@ -516,6 +465,23 @@ def test_delay_spectrum_power_units():
     dspec_object.add_uv_beam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
     nt.assert_equal(units.mK**2 * units.Mpc**3, dspec_object.power_array.unit)
+
+
+def test_delay_spectrum_power_shape():
+    """Test the shape of the output power are correct."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum()
+    power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
+                   dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
+    nt.assert_equal(power_shape, dspec_object.power_array.shape)
 
 
 @unittest.skip('Skipping some of detailed tests during conversion')

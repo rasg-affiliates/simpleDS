@@ -994,6 +994,76 @@ def test_delta_x_unitless():
                      delta_x=2., axis=2)
 
 
+def test_combine_nsamples_different_shapes():
+    """Test an error is raised if nsample_arrays have different shapes."""
+    test_sample_1 = np.ones((2, 13, 21))
+    test_sample_2 = np.ones((3, 13, 21))
+    nt.assert_raises(ValueError, utils.combine_nsamples,
+                     test_sample_1, test_sample_2)
+
+
+def test_combine_nsamples_one_array():
+    """Test that if only one array is given the samples are the same."""
+    test_samples = np.ones((2, 13, 21)) * 3
+    samples_out = utils.combine_nsamples(test_samples, axis=0)
+    test_full_samples = np.ones((2, 2, 13, 21)) * 3
+    nt.assert_true(np.allclose(test_full_samples, samples_out))
+
+
+def test_combine_nsamples_with_pols():
+    """Test that if only one array is given the samples are the same."""
+    test_samples_1 = np.ones((3, 2, 13, 21)) * 3
+    test_samples_2 = np.ones((3, 2, 13, 21)) * 2
+    samples_out = utils.combine_nsamples(test_samples_1, test_samples_2, axis=1)
+    test_full_samples = np.ones((3, 2, 2, 13, 21)) * np.sqrt(6)
+    nt.assert_true(np.all(test_full_samples == samples_out))
+
+
+def test_remove_autos_bad_axis_shape():
+    """Test error raised if axes keyword is bad shape."""
+    test_array = np.ones((3, 3, 11, 21))
+    axes = (1, 2, 3)
+    nt.assert_raises(ValueError, utils.remove_auto_correlations, test_array,
+                     axes=axes)
+
+
+def test_remove_autos_axes_different_shapes():
+    """Test error raised if axes have different shapes."""
+    test_array = np.ones((3, 5, 11, 21))
+    axes = (0, 1)
+    nt.assert_raises(ValueError, utils.remove_auto_correlations, test_array,
+                     axes=axes)
+
+
+def test_remove_autos_axes_not_adjacent():
+    """Test error raised if axes are not adjacent."""
+    test_array = np.ones((3, 3, 11, 21))
+    axes = (0, 2)
+    nt.assert_raises(ValueError, utils.remove_auto_correlations, test_array,
+                     axes=axes)
+
+
+def test_remove_autos():
+    """Test that the remove auto_correlations function returns right shape."""
+    test_array = np.ones((3, 3, 11, 21))
+    out_array = utils.remove_auto_correlations(test_array, axes=(0, 1))
+    nt.assert_equal((6, 11, 21), out_array.shape)
+
+
+def test_remove_middle_axis():
+    """Test that the remove autos function returns right shape axes in middle of array."""
+    test_array = np.ones((13, 17, 19, 3, 3, 11, 21))
+    out_array = utils.remove_auto_correlations(test_array, axes=(3, 4))
+    nt.assert_equal((13, 17, 19, 6, 11, 21), out_array.shape)
+
+
+def test_remove_autos_with_pols():
+    """Test remove auto_correlations function returns right shape with pols."""
+    test_array = np.ones((4, 3, 3, 11, 21))
+    out_array = utils.remove_auto_correlations(test_array, axes=(1, 2))
+    nt.assert_equal((4, 6, 11, 21), out_array.shape)
+
+
 def test_fold_along_delay_mismatched_sizes():
     """Test fold_along_delay errors if inputs are a different sizes."""
     delays = np.arange(20) * units.s

@@ -238,6 +238,84 @@ def noise_equivalent_bandwidth(window):
     return np.sum(window)**2 / (np.sum(window**2) * len(window))
 
 
+def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
+    """Combine the nsample arrays for use in cross-multiplication.
+
+    Uses numpy slicing to generate array of all sample cross-multiples.
+    Used to find the combine samples for a the delay spectrum.
+    The geometric mean is taken between nsamples_1 and nsamples_2 because
+    nsmaples array is used to compute thermal variance in the delay spectrum.
+
+    Arguments:
+        nsample_1 : (Nbls, Ntimes, Nfreqs) array from get_nsamples_array
+                    can also have shape (Npols, Nbls, Ntimes, Nfreqs)
+        nsample_2 : same type as nsample_1 if take cross-multiplication
+                       Defaults to copying nsample_1 for auto-correlation
+    Returns:
+        samples_out: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
+                     the input sample arrays.
+                     Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+    """
+    if nsample_2 is None:
+        nsample_2 = nsample_1.copy()
+
+    if not nsample_1.shape == nsample_2.shape:
+        raise ValueError('nsample_1 and nsample_2 must have same shape, '
+                         'but nsample_1 has shape {d1_s} and '
+                         'nsample_2 has shape {d2_s}'
+                         .format(d1_s=nsample_1.shape,
+                                 d2_s=nsample_2.shape))
+
+    samples_out = cross_multiply_array(array_1=nsample_1,
+                                       array_2=nsample_2,
+                                       axis=axis)
+
+    # The nsamples array is used to construct the thermal variance
+    # Cross-correlation takes the geometric mean of thermal variance.
+    return np.sqrt(samples_out)
+
+
+def remove_auto_correlations(data_array, axes=(0, 1)):
+    """Remove the auto-corrlation term from input array.
+
+    Argument:
+        data_array : (Nbls, Nbls, Ntimes, Nfreqs)
+                     Removes same baseline diagonal along the first 2 diemsions
+    Returns:
+        data_out : (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
+                   if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
+    """
+    # if len(data_array.shape) == 4:
+    #     Nbls = data_array.shape[0]
+    # elif len(data_array.shape) == 5:
+    #     Nbls = data_array.shape[1]
+    # else:
+    #     raise ValueError('Input data_array must be of type '
+    #                      '(Npols, Nbls, Nbls, Ntimes, Nfreqs) or '
+    #                      '(Nbls, Nbls, Ntimes, Nfreqs) but data_array'
+    #                      'has shape {0}'.format(data_array.shape))
+    if not np.shape(axes)[0] == 2:
+        raise ValueError("Shape must be a length 2 tuple/array/list of "
+                         "axis indices.")
+    if axes[0] != axes[1] - 1:
+        raise ValueError("Axes over which diagonal components are to be "
+                         "remove must be adjacent.")
+    if data_array.shape[axes[0]] != data_array.shape[axes[1]]:
+        raise ValueError("The axes over which diagonal components are to be "
+                         "removed must have the same shape.")
+    n_inds = data_array.shape[axes[0]]
+    # make a boolean index array with True off the diagonal and
+    # False on the diagonal.
+    indices = np.logical_not(np.diag(np.ones(n_inds, dtype=bool)))
+    # move the axes so axes[0] is the 0th axis and axis 1 is the 1th
+    data_array = np.moveaxis(data_array, axes[0], 0)
+    data_array = np.moveaxis(data_array, axes[1], 1)
+    data_out = data_array[indices]
+    # put the compressed axis back in the original spot
+    data_out = np.moveaxis(data_out, 0, axes[0])
+    return data_out
+
+
 def cross_multiply_array(array_1, array_2=None, axis=0):
     """Cross multiply the arrays along the given axis.
 

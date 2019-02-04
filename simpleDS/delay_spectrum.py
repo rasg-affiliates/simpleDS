@@ -19,73 +19,6 @@ from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
 
 
-def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
-    """Combine the nsample arrays for use in cross-multiplication.
-
-    Uses numpy slicing to generate array of all sample cross-multiples.
-    Used to find the combine samples for a the delay spectrum.
-    The geometric mean is taken between nsamples_1 and nsamples_2 because
-    nsmaples array is used to compute thermal variance in the delay spectrum.
-
-    Arguments:
-        nsample_1 : (Nbls, Ntimes, Nfreqs) array from utils.get_nsamples_array
-                    can also have shape (Npols, Nbls, Ntimes, Nfreqs)
-        nsample_2 : same type as nsample_1 if take cross-multiplication
-                       Defaults to copying nsample_1 for auto-correlation
-    Returns:
-        samples_out: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
-                     the input sample arrays.
-                     Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
-    """
-    if nsample_2 is None:
-        nsample_2 = nsample_1.copy()
-
-    if not nsample_1.shape == nsample_2.shape:
-        raise ValueError('nsample_1 and nsample_2 must have same shape, '
-                         'but nsample_1 has shape {d1_s} and '
-                         'nsample_2 has shape {d2_s}'
-                         .format(d1_s=nsample_1.shape,
-                                 d2_s=nsample_2.shape))
-
-    samples_out = utils.cross_multiply_array(array_1=nsample_1,
-                                             array_2=nsample_2,
-                                             axis=axis)
-
-    # The nsamples array is used to construct the thermal variance
-    # Cross-correlation takes the geometric mean of thermal variance.
-    return np.sqrt(samples_out)
-
-
-def remove_auto_correlations(data_array):
-    """Remove the auto-corrlation term from input array.
-
-    Argument:
-        data_array : (Nbls, Nbls, Ntimes, Nfreqs)
-                     Removes same baseline diagonal along the first 2 diemsions
-    Returns:
-        data_out : (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
-                   if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
-    """
-    if len(data_array.shape) == 4:
-        Nbls = data_array.shape[0]
-    elif len(data_array.shape) == 5:
-        Nbls = data_array.shape[1]
-    else:
-        raise ValueError('Input data_array must be of type '
-                         '(Npols, Nbls, Nbls, Ntimes, Nfreqs) or '
-                         '(Nbls, Nbls, Ntimes, Nfreqs) but data_array'
-                         'has shape {0}'.format(data_array.shape))
-    # make a boolean index array with True off the diagonal and
-    # False on the diagonal.
-    indices = np.logical_not(np.diag(np.ones(Nbls, dtype=bool)))
-    if len(data_array.shape) == 4:
-        data_out = data_array[indices]
-    else:
-        data_out = data_array[:, indices]
-
-    return data_out
-
-
 class DelaySpectrum(UVBase):
     """A Delay Spectrum object to hold relevant data."""
 
@@ -286,6 +219,13 @@ class DelaySpectrum(UVBase):
         desc = ('The cross-multiplied power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
         self._power_array = UnitParameter('power_array', description=desc,
+                                          expected_type=np.complex, required=False,
+                                          form=('Nswps', 'Npols', 'Nbls', 'Nbls',
+                                                'Ntimes', 'Ndelays'))
+
+        desc = ('The cross-multiplied simulated noise power spectrum estimates. '
+                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
+        self._noise_power = UnitParameter('noise_power', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nswps', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'))
@@ -860,16 +800,16 @@ class DelaySpectrum(UVBase):
         self.set_delay()
         if self.Nuv == 1:
             delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
-                                                     axis=3)
+                                                     axis=2)
             noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
-                                                     axis=3)
+                                                     axis=2)
         else:
             delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
                                                      array_2=self.data_array[:, 1],
-                                                     axis=3)
+                                                     axis=2)
             noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
                                                      array_2=self.noise_array[:, 1],
-                                                     axis=3)
+                                                     axis=2)
 
         self.power_array = delay_power * unit_conversion
         self.noise_power = noise_power * unit_conversion
@@ -887,13 +827,13 @@ class DelaySpectrum(UVBase):
             sqrt(lst_bins): noise power spectrum averages incoherently over time
         """
         if self.Nuv == 1:
-            thermal_noise_samples = combine_nsamples(self.nsample_array[:, 0],
-                                                     self.nsample_array[:, 0],
-                                                     axis=2)
+            thermal_noise_samples = utils.combine_nsamples(self.nsample_array[:, 0],
+                                                           self.nsample_array[:, 0],
+                                                           axis=2)
         else:
-            thermal_noise_samples = combine_nsamples(self.nsample_array[:, 0],
-                                                     self.nsample_array[:, 1],
-                                                     axis=2)
+            thermal_noise_samples = utils.combine_nsamples(self.nsample_array[:, 0],
+                                                           self.nsample_array[:, 1],
+                                                           axis=2)
         # lst_array is stored in radians, multiply by 12*3600/np.pi to convert
         # to seconds
         lst_bins = (np.size(self.lst_array) * np.diff(self.lst_array)[0] * 12.
