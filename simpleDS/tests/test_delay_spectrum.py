@@ -501,7 +501,6 @@ def test_delay_spectrum_power_shape_two_uvdata_objects_read():
     nt.assert_equal(power_shape, dspec_object.power_array.shape)
 
 
-
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units_input_kelvin_str():
     """Test the units on the output power are correct when input kelvin*str."""
