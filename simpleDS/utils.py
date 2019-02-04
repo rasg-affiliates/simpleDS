@@ -326,6 +326,23 @@ def jy_to_mk(freqs):
     return jy2t.to('mK/Jy')
 
 
+def generate_noise(noise_power):
+    """Generate noise given an input array of noise power.
+
+    Argument:
+        noise_power: N-dimensional array of noise power to generate white
+                     noise.
+    Returns:
+        noise: Complex white noise drawn from a Gaussian distribution with
+               width given by the value of the input noise_power array.
+    """
+    # divide by sqrt(2) to conserve total noise amplitude over real and imag
+    noise = noise_power * (1 * np.random.normal(size=noise_power.shape)
+                           + 1j * np.random.normal(size=noise_power.shape))
+    noise /= np.sqrt(2)
+    return noise
+
+
 def normalized_fourier_transform(data_array, delta_x, axis=-1,
                                  taper=windows.blackmanharris, inverse=False):
     """Perform the Fourier transform over specified axis.

@@ -112,21 +112,6 @@ def calculate_noise_power(nsamples, freqs, inttime, trcvr, npols):
     return noise_power.filled(0).to('mK')
 
 
-def generate_noise(noise_power):
-    """Generate noise given an input array of noise power.
-
-    Argument:
-        noise_power: N-dimensional array of noise power to generate white
-                     noise.
-    Returns:
-        noise: Complex white noise drawn from a Gaussian distribution with
-               width given by the value of the input noise_power array.
-    """
-    # divide by sqrt(2) to conserve total noise amplitude over real and imag
-    noise = noise_power * (1 * np.random.normal(size=noise_power.shape)
-                           + 1j * np.random.normal(size=noise_power.shape))
-    noise /= np.sqrt(2)
-    return noise
 
 
 class DelaySpectrum(UVBase):
@@ -781,11 +766,7 @@ class DelaySpectrum(UVBase):
     def generate_noise(self):
         """Simulate noise based on meta-data of observation."""
         noise_power = self.calculate_noise_power()
-        noise_shape = self._noise_array.expected_shape(self)
-        tmp_noise = noise_power / np.sqrt(2)
-        tmp_noise = tmp_noise * (np.random.normal(size=noise_shape)
-                                 + 1j * np.random.normal(size=noise_shape))
-        self.noise_array = tmp_noise
+        self.noise_array = utils.generate_noise(noise_power)
 
     def update_cosmology(self, cosmo=None):
         """Update cosmological information with the assumed cosmology.

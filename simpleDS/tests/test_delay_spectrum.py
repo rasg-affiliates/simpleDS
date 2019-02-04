@@ -575,24 +575,6 @@ def test_noise_power_unit():
     nt.assert_equal(units.mK, test_noise_power.unit)
 
 
-# def test_noise_shape():
-#     """Test shape of generate_noise matches nsample array."""
-#     test_sample = np.ones((2, 13, 21)) * 3
-#     test_noise = dspec.generate_noise(test_sample)
-#     nt.assert_equal(test_sample.shape, test_noise.shape)
-
-
-def test_noise_amplitude():
-    """Ensure noise amplitude is reasonable within 1 percent."""
-    rtol = 1e-2
-    test_sample = np.ones((100, 1000)) * 3
-    test_noise = dspec.generate_noise(test_sample)
-    noise_power = test_noise.std(1)
-    noise_power_uncertainty = noise_power.std()
-    nt.assert_true(np.isclose(test_noise.std(), 3,
-                              atol=noise_power_uncertainty))
-
-
 @unittest.skip('Skipping some of detailed tests during conversion')
 def test_calculate_delay_spectrum_mismatched_freqs():
     """Test Exception is raised when freq arrays are not equal."""

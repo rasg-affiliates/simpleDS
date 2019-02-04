@@ -505,6 +505,24 @@ def test_cross_multiply_quantity_units():
     nt.assert_equal(units.Hz**2, array_out.unit)
 
 
+def test_noise_shape():
+    """Test shape of generate_noise matches nsample array."""
+    test_sample = np.ones((2, 13, 21)) * 3
+    test_noise = utils.generate_noise(test_sample)
+    nt.assert_equal(test_sample.shape, test_noise.shape)
+
+
+def test_noise_amplitude():
+    """Ensure noise amplitude is reasonable within 1 percent."""
+    rtol = 1e-2
+    test_sample = np.ones((100, 1000)) * 3
+    test_noise = utils.generate_noise(test_sample)
+    noise_power = test_noise.std(1)
+    noise_power_uncertainty = noise_power.std()
+    nt.assert_true(np.isclose(test_noise.std(), 3,
+                              atol=noise_power_uncertainty))
+
+
 def test_align_lst_error():
     """Test lst_align enforces same sampling rate."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
@@ -597,16 +615,7 @@ def test_align_lst_shapes_equal_uv_2_longer():
                                    + [PendingDeprecationWarning],
                                    nwarnings=len(warn_message) + 1,
                                    message=warn_message + pend_dep_message)
-    # warn_message = ['Antenna positions are not present in the file.',
-    #                 'Antenna positions are not present in the file.',
-    #                 'Ntimes does not match the number of unique '
-    #                 'times in the data',
-    #                 'Xantpos in extra_keywords is a list, array or dict, '
-    #                 'which will raise an error when writing uvfits '
-    #                 'or miriad file types']
-    # pend_dep_message = ['antenna_positions are not defined. '
-    #                     'antenna_positions will be a required parameter in '
-    #                     'future versions.']
+
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
                     'Ntimes does not match the number of unique '
