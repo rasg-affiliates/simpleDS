@@ -441,6 +441,18 @@ def test_warning_from_uncalibrated_data():
                          message=warn_message)
 
 
+def test_delay_transform_bad_data_type():
+    """Test error is raised in delay_transform if data_type is bad."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+
+    dspec_object = DelaySpectrum(uvd)
+    dspec_object.data_type = 'test'
+    nt.assert_raises(ValueError, dspec_object.delay_transform)
+
+
 def test_combine_nsamples_different_shapes():
     """Test an error is raised if nsample_arrays have different shapes."""
     test_sample_1 = np.ones((2, 13, 21))

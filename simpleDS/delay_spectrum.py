@@ -801,7 +801,7 @@ class DelaySpectrum(UVBase):
         """Perform a delay transform on the stored data array.
 
         If data is set to frequency domain, fourier transforms to delay space.
-        If data is est to delay domain, inverse fourier transform to frequency space.
+        If data is set to delay domain, inverse fourier transform to frequency space.
         """
         if self.data_array.unit == units.dimensionless_unscaled:
             warnings.warn("Fourier Transforming uncalibrated data. Units will "
