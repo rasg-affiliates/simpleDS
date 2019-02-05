@@ -259,7 +259,6 @@ class DelaySpectrum(UVBase):
                                                form=(1, 'Npols',
                                                      'Nbls', 'Ntimes', 1),
                                                expected_type=np.float)
-        self.thermal_expectation = None
 
         desc = ('Spectral taper function used during Fourier Transform. Functions like scipy.signal.windows.blackmanharris')
         self._taper = UnitParameter('taper', description=desc,
@@ -268,9 +267,6 @@ class DelaySpectrum(UVBase):
                                     value_not_quantity=True)
 
         super(DelaySpectrum, self).__init__()
-
-        if taper is not None:
-            self.set_taper(taper=taper)
 
         if uv is not None:
             if not isinstance(uv, (list, np.ndarray, tuple)):
@@ -285,6 +281,9 @@ class DelaySpectrum(UVBase):
 
         if trcvr is not None:
             self.add_trcvr(trcvr=trcvr)
+
+        if taper is not None:
+            self.set_taper(taper=taper)
 
     def set_taper(self, taper=None):
         """Set spectral taper function used during Fourier Transform.
@@ -531,7 +530,7 @@ class DelaySpectrum(UVBase):
         for p in self:
             if p not in ['_data_array', '_flag_array', '_nsample_array',
                          '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area',
-                         '_trcvr']:
+                         '_trcvr', '_taper']:
                 my_parm = getattr(self, p)
                 other_parm = getattr(this, p)
                 if my_parm.value is not None and my_parm != other_parm:
@@ -553,7 +552,7 @@ class DelaySpectrum(UVBase):
             my_parm = getattr(self, p)
             if p not in ['_data_array', '_flag_array', '_nsample_array',
                          '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area',
-                         '_trcvr']:
+                         '_trcvr', '_taper']:
                 if my_parm.value is None:
                     parm = getattr(this, p)
                     setattr(self, p, parm)
