@@ -32,7 +32,7 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     uvdata_argspec = six.get_function_code(uv.read).co_varnames
     kwargs_uvdata = {key: kwargs[key] for key in kwargs
                      if key in uvdata_argspec}
-    uv.read(filename, **kwargs_uvdata)
+    uv.read_miriad(filename, **kwargs_uvdata)
 
     if antpos_file is None:
         raise ValueError("An antpos_file file "
