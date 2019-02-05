@@ -492,7 +492,8 @@ class DelaySpectrum(UVBase):
 
         if this.data_array.unit == units.K * units.sr:
             # if the visibilities are in K steradian then the noise should be too.
-            this.noise_array = this.noise_array * utils.jy_to_mk(this.freq_array)
+            # reshape to have form of Nspws, Nuv, Npols, Nbls, Ntimes, Nfreqs
+            this.noise_array = this.noise_array * utils.jy_to_mk(this.freq_array).reshape(this.Nspws, 1, 1, 1, 1, this.Nfreqs)
         elif this.data_array.unit == units.dimensionless_unscaled:
             warnings.warn("Data is uncalibrated. Unable to covert noise array "
                           "to unicalibrated units.", UserWarning)
@@ -824,7 +825,7 @@ class DelaySpectrum(UVBase):
         # factor in temperature units, so we need to multiply it get them into
         # Janskys
         noise_power = np.ma.masked_invalid(noise_power.to('mK') * self.beam_area
-                                           / utils.jy_to_mk(self.freq_array))
+                                           / utils.jy_to_mk(self.freq_array).reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs))
         noise_power = noise_power.filled(0)
         return noise_power.to('Jy')
 
@@ -843,10 +844,13 @@ class DelaySpectrum(UVBase):
 
         NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
         self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
-        unit_conversion = simple_cosmo.X2Y(self.redshift) / self.bandwidth.to('1/s') / self.beam_sq_area
+        unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
+                           / self.bandwidth.to('1/s') / self.beam_sq_area)
 
         if self.data_array.unit.is_equivalent(units.Jy * units.Hz):
-            unit_conversion *= utils.jy_to_mk(self.freq_array)**2
+            jy_to_ksr = utils.jy_to_mk(self.freq_array)**2
+            # Need to add 'Npols' axis to jy_to_mk conversion
+            unit_conversion *= jy_to_ksr[:, None, :]
 
         self.set_delay()
         if self.Nuv == 1:
@@ -862,8 +866,8 @@ class DelaySpectrum(UVBase):
                                                      array_2=self.noise_array[:, 1],
                                                      axis=2)
 
-        self.power_array = delay_power * unit_conversion
-        self.noise_power = noise_power * unit_conversion
+        self.power_array = delay_power * unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
+        self.noise_power = noise_power * unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
         self.calculate_thermal_sensitivity()
 
     def calculate_thermal_sensitivity(self):
@@ -895,14 +899,15 @@ class DelaySpectrum(UVBase):
         with np.errstate(divide='ignore', invalid='ignore'):
             Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
             Tsys += self.trcvr.to('K')
+            Tsys = Tsys.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
             thermal_power = (Tsys.to('mK')**2
                              / (self.integration_time.to('s') * thermal_noise_samples
                                 * npols_noise * self.Nbls
                                 * np.sqrt(2 * lst_bins)))
 
-            thermal_power = thermal_power * simple_cosmo.X2Y(self.redshift)
+            thermal_power = thermal_power * simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1, 1, 1, 1)
             # This normalization of the thermal power comes from
             # Parsons PSA32 paper appendix B
-            thermal_power *= self.beam_area**2 / self.beam_sq_area
+            thermal_power *= (self.beam_area**2 / self.beam_sq_area).reshape(self.Nspws, self.Npols, 1, 1, 1, self.Nfreqs)
         thermal_power = np.ma.masked_invalid(thermal_power)
         self.thermal_power = thermal_power.filled(0).to('mK^2 Mpc^3')
