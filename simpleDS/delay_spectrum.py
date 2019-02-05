@@ -528,18 +528,24 @@ class DelaySpectrum(UVBase):
                              'data.')
 
         for p in self:
+            my_parm = getattr(self, p)
+            other_parm = getattr(this, p)
             if p not in ['_data_array', '_flag_array', '_nsample_array',
                          '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area',
-                         '_trcvr', '_taper']:
-                my_parm = getattr(self, p)
-                other_parm = getattr(this, p)
+                         '_trcvr', '_taper', '_lst_array']:
                 if my_parm.value is not None and my_parm != other_parm:
                     raise ValueError("Input data differs from previously "
                                      "loaded data. Parameter {name} is not "
                                      "the same.".format(name=p))
+            elif p in ['_lst_array']:
+                if my_parm.value is not None and my_parm != other_parm:
+                    time_diff = np.abs(my_parm.value - other_parm.value) * 12. * units.h / np.pi
+                    warnings.warn("Input LST arrays differ on average "
+                                  "by {time:}. Keeping LST array stored from "
+                                  "the first data set read."
+                                  .format(time=time_diff.mean().to('min')),
+                                  UserWarning)
             elif p in ['_beam_area, _beam_sq_area', '_trcvr']:
-                my_parm = getattr(self, p)
-                other_parm = getattr(this, p)
                 if my_parm.value is not None and my_parm != other_parm:
                     if np.isfinite(my_parm.value.value).all() and np.isfinite(other_parm.value.value).all():
                         raise ValueError("Input data differs from previously "
