@@ -891,9 +891,12 @@ class DelaySpectrum(UVBase):
                                                            self.nsample_array[:, 1],
                                                            axis=2)
         # lst_array is stored in radians, multiply by 12*3600/np.pi to convert
-        # to seconds
-        lst_bins = (np.size(self.lst_array) * np.diff(self.lst_array)[0] * 12.
-                    / np.pi * 3600 * units.s / self.integration_time.to('s'))
+        # to seconds s
+        if self.lst_array.size > 1:
+            delta_t = np.diff(self.lst_array)[0] * 12. / np.pi * 3600 * units.s
+        else:
+            delta_t = self.integration_time.to('s')
+        lst_bins = (np.size(self.lst_array) * delta_t / self.integration_time.to('s'))
         npols_noise = np.array([2 if p in np.arange(1, 5) else 1
                                 for p in self.polarization_array])
         npols_noise = npols_noise.reshape(1, 1, self.Npols, 1, 1, 1)
