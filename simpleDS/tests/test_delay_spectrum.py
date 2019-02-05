@@ -348,6 +348,53 @@ def test_loading_uvb_object():
                                dspec_object.beam_area.to('sr').value))
 
 
+def test_add_trcvr_scalar():
+    """Test a scalar trcvr quantity is broadcast to the correct shape."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object.add_trcvr(9 * units.K)
+    expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
+    nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+
+
+def test_add_trcvr_bad_number_of_spectral_windows():
+    """Test error is raised if the number of spectral windows do not match with input trcvr."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    bad_temp = np.ones((4, 21)) * units.K
+    nt.assert_raises(ValueError, dspec_object.add_trcvr, bad_temp)
+
+
+def test_add_trcvr_bad_number_of_freqs():
+    """Test error is raised if number of frequencies does not match input trcvr."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    bad_temp = np.ones((1, 51)) * units.K
+    nt.assert_raises(ValueError, dspec_object.add_trcvr, bad_temp)
+
+
+def test_add_trcvr_vector():
+    """Test an arry of trcvr quantity."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    good_temp = np.ones((1, 21)) * 9 * units.K
+    dspec_object.add_trcvr(good_temp)
+    expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
+    nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+
+
 def test_noise_shape():
     """Test the generate noise and calculate_noise_power produce correct shape."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
@@ -501,10 +548,9 @@ def test_delay_spectrum_power_shape_two_uvdata_objects_read():
     nt.assert_equal(power_shape, dspec_object.power_array.shape)
 
 
-@unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units_input_kelvin_str():
     """Test the units on the output power are correct when input kelvin*str."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile_k_units.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.']
@@ -531,18 +577,17 @@ def test_delay_spectrum_power_units_input_kelvin_str():
     test_uv_1.select(freq_chans=np.arange(95, 116))
     test_uv_2.select(freq_chans=np.arange(95, 116))
 
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(units.mK**2 * units.Mpc**3, delay_power.unit)
+    dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
+
+    dspec_object.calculate_delay_spectrum()
+    dspec_object.add_trcvr(144 * units.K)
+
+    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit))
 
 
-@unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_power_units_input_uncalib():
     """Test the units on the output power are correct if input uncalib."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile_uncalib_units.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_uncalib_units.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.']
@@ -569,18 +614,28 @@ def test_delay_spectrum_power_units_input_uncalib():
     test_uv_1.select(freq_chans=np.arange(95, 116))
     test_uv_2.select(freq_chans=np.arange(95, 116))
 
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(units.Mpc**3, delay_power.unit)
+    warn_message = ['Data is uncalibrated. Unable to covert noise array to unicalibrated units.']
+    dspec_object = uvtest.checkWarnings(DelaySpectrum,
+                                        func_args=[test_uv_1, test_uv_2],
+                                        message=warn_message,
+                                        nwarnings=len(warn_message),
+                                        category=UserWarning)
+
+    dspec_object.add_trcvr(144 * units.K)
+    warn_message = ['Fourier Transforming uncalibrated data. '
+                    'Units will not have physical meaning. '
+                    'Data will be arbitrarily scaled.']
+    uvtest.checkWarnings(dspec_object.calculate_delay_spectrum,
+                         message=warn_message,
+                         nwarnings=len(warn_message),
+                         category=UserWarning)
+
+    nt.assert_true((units.Mpc**3 / units.sr**2).is_equivalent(dspec_object.power_array.unit))
 
 
-@unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_noise_power_units():
     """Test the units on the output noise power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -624,18 +679,16 @@ def test_delay_spectrum_noise_power_units():
                          nwarnings=len(warn_message),
                          message=warn_message)
 
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(units.mK**2 * units.Mpc**3, noise_power.unit)
+    dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
+
+    dspec_object.calculate_delay_spectrum()
+    dspec_object.add_trcvr(144 * units.K)
+    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.noise_power.unit))
 
 
-@unittest.skip('Skipping some of detailed tests during conversion')
 def test_delay_spectrum_thermal_power_units():
     """Test the units on the output thermal power are correct."""
-    test_miriad = os.path.join(DATA_PATH, 'paper_testfile.uv')
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
     warn_message = ['Antenna positions are not present in the file.',
                     'Antenna positions are not present in the file.',
@@ -679,9 +732,8 @@ def test_delay_spectrum_thermal_power_units():
                          nwarnings=len(warn_message),
                          message=warn_message)
 
-    output_array = dspec.calculate_delay_spectrum(uv_even=test_uv_1,
-                                                  uv_odd=test_uv_2, uvb=uvb,
-                                                  trcvr=144 * units.K,
-                                                  reds=reds)
-    delays, delay_power, noise_power, thermal_power = output_array
-    nt.assert_equal(units.mK**2 * units.Mpc**3, thermal_power.unit)
+    dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
+
+    dspec_object.calculate_delay_spectrum()
+    dspec_object.add_trcvr(144 * units.K)
+    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.thermal_power.unit))

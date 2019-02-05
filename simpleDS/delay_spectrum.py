@@ -22,7 +22,6 @@ from .parameter import UnitParameter
 class DelaySpectrum(UVBase):
     """A Delay Spectrum object to hold relevant data."""
 
-    # @units.quantity_input(trcvr=units.K)
     def __init__(self, uv=None, uvb=None, taper=None):
         """Initialize the Delay Spectrum Object.
 
@@ -220,14 +219,21 @@ class DelaySpectrum(UVBase):
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
         self._power_array = UnitParameter('power_array', description=desc,
                                           expected_type=np.complex, required=False,
-                                          form=('Nswps', 'Npols', 'Nbls', 'Nbls',
+                                          form=('Nspws', 'Npols', 'Nbls', 'Nbls',
+                                                'Ntimes', 'Ndelays'))
+        desc = ('The predicted thermal sensitivity for input data assuming all '
+                'data will be averaged together.'
+                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
+        self._power_array = UnitParameter('power_array', description=desc,
+                                          expected_type=np.complex, required=False,
+                                          form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'))
 
         desc = ('The cross-multiplied simulated noise power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
         self._noise_power = UnitParameter('noise_power', description=desc,
                                           expected_type=np.complex, required=False,
-                                          form=('Nswps', 'Npols', 'Nbls', 'Nbls',
+                                          form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'))
 
         desc = ('The integral of the power beam area. Shape = (Nspws, Npols, Nfreqs)')
@@ -695,19 +701,47 @@ class DelaySpectrum(UVBase):
         uvw_wave /= (const.c / mean_freq.to('1/s')).to('m')
         self.k_perpendicular = simple_cosmo.u2kperp(uvw_wave, self.redshift)
 
-    def add_uv_beam(self, uvb):
+    def add_uv_beam(self, uvb, no_read_trcvr=False):
         """Add the beam_area and beam_square_area integrals into memory.
 
+        Also adds receiver temperature information if set in UVBeam object.
         Arguments:
             uvb: UVBeam object with relevent beam info.
                  Currently assumes 1 beam object can describe all baselines
                  Must be a power beam in healpix coordinates and peak normalized
+            no_read_trcvr: (Bool, default False)
+                           Flag to Not read trcvr from UVBeam object even if set in UVBeam.
+                           This is useful if a trcvr wants to be manually set but
+                           a beam read from a file which also contains receiver temperature information.
         """
         for spw, freqs in enumerate(self.freq_array):
             _beam = uvb.select(frequencies=freqs.to('Hz').value, inplace=False)
             for pol_cnt, pol in enumerate(self.polarization_array):
                 self.beam_area[spw, pol_cnt, :] = _beam.get_beam_area(pol=pol) * units.sr
                 self.beam_sq_area[spw, pol_cnt, :] = _beam.get_beam_sq_area(pol=pol) * units.sr**2
+
+                if _beam.receiver_temperature_array is not None and not no_read_trcvr:
+                    self.trcvr[spw, pol_cnt, :] = _beam.receiver_temperature_array[0]
+
+    @units.quantity_input(trcvr=units.K)
+    def add_trcvr(self, trcvr):
+        """Add the receiver temperature used to generate noise simulation.
+
+        Arguments:
+                trcvr: (astropy Quantity, units: Kelvin)
+                       (Nspws, Nfreqs) array of temperatures
+                       if a single temperature, it is assumed to be constant at all frequencies.
+        """
+        if trcvr.size == 1:
+            self.trcvr = np.ones(shape=self._trcvr.expected_shape(self)) * trcvr
+        elif trcvr.shape[0] != self.Nspws or trcvr.shape[1] != self.Nfreqs:
+            raise ValueError("If input receiver temperature is not a scalar "
+                             "Quantity, must shape (Nspws, Nfreqs). "
+                             "Expected shape was {s1}, but input shape "
+                             "was {s2}".format(s1=(self.Nspws, self.Nfreqs),
+                                               s2=trcvr.shape))
+        else:
+            self.trcvr = trcvr
 
     def delay_transform(self):
         """Perform a delay transform on the stored data array.
@@ -795,7 +829,9 @@ class DelaySpectrum(UVBase):
         NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
         self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
         unit_conversion = simple_cosmo.X2Y(self.redshift) / self.bandwidth.to('1/s') / self.beam_sq_area
-        unit_conversion *= utils.jy_to_mk(self.freq_array)**2
+
+        if self.data_array.unit.is_equivalent(units.Jy * units.Hz):
+            unit_conversion *= utils.jy_to_mk(self.freq_array)**2
 
         self.set_delay()
         if self.Nuv == 1:
@@ -841,17 +877,17 @@ class DelaySpectrum(UVBase):
         npols_noise = np.array([2 if p in np.arange(1, 5) else 1
                                 for p in self.polarization_array])
         npols_noise = npols_noise.reshape(1, 1, self.Npols, 1, 1, 1)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
+            Tsys += self.trcvr.to('K')
+            thermal_power = (Tsys.to('mK')**2
+                             / (self.integration_time.to('s') * thermal_noise_samples
+                                * npols_noise * self.Nbls
+                                * np.sqrt(2 * lst_bins)))
 
-        Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
-        Tsys += self.trcvr.to('K')
-        thermal_power = (Tsys.to('mK')**2
-                         / (self.integration_time.to('s') * thermal_noise_samples
-                            * npols_noise * self.Nbls
-                            * np.sqrt(2 * lst_bins)))
-
-        thermal_power = thermal_power * simple_cosmo.X2Y(self.redshift)
-        # This normalization of the thermal power comes from
-        # Parsons PSA32 paper appendix B
-        thermal_power *= self.beam_area**2 / self.beam_sq_area
-
-        self.thermal_power = thermal_power.to('mK^2 Mpc^3')
+            thermal_power = thermal_power * simple_cosmo.X2Y(self.redshift)
+            # This normalization of the thermal power comes from
+            # Parsons PSA32 paper appendix B
+            thermal_power *= self.beam_area**2 / self.beam_sq_area
+        thermal_power = np.ma.masked_invalid(thermal_power)
+        self.thermal_power = thermal_power.filled(0).to('mK^2 Mpc^3')
