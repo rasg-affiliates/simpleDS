@@ -22,7 +22,8 @@ from .parameter import UnitParameter
 class DelaySpectrum(UVBase):
     """A Delay Spectrum object to hold relevant data."""
 
-    def __init__(self, uv=None, uvb=None, taper=None):
+    @units.quantity_input(trcvr=units.K)
+    def __init__(self, uv=None, uvb=None, trcvr=None, taper=None):
         """Initialize the Delay Spectrum Object.
 
         If only one UVData Object is specified, data is multiplied by itself.
@@ -277,6 +278,14 @@ class DelaySpectrum(UVBase):
             for _uv in uv:
                 self.add_uvdata_object(_uv)
 
+        if uvb is not None:
+            if self.Nuv == 0:
+                raise ValueError("Please Load data before attaching a UVBeam.")
+            self.add_uv_beam(uvb)
+
+        if trcvr is not None:
+            self.add_trcvr(trcvr=trcvr)
+
     def set_taper(self, taper=None):
         """Set spectral taper function used during Fourier Transform.
 
@@ -520,18 +529,19 @@ class DelaySpectrum(UVBase):
 
         for p in self:
             if p not in ['_data_array', '_flag_array', '_nsample_array',
-                         '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area']:
+                         '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area',
+                         '_trcvr']:
                 my_parm = getattr(self, p)
                 other_parm = getattr(this, p)
                 if my_parm.value is not None and my_parm != other_parm:
                     raise ValueError("Input data differs from previously "
                                      "loaded data. Parameter {name} is not "
                                      "the same.".format(name=p))
-            elif p in ['_beam_area, _beam_sq_area']:
+            elif p in ['_beam_area, _beam_sq_area', '_trcvr']:
                 my_parm = getattr(self, p)
                 other_parm = getattr(this, p)
                 if my_parm.value is not None and my_parm != other_parm:
-                    if all(np.isfinite(my_parm.value)) and all(np.isfinite(other_parm.value)):
+                    if np.isfinite(my_parm.value.value).all() and np.isfinite(other_parm.value.value).all():
                         raise ValueError("Input data differs from previously "
                                          "loaded data. Parameter {name} is not "
                                          "the same".format(name=p))
@@ -539,37 +549,36 @@ class DelaySpectrum(UVBase):
         # Increment by one the number of read uvdata objects
         self._Nuv.value += 1
         for p in self:
-            if p not in ['_data_array', '_flag_array', '_nsample_array',
-                         '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area']:
-                my_parm = getattr(self, p)
-                if my_parm.value is None:
-                    parm = getattr(this, p)
-                    setattr(self, p, parm)
-            elif p in ['_beam_area', '_beam_sq_area']:
-                if my_parm.value is None:
-                    parm = getattr(this, p)
-                    setattr(self, p, parm)
-                elif all(np.isinf(my_parm.value)):
-                    parm = getattr(this, p)
-                    setattr(self, p, parm)
-
-        for p in ['_data_array', '_flag_array',
-                  '_nsample_array', '_noise_array']:
             my_parm = getattr(self, p)
-            parm = getattr(this, p)
-            if my_parm.value is not None:
-                tmp_data = np.zeros(my_parm.expected_shape(self),
-                                    dtype=my_parm.expected_type)
-                tmp_data[:, :self.Nuv - 1] = my_parm.value[:]
+            if p not in ['_data_array', '_flag_array', '_nsample_array',
+                         '_noise_array', '_Nuv', '_beam_area', '_beam_sq_area',
+                         '_trcvr']:
+                if my_parm.value is None:
+                    parm = getattr(this, p)
+                    setattr(self, p, parm)
+            elif p in ['_beam_area', '_beam_sq_area', '_trcvr']:
+                if my_parm.value is None:
+                    parm = getattr(this, p)
+                    setattr(self, p, parm)
+                elif np.isinf(my_parm.value.value).all():
+                    parm = getattr(this, p)
+                    setattr(self, p, parm)
+            elif p in ['_data_array', '_flag_array',
+                       '_nsample_array', '_noise_array']:
+                parm = getattr(this, p)
+                if my_parm.value is not None:
+                    tmp_data = np.zeros(my_parm.expected_shape(self),
+                                        dtype=my_parm.expected_type)
+                    tmp_data[:, :self.Nuv - 1] = my_parm.value[:]
 
-                if isinstance(my_parm.value, units.Quantity):
-                    tmp_data = tmp_data * my_parm.value.unit
+                    if isinstance(my_parm.value, units.Quantity):
+                        tmp_data = tmp_data * my_parm.value.unit
 
-                my_parm.value = tmp_data
-                my_parm.value[:, self.Nuv - 1] = parm.value[0]
-                setattr(self, p, my_parm)
-            else:
-                setattr(self, p, parm)
+                    my_parm.value = tmp_data
+                    my_parm.value[:, self.Nuv - 1] = parm.value[0]
+                    setattr(self, p, my_parm)
+                else:
+                    setattr(self, p, parm)
         self.check(check_extra=False, run_check_acceptability=True)
 
     def select_spectral_windows(self, spectral_windows=None, freqs=None, inplace=True):
@@ -623,7 +632,7 @@ class DelaySpectrum(UVBase):
         num_freqs = spectral_windows[:, 1] + 1 - spectral_windows[:, 0]
         if not all(num_freqs == num_freqs[0]):
             raise ValueError("Spectral windows must all have the same size.")
-        freq_chans = spectral_windows[:, 0, None] + np.arange(num_freqs)
+        freq_chans = spectral_windows[:, 0, None] + np.arange(num_freqs[0])
         this.Nspws = Nspws
         this.Nfreqs = np.int(num_freqs[0])
         this.freq_array = np.take(this.freq_array, freq_chans)
@@ -694,12 +703,14 @@ class DelaySpectrum(UVBase):
         """
         # find the mean redshift for each spectral window
         self.redshift = simple_cosmo.calc_z(self.freq_array).mean(axis=1)
-        self.k_parallel = simple_cosmo.eta2kparr(self.delay_array, self.redshift[None])
+        self.k_parallel = simple_cosmo.eta2kparr(self.delay_array.reshape(1, self.Ndelays),
+                                                 self.redshift.reshape(self.Nspws, 1), cosmo=cosmo)
 
         uvw_wave = np.linalg.norm(self.uvw)
         mean_freq = np.mean(self.freq_array.value, axis=1) * self.freq_array.unit
         uvw_wave /= (const.c / mean_freq.to('1/s')).to('m')
-        self.k_perpendicular = simple_cosmo.u2kperp(uvw_wave, self.redshift)
+        self.k_perpendicular = simple_cosmo.u2kperp(uvw_wave, self.redshift,
+                                                    cosmo=cosmo)
 
     def add_uv_beam(self, uvb, no_read_trcvr=False):
         """Add the beam_area and beam_square_area integrals into memory.
@@ -721,7 +732,7 @@ class DelaySpectrum(UVBase):
                 self.beam_sq_area[spw, pol_cnt, :] = _beam.get_beam_sq_area(pol=pol) * units.sr**2
 
                 if _beam.receiver_temperature_array is not None and not no_read_trcvr:
-                    self.trcvr[spw, pol_cnt, :] = _beam.receiver_temperature_array[0]
+                    self.trcvr[spw, :] = _beam.receiver_temperature_array[0] * units.K
 
     @units.quantity_input(trcvr=units.K)
     def add_trcvr(self, trcvr):
@@ -817,12 +828,16 @@ class DelaySpectrum(UVBase):
         noise_power = noise_power.filled(0)
         return noise_power.to('Jy')
 
-    def calculate_delay_spectrum(self):
+    def calculate_delay_spectrum(self, run_check=True,
+                                 run_check_acceptability=True):
         """Perform Delay tranform and cross multiplication of datas.
 
         Take the normalized Fourier transform of the data in objects and cross multiplies baselines.
         Also generates white noise given the frequency range and trcvr and calculates the expected noise power.
         """
+        if self.Nuv == 0:
+            raise ValueError("No data has be loaded. Add UVData objects before "
+                             "calling calculate_delay_spectrum.")
         if self.data_type == 'frequency':
             self.delay_transform()
 

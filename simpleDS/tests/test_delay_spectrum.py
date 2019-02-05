@@ -259,6 +259,14 @@ class TestBasicFunctions(object):
         nt.assert_raises(ValueError, self.dspec_object.select_spectral_windows,
                          spectral_windows=((2, 3), (2, 6)))
 
+    def test_adding_multiple_spectral_windows(self):
+        """Test multiple spectral windows are added correctly."""
+        self.dspec_object.select_spectral_windows([(3, 5), (7, 9)])
+        expected_shape = (2, 1, self.dspec_object.Npols, self.dspec_object.Nbls,
+                          self.dspec_object.Ntimes, 3)
+        nt.assert_equal(expected_shape, self.dspec_object.data_array.shape)
+        nt.assert_true(self.dspec_object.check())
+
     def test_add_second_uvdata_object(self):
         """Test a second UVdata object can be added correctly."""
         uvd = UVData()
@@ -348,6 +356,33 @@ def test_loading_uvb_object():
                                dspec_object.beam_area.to('sr').value))
 
 
+def test_loading_uvb_object_no_data():
+    """Test error is raised if adding a UVBeam object but no data."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    nt.assert_raises(ValueError, DelaySpectrum, uvb=uvb)
+
+
+def test_loading_uvb_object_with_trcvr():
+    """Test a uvb object with trcvr gets added properly."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    uvb.receiver_temperature_array = np.ones((1, uvb.Nfreqs)) * 144
+    dspec_object.add_uv_beam(uvb=uvb)
+    uvb.select(frequencies=uvd.freq_array[0])
+    nt.assert_true(np.allclose(uvb.receiver_temperature_array[0],
+                               dspec_object.trcvr.to('K')[0].value))
+
+
 def test_add_trcvr_scalar():
     """Test a scalar trcvr quantity is broadcast to the correct shape."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
@@ -393,6 +428,28 @@ def test_add_trcvr_vector():
     dspec_object.add_trcvr(good_temp)
     expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
     nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+
+
+def test_add_trcvr_init():
+    """Test a scalar trcvr quantity is broadcast to the correct shape during init."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd, trcvr=9 * units.K)
+    expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
+    nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+
+
+def test_add_trcvr_init_error():
+    """Test error is raised if trcvr is the only input to init."""
+    nt.assert_raises(ValueError, DelaySpectrum, trcvr=9 * units.K)
+
+
+def test_spectrum_on_no_data():
+    """Test error is raised if spectrum attempted to be taken with no data."""
+    dspec_object = DelaySpectrum()
+    nt.assert_raises(ValueError, dspec_object.calculate_delay_spectrum)
 
 
 def test_noise_shape():
@@ -614,9 +671,12 @@ def test_delay_spectrum_power_units_input_uncalib():
     test_uv_1.select(freq_chans=np.arange(95, 116))
     test_uv_2.select(freq_chans=np.arange(95, 116))
 
-    warn_message = ['Data is uncalibrated. Unable to covert noise array to unicalibrated units.']
+    warn_message = ['Data is uncalibrated. Unable to covert noise '
+                    'array to unicalibrated units.',
+                    'Data is uncalibrated. Unable to covert noise '
+                    'array to unicalibrated units.']
     dspec_object = uvtest.checkWarnings(DelaySpectrum,
-                                        func_args=[test_uv_1, test_uv_2],
+                                        func_kwargs={'uv': [test_uv_1, test_uv_2]},
                                         message=warn_message,
                                         nwarnings=len(warn_message),
                                         category=UserWarning)
