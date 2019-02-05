@@ -272,12 +272,12 @@ class DelaySpectrum(UVBase):
             if not isinstance(uv, (list, np.ndarray, tuple)):
                 uv = [uv]
             for _uv in uv:
-                self.add_uvdata_object(_uv)
+                self.add_uvdata(_uv)
 
         if uvb is not None:
             if self.Nuv == 0:
                 raise ValueError("Please Load data before attaching a UVBeam.")
-            self.add_uv_beam(uvb)
+            self.add_uvbeam(uvb)
 
         if trcvr is not None:
             self.add_trcvr(trcvr=trcvr)
@@ -409,7 +409,7 @@ class DelaySpectrum(UVBase):
                                          + message)
         return True
 
-    def add_uvdata_object(self, uv, spectral_windows=None):
+    def add_uvdata(self, uv, spectral_windows=None):
         """Add the relevant uvdata object data to DelaySpectrum object.
 
         Unloads the data, flags, and nsamples arrays from the input UVData
@@ -718,7 +718,7 @@ class DelaySpectrum(UVBase):
         self.k_perpendicular = simple_cosmo.u2kperp(uvw_wave, self.redshift,
                                                     cosmo=cosmo)
 
-    def add_uv_beam(self, uvb, no_read_trcvr=False):
+    def add_uvbeam(self, uvb, no_read_trcvr=False):
         """Add the beam_area and beam_square_area integrals into memory.
 
         Also adds receiver temperature information if set in UVBeam object.

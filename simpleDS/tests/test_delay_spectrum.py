@@ -224,13 +224,13 @@ class TestBasicFunctions(object):
         uvd = UVData()
         uvd.read(self.testfile)
         uvd.vis_units = 'K str'
-        nt.assert_raises(units.UnitConversionError, self.dspec_object.add_uvdata_object, uvd)
+        nt.assert_raises(units.UnitConversionError, self.dspec_object.add_uvdata, uvd)
         uvd.vis_units = 'uncalib'
         warn_message = ['Data is uncalibrated. Unable to covert '
                         'noise array to unicalibrated units.']
 
         nt.assert_raises(units.UnitConversionError, uvtest.checkWarnings,
-                         self.dspec_object.add_uvdata_object, func_args=[uvd],
+                         self.dspec_object.add_uvdata, func_args=[uvd],
                          category=UserWarning,
                          nwarnings=len(warn_message),
                          message=warn_message)
@@ -240,14 +240,14 @@ class TestBasicFunctions(object):
         uvd = UVData()
         uvd.read(self.testfile)
         self.dspec_object.Nuv = 2
-        nt.assert_raises(ValueError, self.dspec_object.add_uvdata_object, uvd)
+        nt.assert_raises(ValueError, self.dspec_object.add_uvdata, uvd)
 
     def test_incompatible_parameters(self):
         """Test UVData objects with incompatible paramters are rejected."""
         uvd = UVData()
         uvd.read(self.testfile)
         uvd.select(freq_chans=np.arange(12))
-        nt.assert_raises(ValueError, self.dspec_object.add_uvdata_object, uvd)
+        nt.assert_raises(ValueError, self.dspec_object.add_uvdata, uvd)
 
     def test_adding_spectral_windows_different_tuple_shape(self):
         """Test error is raised if spectral windows have different shape input."""
@@ -273,7 +273,7 @@ class TestBasicFunctions(object):
         uvd.read(self.testfile)
         # multiply by a scalar here to track if it gets set in the correct slot
         uvd.data_array *= np.sqrt(2)
-        self.dspec_object.add_uvdata_object(uvd)
+        self.dspec_object.add_uvdata(uvd)
         nt.assert_equal(self.dspec_object.Nuv, 2)
         nt.assert_true(np.allclose(self.dspec_object.data_array[:, 0].value,
                                    self.dspec_object.data_array[:, 1].value / np.sqrt(2)))
@@ -300,12 +300,12 @@ def test_adding_spectral_window_between_uvdata():
     dspec_object = DelaySpectrum(uv=uvd)
     dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
     uvd1 = copy.deepcopy(uvd)
-    dspec_object.add_uvdata_object(uvd1)
+    dspec_object.add_uvdata(uvd1)
     nt.assert_true(dspec_object.check())
 
 
 def test_adding_new_uvdata_with_different_freqs():
-    """Test error is raised when trying to add a uvdata object with the same freqs."""
+    """Test error is raised when trying to add a uvdata object with different freqs."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
     uvd = UVData()
     uvd.read(testfile)
@@ -313,7 +313,25 @@ def test_adding_new_uvdata_with_different_freqs():
     dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
     uvd1 = copy.deepcopy(uvd)
     uvd1.freq_array *= 11.1
-    nt.assert_raises(ValueError, dspec_object.add_uvdata_object, uvd1)
+    nt.assert_raises(ValueError, dspec_object.add_uvdata, uvd1)
+
+
+def test_adding_new_uvdata_with_different_lsts():
+    """Test error is raised when trying to add a uvdata object with different LSTS."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
+    uvd1 = copy.deepcopy(uvd)
+    uvd1.lst_array += (3 * units.min * np.pi / (12 * units.h).to('min')).value
+    # the actual output of this warning depends on the time difference of the
+    #  arrays so we'll cheat on the check.
+    warn_message = ["Input LST arrays differ on average by"]
+    uvtest.checkWarnings(dspec_object.add_uvdata, func_args=[uvd1],
+                         message=warn_message,
+                         nwarnings=len(warn_message),
+                         category=UserWarning)
 
 
 def test_select_spectral_window_not_inplace():
@@ -337,7 +355,7 @@ def test_loading_different_arrays():
     ants = [uvd.baseline_to_antnums(bl) for bl in bls]
     ants = [(a1, a2) for a1, a2 in ants]
     uvd.select(bls=ants)
-    nt.assert_raises(ValueError, dspec_object.add_uvdata_object, uvd)
+    nt.assert_raises(ValueError, dspec_object.add_uvdata, uvd)
 
 
 def test_loading_uvb_object():
@@ -350,7 +368,7 @@ def test_loading_uvb_object():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb)
     uvb.select(frequencies=uvd.freq_array[0])
     nt.assert_true(np.allclose(uvb.get_beam_area(pol='pI'),
                                dspec_object.beam_area.to('sr').value))
@@ -393,7 +411,7 @@ def test_loading_uvb_object_with_trcvr():
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
     uvb.receiver_temperature_array = np.ones((1, uvb.Nfreqs)) * 144
-    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb)
     uvb.select(frequencies=uvd.freq_array[0])
     nt.assert_true(np.allclose(uvb.receiver_temperature_array[0],
                                dspec_object.trcvr.to('K')[0].value))
@@ -582,7 +600,7 @@ def test_delay_spectrum_power_units():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
     nt.assert_equal(units.mK**2 * units.Mpc**3, dspec_object.power_array.unit)
 
@@ -597,7 +615,7 @@ def test_delay_spectrum_power_shape():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
     power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
                    dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
@@ -614,7 +632,7 @@ def test_delay_spectrum_power_shape_two_uvdata_objects_read():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
     power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
                    dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
@@ -631,7 +649,7 @@ def test_delay_spectrum_power_shape_two_spectral_windows():
     dspec_object.select_spectral_windows([(1, 3), (4, 6)])
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uv_beam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
     power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
                    dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
