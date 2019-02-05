@@ -1064,30 +1064,115 @@ def test_remove_autos_with_pols():
     nt.assert_equal((4, 6, 11, 21), out_array.shape)
 
 
+def test_weighted_average_unit_mismatch():
+    """Test error is raised if array and uncertainty have incompatible units."""
+    test_array = np.ones((3, 3, 2)) * units.m
+    test_error = np.ones_like(test_array.value) * units.Hz
+    nt.assert_raises(units.UnitConversionError, utils.weighted_average,
+                     test_array, test_error)
+
+
+def test_weighted_average_array_not_quantity_error_is_quantity():
+    """Test error is raised if array and uncertainty have incompatible units."""
+    test_array = np.ones((3, 3, 2))
+    test_error = np.ones_like(test_array) * units.m
+    nt.assert_raises(ValueError, utils.weighted_average, test_array, test_error)
+
+
+def test_weighted_average_array_is_quantity_error_not_quantity():
+    """Test error is raised if array and uncertainty have incompatible units."""
+    test_array = np.ones((3, 3, 2)) * units.m
+    test_error = np.ones_like(test_array.value)
+    nt.assert_raises(ValueError, utils.weighted_average, test_array, test_error)
+
+
+def test_weighted_average_shape_mismatch():
+    """Test error is raised is shape of array and uncertainty differ."""
+    test_array = np.ones((3, 3, 2)) * units.m
+    test_error = np.ones((4, 3, 2)) * units.m
+    nt.assert_raises(ValueError, utils.weighted_average, test_array, test_error)
+
+
+def test_weighted_average_weights_bad_shape_one_dimensional():
+    """Test error is raised if the weights have a bad shape if in 1-D."""
+    test_array = np.ones((3, 3, 2)) * units.m
+    test_error = np.ones((3, 3, 2)) * units.m
+    weights = np.ones(4)
+    nt.assert_raises(ValueError, utils.weighted_average, test_array,
+                     test_error, weights=weights)
+
+
+def test_weighted_average_weights_bad_shape():
+    """Test error is raised if the weights have a bad shape."""
+    test_array = np.ones((3, 3, 2)) * units.m
+    test_error = np.ones((3, 3, 2)) * units.m
+    weights = np.ones((5, 3, 2))
+    nt.assert_raises(ValueError, utils.weighted_average, test_array,
+                     test_error, weights=weights)
+
+
+def test_weighted_average_uniform_weights_value():
+    """Test when weights are one a uniform average is performed."""
+    test_array = np.arange(20).reshape(4, 5) * units.m
+    test_error = np.ones(20).reshape(4, 5) * units.m
+    weights = np.ones_like(test_array.value)
+    array_out, error_out = utils.weighted_average(test_array, test_error,
+                                                  weights=weights, axis=0)
+    nt.assert_true(np.array_equal(np.array([7.5, 8.5, 9.5, 10.5, 11.5]), array_out.value))
+    nt.assert_equal(units.m, array_out.unit)
+    print(error_out**2)
+    nt.assert_true(np.array_equal(np.array([1, 1, 1, 1, 1]) / np.sqrt(test_array.shape[0]),
+                                  error_out.value))
+    nt.assert_equal(units.m, error_out.unit)
+
+
+def test_weighted_average_inverse_variance_weights():
+    """Test the output of weighted average with inverse variance weights."""
+    test_array = np.array([1, 3, 10])
+    test_error = np.array([1, 3, 10])
+    array_out, error_out = utils.weighted_average(test_array, test_error)
+    print(error_out)
+    nt.assert_true(np.isclose(array_out, 1.2784935579781962))
+    nt.assert_true(np.isclose(error_out, 0.9444428250308379))
+
+
 def test_fold_along_delay_mismatched_sizes():
     """Test fold_along_delay errors if inputs are a different sizes."""
     delays = np.arange(20) * units.s
     array = np.ones((1, 10, 3)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 3)) * units.mK**2 * units.Mpc**3
     axis = 2
     nt.assert_raises(ValueError, utils.fold_along_delay,
-                     array, delays, axis=axis)
+                     delays, array, errs, axis=axis)
+
+
+def test_fold_along_delay_mismatched_uncertainty_shape():
+    """Test fold_along_delay errors if inputs are a different sizes."""
+    delays = np.arange(20) * units.s
+    array = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    axis = 2
+    nt.assert_raises(ValueError, utils.fold_along_delay,
+                     delays, array, errs, axis=axis)
 
 
 def test_fold_along_delay_delays_no_zero_bin():
     """Test fold_along_delay errors if inputs are a different sizes."""
     delays = (np.arange(21) + 11) * units.s
     array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = -1
     nt.assert_raises(ValueError, utils.fold_along_delay,
-                     array, delays, axis=axis)
+                     delays, array, errs, axis=axis)
 
 
 def test_fold_along_delay_odd_length_ones_unchanged():
     """Test fold_along_delay returns all ones if  odd shaped input is ones."""
     delays = np.arange(-10, 11) * units.s
     array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays, axis=axis)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     nt.assert_true(np.allclose(np.ones((1, 10, 11)), array_out.value))
 
 
@@ -1095,8 +1180,9 @@ def test_fold_along_delay_odd_length_units_unchanged():
     """Test fold_along_delay returns the same unit as odd shaped input."""
     delays = np.arange(-10, 11) * units.s
     array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays, axis=axis)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     nt.assert_equal(units.mK**2 * units.Mpc**3, array_out.unit)
 
 
@@ -1104,8 +1190,9 @@ def test_fold_along_delay_even_length_ones_unchanged():
     """Test fold_along_delay returns all ones if even shaped input is ones."""
     delays = (np.arange(-10, 10) + .5) * units.s
     array = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays, axis=axis)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     nt.assert_true(np.allclose(np.ones((1, 10, 10)), array_out.value))
 
 
@@ -1113,8 +1200,9 @@ def test_fold_along_delay_even_length_units_unchanged():
     """Test fold_along_delay returns the same unit as the even shaped input."""
     delays = (np.arange(-10, 10) + .5) * units.s
     array = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays, axis=axis)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     nt.assert_equal(units.mK**2 * units.Mpc**3, array_out.unit)
 
 
@@ -1125,7 +1213,8 @@ def test_fold_along_delay_amplitude_check():
     array[:, :, 11:] *= np.sqrt(2)
     array[:, :, 10] *= 3
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays, axis=axis)
+    errs = np.ones_like(array)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     test_value_array = np.ones((1, 10, 11)) * np.mean([np.sqrt(2), 1])
     test_value_array[:, :, 0] = 3
     nt.assert_true(np.allclose(test_value_array, array_out.value))
@@ -1137,11 +1226,11 @@ def test_fold_along_delay_amplitude_check_with_weights():
     array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     array[:, :, 11:] *= np.sqrt(2)
     array[:, :, 10] *= 3
-    weights = np.ones_like(array)
-    weights[:, :, 11:] *= 2
+    errs = np.ones_like(array)
+    errs[:, :, 11:] *= 2
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays,
-                                                    weights=weights, axis=axis)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs,
+                                                 weights=1. / errs**2, axis=axis)
     test_value_array = np.ones((1, 10, 11))
     test_value_array[:, :, 1:] *= np.average([np.sqrt(2), 1],
                                              weights=1. / np.array([2., 1.])**2)
@@ -1155,16 +1244,17 @@ def test_fold_along_delay_weight_check():
     array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     array[:, :, 11:] *= np.sqrt(2)
     array[:, :, 10] *= 3
-    weights = np.ones_like(array)
-    weights[:, :, 11:] *= 2
+    errs = np.ones_like(array)
+    errs[:, :, 11:] *= 2
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays,
-                                                    weights=weights, axis=axis)
-    test_weight_array = np.ones((1, 10, 11))
-    test_weight_array[:, :, 1:] *= np.sqrt(np.average(np.array([2., 1.])**2,
-                                                      weights=1. / np.array([2., 1.])**2))
-    test_weight_array[:, :, 0] = 1
-    nt.assert_true(np.allclose(test_weight_array, weights_out.value))
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs,
+                                                 weights=1. / errs**2, axis=axis)
+    test_errs_array = np.ones((1, 10, 11))
+    test_errs_array[:, :, 1:] *= np.sqrt(1. / np.sum(1. / np.array([2., 1.])**2))
+    test_errs_array[:, :, 0] = 1
+    # print('known:', test_weight_array)
+    # print('calc', weights_out)
+    nt.assert_true(np.allclose(test_errs_array, errs_out.value))
 
 
 def test_fold_along_delay_amplitude_check_complex():
@@ -1176,7 +1266,8 @@ def test_fold_along_delay_amplitude_check_complex():
     array[:, :, 11:].imag *= np.sqrt(3)
     array[:, :, 10].imag *= 6
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays, axis=axis)
+    errs = np.ones_like(array)
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     test_value_array = np.ones((1, 10, 11)).astype(np.complex)
     test_value_array[:, :, 1:] *= (np.mean([np.sqrt(2), 1])
                                    + 1j * np.mean([np.sqrt(3), 1]))
@@ -1192,15 +1283,15 @@ def test_fold_along_delay_amplitude_check_complex_mismatched_weights():
     array[:, :, 10].real *= 5
     array[:, :, 11:].imag *= np.sqrt(3)
     array[:, :, 10].imag *= 6
-    weights = np.ones_like(array).real
-    weights[:, :, 11:] *= 2
+    errs = np.ones_like(array).real
+    errs[:, :, 11:] *= 2
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays,
-                                                    weights=weights, axis=axis)
-    test_weight_array = np.ones((1, 10, 11)).astype(np.complex)
-    test_weight_array[:, :, 1:].real *= np.sqrt(np.average(np.array([2., 1.])**2, weights=1. / np.array([2., 1.])**2))
-    test_weight_array[:, :, 0] = 1 + 0j
-    nt.assert_true(np.allclose(test_weight_array, weights_out.value))
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs,
+                                                 weights=1. / errs**2, axis=axis)
+    test_errs_array = np.ones((1, 10, 11)).astype(np.complex)
+    test_errs_array[:, :, 1:].real *= 1. / np.sqrt(np.sum(1. / np.array([2., 1.])**2))
+    test_errs_array[:, :, 0] = 1 + 0j
+    nt.assert_true(np.allclose(test_errs_array, errs_out.value))
 
 
 def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
@@ -1211,12 +1302,12 @@ def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
     array[:, :, 10].real *= 5
     array[:, :, 11:].imag *= np.sqrt(3)
     array[:, :, 10].imag *= 6
-    weights = np.ones_like(array).astype(np.complex)
-    weights[:, :, 11:].real *= 2
+    errs = np.ones_like(array).astype(np.complex)
+    errs[:, :, 11:].real *= 2
     axis = -1
-    array_out, weights_out = utils.fold_along_delay(array, delays,
-                                                    weights=weights, axis=axis)
-    test_weight_array = np.ones((1, 10, 11)).astype(np.complex)
-    test_weight_array[:, :, 1:].real *= np.sqrt(np.average(np.array([2., 1.])**2, weights=1. / np.array([2., 1.])**2))
-    test_weight_array[:, :, 0] = 1 + 0j
-    nt.assert_true(np.allclose(test_weight_array, weights_out.value))
+    array_out, errs_out = utils.fold_along_delay(delays, array, errs,
+                                                 weights=1. / errs**2, axis=axis)
+    test_errs_array = np.ones((1, 10, 11)).astype(np.complex)
+    test_errs_array[:, :, 1:].real *= 1. / np.sqrt(np.sum(1. / np.array([2., 1.])**2))
+    test_errs_array[:, :, 0] = 1 + 0j
+    nt.assert_true(np.allclose(test_errs_array, errs_out.value))

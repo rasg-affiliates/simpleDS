@@ -285,15 +285,6 @@ def remove_auto_correlations(data_array, axes=(0, 1)):
         data_out : (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
                    if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
     """
-    # if len(data_array.shape) == 4:
-    #     Nbls = data_array.shape[0]
-    # elif len(data_array.shape) == 5:
-    #     Nbls = data_array.shape[1]
-    # else:
-    #     raise ValueError('Input data_array must be of type '
-    #                      '(Npols, Nbls, Nbls, Ntimes, Nfreqs) or '
-    #                      '(Nbls, Nbls, Ntimes, Nfreqs) but data_array'
-    #                      'has shape {0}'.format(data_array.shape))
     if not np.shape(axes)[0] == 2:
         raise ValueError("Shape must be a length 2 tuple/array/list of "
                          "axis indices.")
@@ -467,13 +458,65 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
     return fourier_array
 
 
+def weighted_average(array, uncertainty, weights=None, axis=-1):
+    """Compute the weighted average and propagate uncertainty.
+
+    Performs weighted average of input array, and propagates the weighted average into the uncertainty.
+
+    Arguments:
+        array: (N-dimensional) array over which to average an axis.
+        uncertainty: (N-dimensional) array of uncertainties associated with each point in input array
+        weights: (N-dimenional or 1-Dimenaional, Default None) array of weights to apply to each data point.
+                  If weights are one dimensional must be of length N and assumped to be the same for each row M.
+                  if weights is None, uses inverse variance weighting
+        axis: (integer, Default -1) The axis over which the average is taken.
+    Retruns:
+        array: (MxN-1 dimenionals) array averaged array with given weights
+        uncertainty: (MxN-1 dimensional) propagated array array for given weights
+    """
+    if isinstance(array, units.Quantity):
+        if isinstance(uncertainty, units.Quantity):
+            uncertainty = uncertainty.to(array.unit)
+        else:
+            raise ValueError("Input array is a Quantity Objcet but "
+                             "uncertainty is not. Either both arrays must be "
+                             "Quantity objects or neither must be.")
+    elif isinstance(uncertainty, units.Quantity):
+        raise ValueError("Input array is a not Quantity Objcet but "
+                         "uncertainty is. Either both arrays must be "
+                         "Quantity objects or neither must be.")
+    # check shapes of array and uncertainty
+    if not array.shape == uncertainty.shape:
+        raise ValueError("Input array and uncertainties must have the same "
+                         "shape. Array shape: {array}, Uncertainty shape: "
+                         "{error}".format(array=array.shape,
+                                          error=uncertainty.shape))
+    # if weights is none use uniform? inverse variance
+    if weights is None:
+        weights = 1. / uncertainty**2
+    # check shape of weights
+    if np.ndim(weights) == 1 and weights.size != array.shape[axis]:
+        raise ValueError("1-Dimenionals weights must have the same shape "
+                         "as the axis over which the average is taken.")
+    elif not np.shape(weights) == array.shape:
+        raise ValueError("Input array and uncertainties must have the same "
+                         "shape. Array shape: {array}, Uncertainty shape: "
+                         "{weights}".format(array=array.shape,
+                                            weights=weights.shape))
+    array_out = np.average(array, weights=weights, axis=axis)
+    uncertainty_out = np.sqrt(np.sum(uncertainty**2 * weights**2, axis=axis)
+                              / np.abs(np.sum(weights, axis=axis))**2)
+    return array_out, uncertainty_out
+
+
 @units.quantity_input(delays='time', array=['mK^2*Mpc^3', 'time'])
-def fold_along_delay(array, delays, weights=None, axis=-1):
+def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
     """Fold input array over the delay axis.
 
     Arguments
-        array: An N-Dimensional numpy array or nested lists.
         delays: A 1-Dimensional numpy array of interferometric delays.
+        array: An N-Dimensional numpy array or nested lists.
+        uncertainty: An N-Dimensional numpy array or nested lists of uncertainty values for input array
         weights: Weights to use while averaging the input array.
                  Must have same shape as input array.
                  Default: np.ones_like(array)
@@ -483,7 +526,7 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         array: The N-Dimensional input array folded over the axis specified
                give axis will have size np.shape(array)[axis]/2 if shape is even
                or (np.shape(array)[axis] + 1)/2 if shape is odd
-        weights: The folded weights used corresponding to the input array.
+        uncertainty: The folded uncertainties corresponding to the input array.
     """
     # This function assumes your array is a block-square array,
     # e.g. all delays are the same.
@@ -497,6 +540,13 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
     if (len(delays) % 2 != 0 and np.abs(delays).min() != 0):
         raise ValueError(("Input delays must have either a delay=0 bin "
                           "as the central value or have an even size."))
+
+    # check shapes of array and uncertainty
+    if not array.shape == uncertainty.shape:
+        raise ValueError("Input array and uncertainties must have the same "
+                         "shape. Array shape: {array}, Uncertainty shape: "
+                         "{error}".format(array=array.shape,
+                                          error=uncertainty.shape))
 
     if weights is None:
         no_input_weights = True
@@ -515,6 +565,17 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         pos_vals = np.concatenate([zero_bin, pos_vals], axis=axis)
         neg_vals = np.concatenate([zero_bin, neg_vals], axis=axis)
 
+        neg_errors, zero_errors, pos_errors = np.split(uncertainty, split_inds,
+                                                       axis=axis)
+        # the error on the 0 delay mode will go down like 1/sqrt(2) with the
+        # inverse vaiance weighting scheme, but we didn't actually gain any information
+        # so rescale the error, this _could_ be avoided if we didn't concatenate along
+        # the 0th dimension but would make it require two different calculations
+        zero_errors *= np.sqrt(2)
+        neg_errors = np.flip(neg_errors, axis=axis)
+        pos_errors = np.concatenate([zero_errors, pos_errors], axis=axis)
+        neg_errors = np.concatenate([zero_errors, neg_errors], axis=axis)
+
         neg_weights, zero_weights, pos_weights = np.split(weights, split_inds,
                                                           axis=axis)
         neg_weights = np.flip(neg_weights, axis=axis)
@@ -529,23 +590,26 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         neg_vals, pos_vals = np.split(array, split_inds, axis=axis)
         neg_vals = np.flip(neg_vals, axis=axis)
 
+        neg_errors, pos_errors = np.split(uncertainty, split_inds, axis=axis)
+        neg_errors = np.flip(neg_errors, axis=axis)
+
         neg_weights, pos_weights = np.split(weights, split_inds, axis=axis)
         neg_weights = np.flip(neg_weights, axis=axis)
 
     _array = np.stack([pos_vals, neg_vals], axis=0)
+    _errors = np.stack([pos_errors, neg_errors], axis=0)
     _weights = np.stack([pos_weights, neg_weights], axis=0)
 
     if _array.unit is None:
         _array = _array.value * array.unit
+    if _errors.unit is None:
+        _errors = _errors.value * uncertainty.unit
     if _weights.unit is None:
         _weights = _weights.value * weights.unit
 
     if not _array.imag.value.any():
-        out_array = np.average(_array.real, weights=1. / _weights.real**2,
-                               axis=0)
-        out_weights = np.sqrt(np.average(_weights.real**2,
-                                         weights=1. / _weights.real**2, axis=0))
-        return out_array, out_weights
+        out_array, out_errors = weighted_average(_array.real, _errors.real,
+                                                 weights=_weights, axis=0)
     else:
         weight_check = _weights.imag.value.any()
         if not weight_check:
@@ -554,13 +618,16 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
             except TypeError:
                 _weights = _weights.astype(np.complex)
                 _weights.imag = np.ones_like(_weights.real)
-        out_array = (np.average(_array.real, weights=1. / _weights.real**2, axis=0)
-                     + 1j * np.average(_array.imag, weights=1. / _weights.imag**2, axis=0))
+        out_array_real, out_errors_real = weighted_average(_array.real,
+                                                           _errors.real,
+                                                           weights=_weights.real,
+                                                           axis=0)
+        out_array_imag, out_errors_imag = weighted_average(_array.imag,
+                                                           _errors.imag,
+                                                           weights=_weights.imag,
+                                                           axis=0)
 
-        out_weights = (np.sqrt(np.average(_weights.real**2, weights=1. / _weights.real**2, axis=0))
-                       + 1j * np.sqrt(np.average(_weights.imag**2, weights=1. / _weights.imag**2, axis=0)))
+        out_array = out_array_real + 1j * out_array_imag
+        out_errors = out_errors_real + 1j * out_errors_imag
 
-        if not weight_check:
-            out_weights.imag = np.zeros_like(out_weights.real)
-
-        return out_array, out_weights
+    return out_array, out_errors
