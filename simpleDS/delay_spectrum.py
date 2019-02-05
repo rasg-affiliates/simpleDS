@@ -853,7 +853,6 @@ class DelaySpectrum(UVBase):
             # Need to add 'Npols' axis to jy_to_mk conversion
             unit_conversion *= jy_to_ksr[:, None, :]
 
-        self.set_delay()
         if self.Nuv == 1:
             delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
                                                      axis=2)
