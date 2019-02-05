@@ -789,14 +789,15 @@ class DelaySpectrum(UVBase):
             delta_x = np.diff(self.delay_array)[0]
         else:
             delta_x = np.diff(self.freq_array[0])[0]
+        float_flags = np.logical_not(self.flag_array).astype(float)
         self.data_array = utils.normalized_fourier_transform((self.data_array
-                                                              * self.flag_array),
+                                                              * float_flags),
                                                              delta_x=delta_x,
                                                              axis=-1,
                                                              taper=self.taper,
                                                              inverse=inverse)
         self.noise_array = utils.normalized_fourier_transform((self.noise_array
-                                                               * self.flag_array),
+                                                               * float_flags),
                                                               delta_x=delta_x,
                                                               axis=-1,
                                                               taper=self.taper,
