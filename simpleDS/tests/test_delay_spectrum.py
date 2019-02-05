@@ -366,6 +366,22 @@ def test_loading_uvb_object_no_data():
     nt.assert_raises(ValueError, DelaySpectrum, uvb=uvb)
 
 
+def test_loading_uvb_object_with_data():
+    """Test uvbeam can be added in init."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+
+    uv = UVData()
+    uv.read(testfile)
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object = DelaySpectrum(uv=uv, uvb=uvb)
+
+    nt.assert_true(dspec_object.check())
+    nt.assert_true(np.allclose(uvb.get_beam_area(pol='pI'),
+                               dspec_object.beam_area.to('sr').value))
+
+
 def test_loading_uvb_object_with_trcvr():
     """Test a uvb object with trcvr gets added properly."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
