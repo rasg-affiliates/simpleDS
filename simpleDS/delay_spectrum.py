@@ -825,7 +825,8 @@ class DelaySpectrum(UVBase):
         # the normalization of noise is defined to have this 1/beam_integral
         # factor in temperature units, so we need to multiply it get them into
         # Janskys
-        noise_power = np.ma.masked_invalid(noise_power.to('mK') * self.beam_area
+        noise_power = np.ma.masked_invalid(noise_power.to('mK')
+                                           * self.beam_area.reshape(self.Nspws, 1, self.Npols, 1, 1, self.Nfreqs)
                                            / utils.jy_to_mk(self.freq_array).reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs))
         noise_power = noise_power.filled(0)
         return noise_power.to('Jy')
