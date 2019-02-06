@@ -875,9 +875,7 @@ class DelaySpectrum(UVBase):
         #     tmp_data_array = self.data_array.copy()
         #     tmp_noise_aray = self.noise_array.copy()
 
-        print('pre-transform:', self.data_array.unit)
         self.delay_transform()
-        print('post-transform:', self.data_array.unit)
 
         if self.Nuv == 1:
             delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
