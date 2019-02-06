@@ -656,6 +656,21 @@ def test_delay_spectrum_power_shape_two_spectral_windows():
     nt.assert_equal(power_shape, dspec_object.power_array.shape)
 
 
+def test_cosmological_units():
+    """Test the units on cosmological parameters."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    nt.assert_true(dspec_object.k_perpendicular.unit.is_equivalent(1. / units.Mpc))
+    nt.assert_true(dspec_object.k_parallel.unit.is_equivalent(1. / units.Mpc))
+
+
 def test_delay_spectrum_power_units_input_kelvin_str():
     """Test the units on the output power are correct when input kelvin*str."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')

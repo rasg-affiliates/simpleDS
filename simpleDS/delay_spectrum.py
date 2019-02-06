@@ -712,9 +712,9 @@ class DelaySpectrum(UVBase):
         self.k_parallel = simple_cosmo.eta2kparr(self.delay_array.reshape(1, self.Ndelays),
                                                  self.redshift.reshape(self.Nspws, 1), cosmo=cosmo)
 
-        uvw_wave = np.linalg.norm(self.uvw)
+        uvw_wave = np.linalg.norm(self.uvw.value) * self.uvw.unit
         mean_freq = np.mean(self.freq_array.value, axis=1) * self.freq_array.unit
-        uvw_wave /= (const.c / mean_freq.to('1/s')).to('m')
+        uvw_wave = uvw_wave / (const.c / mean_freq.to('1/s')).to('m')
         self.k_perpendicular = simple_cosmo.u2kperp(uvw_wave, self.redshift,
                                                     cosmo=cosmo)
 
