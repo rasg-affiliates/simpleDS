@@ -602,7 +602,7 @@ def test_delay_spectrum_power_units():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
-    nt.assert_equal(units.mK**2 * units.Mpc**3, dspec_object.power_array.unit)
+    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit))
 
 
 def test_delay_spectrum_power_shape():
@@ -756,7 +756,7 @@ def test_delay_spectrum_power_units_input_uncalib():
                          nwarnings=len(warn_message),
                          category=UserWarning)
 
-    nt.assert_true((units.Mpc**3 / units.sr**2).is_equivalent(dspec_object.power_array.unit))
+    nt.assert_true((units.Hz**2).is_equivalent(dspec_object.power_array.unit))
 
 
 def test_delay_spectrum_noise_power_units():

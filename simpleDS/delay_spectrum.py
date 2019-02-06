@@ -488,7 +488,7 @@ class DelaySpectrum(UVBase):
         this.integration_time = copy.deepcopy(temp_data) * units.s
         # initialize the beam_area and beam_sq_area to help with selections later
         this.beam_area = np.ones(this._beam_area.expected_shape(this)) * np.inf * units.sr
-        this.beam_sq_area = np.ones(this._beam_sq_area.expected_shape(this)) * np.inf * units.sr**2
+        this.beam_sq_area = np.ones(this._beam_sq_area.expected_shape(this)) * np.inf * units.sr
 
         this.trcvr = np.ones(shape=this._trcvr.expected_shape(this)) * np.inf * units.K
 
@@ -743,7 +743,7 @@ class DelaySpectrum(UVBase):
             _beam = uvb.select(frequencies=freqs.to('Hz').value, inplace=False)
             for pol_cnt, pol in enumerate(self.polarization_array):
                 self.beam_area[spw, pol_cnt, :] = _beam.get_beam_area(pol=pol) * units.sr
-                self.beam_sq_area[spw, pol_cnt, :] = _beam.get_beam_sq_area(pol=pol) * units.sr**2
+                self.beam_sq_area[spw, pol_cnt, :] = _beam.get_beam_sq_area(pol=pol) * units.sr
 
                 if _beam.receiver_temperature_array is not None and not no_read_trcvr:
                     self.trcvr[spw, :] = _beam.receiver_temperature_array[0] * units.K
@@ -852,24 +852,45 @@ class DelaySpectrum(UVBase):
         Take the normalized Fourier transform of the data in objects and cross multiplies baselines.
         Also generates white noise given the frequency range and trcvr and calculates the expected noise power.
         """
+        if self.data_type == 'delay':
+            self.delay_transform()
+
         if self.Nuv == 0:
             raise ValueError("No data has be loaded. Add UVData objects before "
                              "calling calculate_delay_spectrum.")
 
-        NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
-        self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
-        self.unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
-                                / self.bandwidth.to('1/s') / self.beam_sq_area)
-
-        if self.data_type == 'delay':
-            self.delay_transform()
+        # NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
+        # self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
+        # self.unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
+        #                         / self.bandwidth.to('1/s') / self.beam_sq_area)
 
         if self.data_array.unit.is_equivalent(units.Jy):
-            jy_to_ksr = utils.jy_to_mk(self.freq_array)
-            # Need to reshape the conversion factor to be broadcastable with
-            # the stored data
-            self.data_array = self.data_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
-            self.noise_array = self.noise_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
+            # This additoinal units.sr term in the c/2*K_b expression may seem
+            # weird, however, the temperature to Jy conversion factor is defined
+            # such that there is a beam integral, or a sr factor, included.
+            # this helps the units work out.
+
+            # This is the full unit conversion integral.
+            # See liu et al 2014ab or write the visibility equation and convert to cosmological units without pulling anything outside the integral.
+            self.unit_conversion = ((const.c**2 * units.sr / (2 * const.k_B))**2
+                                    / (np.sum((self.freq_array**4
+                                              / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array))).reshape(self.Nspws, 1, self.Nfreqs)
+                                              * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                              * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs), axis=-1, keepdims=True)
+                                       * np.diff(self.freq_array[0])[0].to('1/s')))
+        elif self.data_array.unit.is_equivalent(units.K * units.sr):
+            self.unit_conversion = 1. / (np.sum((1 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array))).reshape(self.Nspws, 1, self.Nfreqs)
+                                                * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                                * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs), axis=-1, keepdims=True)
+                                         * np.diff(self.freq_array[0])[0].to('1/s'))
+        else:
+            self.unit_conversion = np.ones(self.Nspws)
+        # if self.data_array.unit.is_equivalent(units.Jy):
+        #     jy_to_ksr = utils.jy_to_mk(self.freq_array)
+        #     # Need to reshape the conversion factor to be broadcastable with
+        #     # the stored data
+        #     self.data_array = self.data_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
+        #     self.noise_array = self.noise_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
 
         # else:
         #     tmp_data_array = self.data_array.copy()
@@ -889,9 +910,13 @@ class DelaySpectrum(UVBase):
             noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
                                                      array_2=self.noise_array[:, 1],
                                                      axis=2)
+        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, 1, 1, 1, 1, 1)
+        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, 1, 1, 1, 1, 1)
 
-        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
-        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
+        if not self.data_array.unit.is_equivalent(units.dimensionless_unscaled * units.Hz):
+            self.power_array = self.power_array.to('mK^2 * Mpc^3')
+            self.noise_power = self.noise_power.to('mK^2 * Mpc^3')
+
         self.calculate_thermal_sensitivity()
 
     def calculate_thermal_sensitivity(self):
