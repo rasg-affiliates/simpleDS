@@ -812,6 +812,7 @@ class DelaySpectrum(UVBase):
         """Use the radiometry equation to generate the expected noise power."""
         Tsys = 180. * units.K * np.power(self.freq_array.to('GHz') / (.18 * units.GHz), -2.55)
         Tsys += self.trcvr.to('K')
+        Tsys = Tsys.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
         delta_f = np.diff(self.freq_array[0])[0]
         # if any of the polarizations are psuedo-stokes then there Should
         # be a factor of 1/sqrt(2) factor divided as per Cheng 2018
