@@ -237,6 +237,14 @@ class DelaySpectrum(UVBase):
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'))
 
+        desc = ('The cosmological unit conversion factor applied to the data. '
+                'This factor does not include andy Jansky to Kelvin-steradian '
+                'factors. Only used for conversion from (k*sr)^2 to mk^2*[h/Mpc]^-3')
+        self._unit_conversion = UnitParameter('unit_conversion',
+                                              description=desc, required=False,
+                                              expected_type=np.float,
+                                              form=('Nspws', 'Npols', 'Ndelays'))
+
         desc = ('The integral of the power beam area. Shape = (Nspws, Npols, Nfreqs)')
         self._beam_area = UnitParameter('beam_area', description=desc,
                                         form=('Nspws', 'Npols', 'Nfreqs'),
@@ -847,18 +855,29 @@ class DelaySpectrum(UVBase):
         if self.Nuv == 0:
             raise ValueError("No data has be loaded. Add UVData objects before "
                              "calling calculate_delay_spectrum.")
-        if self.data_type == 'frequency':
-            self.delay_transform()
 
         NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
         self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
-        unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
-                           / self.bandwidth.to('1/s') / self.beam_sq_area)
+        self.unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
+                                / self.bandwidth.to('1/s') / self.beam_sq_area)
 
-        if self.data_array.unit.is_equivalent(units.Jy * units.Hz):
-            jy_to_ksr = utils.jy_to_mk(self.freq_array)**2
-            # Need to add 'Npols' axis to jy_to_mk conversion
-            unit_conversion *= jy_to_ksr[:, None, :]
+        if self.data_type == 'delay':
+            self.delay_transform()
+
+        if self.data_array.unit.is_equivalent(units.Jy):
+            jy_to_ksr = utils.jy_to_mk(self.freq_array)
+            # Need to reshape the conversion factor to be broadcastable with
+            # the stored data
+            self.data_array = self.data_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
+            self.noise_array = self.noise_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
+
+        # else:
+        #     tmp_data_array = self.data_array.copy()
+        #     tmp_noise_aray = self.noise_array.copy()
+
+        print('pre-transform:', self.data_array.unit)
+        self.delay_transform()
+        print('post-transform:', self.data_array.unit)
 
         if self.Nuv == 1:
             delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
@@ -873,8 +892,8 @@ class DelaySpectrum(UVBase):
                                                      array_2=self.noise_array[:, 1],
                                                      axis=2)
 
-        self.power_array = delay_power * unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
-        self.noise_power = noise_power * unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
+        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
+        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Ndelays)
         self.calculate_thermal_sensitivity()
 
     def calculate_thermal_sensitivity(self):
