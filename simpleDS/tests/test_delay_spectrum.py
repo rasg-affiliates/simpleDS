@@ -863,3 +863,56 @@ def test_delay_spectrum_thermal_power_units():
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
     nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.thermal_power.unit))
+
+
+def test_delay_spectrum_thermal_power_shape():
+    """Test the shape of the output thermal power is correct."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+    warn_message = ['Antenna positions are not present in the file.',
+                    'Antenna positions are not present in the file.',
+                    'Ntimes does not match the number of unique '
+                    'times in the data',
+                    'Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types']
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
+
+    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
+                                     func_args=[test_miriad, test_antpos_file],
+                                     func_kwargs={'skip_header': 3,
+                                                  'usecols': [1, 2, 3]},
+                                     category=[UserWarning] * len(warn_message)
+                                     + [PendingDeprecationWarning],
+                                     nwarnings=len(warn_message) + 1,
+                                     message=warn_message + pend_dep_message)
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+
+    warn_message = ['Xantpos in extra_keywords is a list, array or dict, '
+                    'which will raise an error when writing uvfits '
+                    'or miriad file types']
+    uvtest.checkWarnings(test_uv_1.select, func_args=[],
+                         func_kwargs={'freq_chans': np.arange(95, 116)},
+                         category=UserWarning,
+                         nwarnings=len(warn_message),
+                         message=warn_message)
+
+    uvtest.checkWarnings(test_uv_2.select, func_args=[],
+                         func_kwargs={'freq_chans': np.arange(95, 116)},
+                         category=UserWarning,
+                         nwarnings=len(warn_message),
+                         message=warn_message)
+
+    dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
+
+    dspec_object.calculate_delay_spectrum()
+    dspec_object.add_trcvr(144 * units.K)
+    nt.assert_equal(dspec_object._thermal_power.expected_shape(dspec_object), dspec_object.thermal_power.shape)
