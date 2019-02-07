@@ -15,6 +15,7 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy import constants as const
 from scipy.signal import windows
+import scipy.integrate as integrate
 from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
 
@@ -872,29 +873,24 @@ class DelaySpectrum(UVBase):
 
             # This is the full unit conversion integral.
             # See liu et al 2014ab or write the visibility equation and convert to cosmological units without pulling anything outside the integral.
+            integration_array = (self.freq_array.reshape(self.Nspws, 1, self.Nfreqs)**4
+                                 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
+                                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                 * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
             self.unit_conversion = ((const.c**2 * units.sr / (2 * const.k_B))**2
-                                    / (np.sum((self.freq_array**4
-                                              / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array))).reshape(self.Nspws, 1, self.Nfreqs)
-                                              * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                              * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs), axis=-1, keepdims=True)
-                                       * np.diff(self.freq_array[0])[0].to('1/s')))
+                                    / integrate.trapz(integration_array.value, x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs), axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1))
+            self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
+            self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3 /( Jy^2 Hz^2)')
         elif self.data_array.unit.is_equivalent(units.K * units.sr):
-            self.unit_conversion = 1. / (np.sum((1 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array))).reshape(self.Nspws, 1, self.Nfreqs)
-                                                * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                                * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs), axis=-1, keepdims=True)
-                                         * np.diff(self.freq_array[0])[0].to('1/s'))
+            integration_array = (1.
+                                 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
+                                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                 * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
+            self.unit_conversion = 1. / integrate.trapz(integration_array.value, x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs), axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+            self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
+            self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
         else:
             self.unit_conversion = np.ones(self.Nspws)
-        # if self.data_array.unit.is_equivalent(units.Jy):
-        #     jy_to_ksr = utils.jy_to_mk(self.freq_array)
-        #     # Need to reshape the conversion factor to be broadcastable with
-        #     # the stored data
-        #     self.data_array = self.data_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
-        #     self.noise_array = self.noise_array.copy() * jy_to_ksr.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
-
-        # else:
-        #     tmp_data_array = self.data_array.copy()
-        #     tmp_noise_aray = self.noise_array.copy()
 
         self.delay_transform()
 
@@ -910,8 +906,10 @@ class DelaySpectrum(UVBase):
             noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
                                                      array_2=self.noise_array[:, 1],
                                                      axis=2)
-        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, 1, 1, 1, 1, 1)
-        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, 1, 1, 1, 1, 1)
+        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+
+        print('unit:', self.unit_conversion)
 
         if not self.data_array.unit.is_equivalent(units.dimensionless_unscaled * units.Hz):
             self.power_array = self.power_array.to('mK^2 * Mpc^3')
