@@ -441,7 +441,10 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
                          'value was : {df}'.format(df=delta_x))
 
     n_axis = data_array.shape[axis]
-    win = taper(n_axis).reshape(1, n_axis)
+    data_shape = (d if cnt == axis else 1
+                  for cnt, d in enumerate(data_array.shape))
+    # win = taper(n_axis).reshape(1, n_axis)
+    win = np.broadcast_to(taper(n_axis), data_shape)
 
     # Fourier Transforms should have a delta_x term multiplied
     # This is the proper normalization of the FT but is not
@@ -491,7 +494,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
                          "shape. Array shape: {array}, Uncertainty shape: "
                          "{error}".format(array=array.shape,
                                           error=uncertainty.shape))
-    # if weights is none use uniform? inverse variance
+    # if weights is none use uniform? inverse variance?
     if weights is None:
         weights = 1. / uncertainty**2
     # check shape of weights
