@@ -441,8 +441,8 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
                          'value was : {df}'.format(df=delta_x))
 
     n_axis = data_array.shape[axis]
-    data_shape = (d if cnt == axis else 1
-                  for cnt, d in enumerate(data_array.shape))
+    data_shape = np.ones_like(data_array.shape)
+    data_shape[axis] = n_axis
     # win = taper(n_axis).reshape(1, n_axis)
     win = np.broadcast_to(taper(n_axis), data_shape)
 
@@ -454,9 +454,9 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
         fourier_array = np.fft.fftshift(fourier_array, axes=axis)
         fourier_array = fourier_array * delta_x.si * unit
     else:
-        fourier_array = np.fft.ifft(data_array * win, axis=axis)
+        fourier_array = np.fft.ifft(data_array, axis=axis)
         fourier_array = np.fft.ifftshift(fourier_array, axes=axis)
-        fourier_array = fourier_array * delta_x.si * unit
+        fourier_array = fourier_array / win * delta_x.si * unit
 
     return fourier_array
 
