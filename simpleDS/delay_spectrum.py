@@ -967,7 +967,7 @@ class DelaySpectrum(UVBase):
             # integrate the noise temperature over the bands being Fourier Transformed
             thermal_spectral_norm = (self.freq_array.unit
                                      * integrate.trapz(thermal_power
-                                                       * self.beam_area.reshape(self.Nspws, 1, self.Nfreqs)**2
+                                                       * self.beam_area.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)**2
                                                        * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
                                                        x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs))
                                      )
