@@ -962,15 +962,17 @@ class DelaySpectrum(UVBase):
             Tsys = Tsys.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
             thermal_power = (Tsys.to('mK')**2
                              / (self.integration_time.to('s') * thermal_noise_samples
-                                * npols_noise  # * self.Nbls
+                                * npols_noise * self.Nbls
                                 * np.sqrt(2 * lst_bins)))
+            # integrate the noise temperature over the bands being Fourier Transformed
             thermal_spectral_norm = (self.freq_array.unit
-                                     * integrate.trapz(thermal_power
-                                                       * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs)**2,
+                                     * integrate.trapz(thermal_power * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
                                                        x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs))
                                      )
-
+            # this is _almost_ the same as the unit conversion above
+            # but we need the beam_area/beam_sq_area factor
             thermal_conversion_integral = (self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs)
+                                           * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs)**2
                                            / self.beam_area.reshape(self.Nspws, 1, self.Nfreqs)**2
                                            / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
                                            )
@@ -981,10 +983,5 @@ class DelaySpectrum(UVBase):
                                 * self.freq_array.unit
                                 ).reshape(self.Nspws, 1, 1, 1, 1)
                              )
-            # thermal_power = thermal_power * thermal_conversion.reshape(self.Nspws, 1, 1, 1, 1, 1)
-            # thermal_power = thermal_power * simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1, 1, 1, 1)
-            # This normalization of the thermal power comes from
-            # Parsons PSA32 paper appendix B
-            # thermal_power *= (self.beam_area**2 / self.beam_sq_area).reshape(self.Nspws, self.Npols, 1, 1, 1, self.Nfreqs)
         thermal_power = np.ma.masked_invalid(thermal_power)
         self.thermal_power = thermal_power.filled(0).to('mK^2 Mpc^3')
