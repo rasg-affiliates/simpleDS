@@ -614,8 +614,11 @@ class DelaySpectrum(UVBase):
         Arguments:
             spectral_windows: tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
                               spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
+            freqs: Quantity array of the shape (Nspws, Nfreqs)
+                   The actual frequency values to select from the held data set. Input frequencies must match exactly to some subset of frequencies stored in self.freq_array.
+
             inplace: Bool; Default True
-                     choose whether spectral window selection is done inplcae on the object, or a new object is returned.
+                     choose whether spectral window selection is done inplace on the object, or a new object is returned.
         """
         if inplace:
             this = self
