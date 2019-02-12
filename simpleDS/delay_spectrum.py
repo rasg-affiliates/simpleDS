@@ -845,8 +845,7 @@ class DelaySpectrum(UVBase):
         with np.errstate(divide='ignore', invalid='ignore'):
             noise_power = Tsys.to('K') / np.sqrt(delta_f.to('1/s')
                                                  * self.integration_time.to('s')
-                                                 * self.nsample_array
-                                                 * npols_noise)
+                                                 * self.nsample_array)
         # Want to put noise into Jy units
         # the normalization of noise is defined to have this 1/beam_integral
         # factor in temperature units, so we need to multiply it get them into
