@@ -966,14 +966,15 @@ class DelaySpectrum(UVBase):
                                 * np.sqrt(2 * lst_bins)))
             # integrate the noise temperature over the bands being Fourier Transformed
             thermal_spectral_norm = (self.freq_array.unit
-                                     * integrate.trapz(thermal_power * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
+                                     * integrate.trapz(thermal_power
+                                                       * self.beam_area.reshape(self.Nspws, 1, self.Nfreqs)**2
+                                                       * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
                                                        x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs))
                                      )
             # this is _almost_ the same as the unit conversion above
             # but we need the beam_area/beam_sq_area factor
             thermal_conversion_integral = (self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs)
                                            * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs)**2
-                                           / self.beam_area.reshape(self.Nspws, 1, self.Nfreqs)**2
                                            / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
                                            )
             thermal_power = (thermal_spectral_norm
