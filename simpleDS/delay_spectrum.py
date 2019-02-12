@@ -933,7 +933,9 @@ class DelaySpectrum(UVBase):
 
         Divide by the following factors:
             Nbls: baselines should coherently add together
-            sqrt(2): noise is split between even and odd
+            Npols: 1 if in linear polarization
+                   2 if a pseudo-stokes visbility
+            sqrt(2): noise is split between real and imaginary
             sqrt(lst_bins): noise power spectrum averages incoherently over time
         """
         if self.Nuv == 1:
