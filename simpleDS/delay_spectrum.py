@@ -960,26 +960,37 @@ class DelaySpectrum(UVBase):
             Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
             Tsys += self.trcvr.to('K')
             Tsys = Tsys.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
-            thermal_power = (Tsys.to('mK')**2
-                             / (self.integration_time.to('s') * thermal_noise_samples
-                                * npols_noise * self.Nbls
-                                * np.sqrt(2 * lst_bins)))
+            thermal_power = (Tsys.to('mK')
+                             / np.sqrt(self.integration_time.to('s') * thermal_noise_samples
+                                       * npols_noise * self.Nbls
+                                       * np.sqrt(2 * lst_bins)))
             # integrate the noise temperature over the bands being Fourier Transformed
             thermal_spectral_norm = (self.freq_array.unit
                                      * integrate.trapz(thermal_power
-                                                       * self.beam_area.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)**2
+                                                       * self.beam_area.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Nfreqs)
                                                        * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
-                                                       x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs))
+                                                       x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
+                                                       axis=-1)
+                                     )
+            # Thermal sensitivity goes like T_sys^2/B*t, we already have the t
+            # but need to divide out by B again
+            thermal_spectral_norm = (thermal_spectral_norm**2
+                                     / (self.freq_array.unit
+                                        * integrate.trapz(self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
+                                                          x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
+                                                          axis=-1)
+                                        )
                                      )
             # this is _almost_ the same as the unit conversion above
             # but we need the beam_area/beam_sq_area factor
-            thermal_conversion_integral = (self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs)
+            thermal_conversion_integral = (self.beam_sq_area.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Nfreqs)
                                            * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs)**2
-                                           / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
+                                           / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
                                            )
             thermal_power = (thermal_spectral_norm
                              / (integrate.trapz(thermal_conversion_integral.value,
-                                                x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs))
+                                                x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
+                                                axis=-1)
                                 * thermal_conversion_integral.unit
                                 * self.freq_array.unit
                                 ).reshape(self.Nspws, 1, 1, 1, 1)
