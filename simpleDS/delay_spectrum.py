@@ -888,7 +888,9 @@ class DelaySpectrum(UVBase):
                                  * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
                                  * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
             self.unit_conversion = ((const.c**2 * units.sr / (2 * const.k_B))**2
-                                    / integrate.trapz(integration_array.value, x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs), axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1))
+                                    / integrate.trapz(integration_array.value,
+                                                      x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                                                      axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1))
             self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
             self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3 /( Jy^2 Hz^2)')
         elif self.data_array.unit.is_equivalent(units.K * units.sr):
@@ -896,7 +898,9 @@ class DelaySpectrum(UVBase):
                                  / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
                                  * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
                                  * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
-            self.unit_conversion = 1. / integrate.trapz(integration_array.value, x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs), axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+            self.unit_conversion = 1. / integrate.trapz(integration_array.value,
+                                                        x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                                                        axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
             self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
             self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
         else:
