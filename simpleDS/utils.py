@@ -51,9 +51,13 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     antpos_ecef = uvutils.ECEF_from_ENU(antpos,
                                         *uv.telescope_location_lat_lon_alt)
     antpos_itrf = antpos_ecef - uv.telescope_location
-    good_ants = list(map(int, uv.antenna_names))
-    antpos_itrf = np.take(antpos_itrf, good_ants, axis=0)
+    setattr(uv, 'Nants_telescope', antpos_itrf.shape[0])
+    ant_names = [str(x) for x in range(uv.Nants_telescope)]
+    setattr(uv, 'antenna_names', ant_names)
+    ant_nums = [x for x in range(uv.Nants_telescope)]
+    setattr(uv, 'antenna_numbers', ant_nums)
     setattr(uv, 'antenna_positions', antpos_itrf)
+
     uv.set_uvws_from_antenna_positions()
 
     # PAPER uses Eastward pointing baselines, look for and baselines
@@ -224,7 +228,7 @@ def bootstrap_array(array, nboot=100, axis=0):
     if axis >= len(np.shape(array)):
         raise ValueError("Specified axis must be shorter than the lenght "
                          "of input array.\n"
-                         "axis value was {0} but array has {} dimensions"
+                         "axis value was {0} but array has {1} dimensions"
                          .format(axis, len(np.shape(array))))
 
     sample_inds = np.random.choice(array.shape[axis],
@@ -531,6 +535,9 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
                or (np.shape(array)[axis] + 1)/2 if shape is odd
         uncertainty: The folded uncertainties corresponding to the input array.
     """
+    delays = copy.deepcopy(delays)
+    array = copy.deepcopy(array)
+    uncertainty = copy.deepcopy(uncertainty)
     # This function assumes your array is a block-square array,
     # e.g. all delays are the same.
     if array.shape[axis] != len(delays):
