@@ -38,7 +38,7 @@ install:
   - conda update -q conda
 
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
-  - conda activate testenv
+  - source activate testenv
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       conda install -c defaults -y 'libgfortran =3.0.0' 'libgfortran-ng =7.2.0';
     else
