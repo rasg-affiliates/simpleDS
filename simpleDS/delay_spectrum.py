@@ -967,17 +967,23 @@ class DelaySpectrum(UVBase):
             thermal_power = (Tsys.to('mK')
                              * self.beam_area.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Nfreqs)
                              / np.sqrt(self.integration_time.to('s')
-                                       * np.diff(self.freq_array[0])[0].to('1/s')
                                        * thermal_noise_samples
                                        * npols_noise * self.Nbls
                                        * np.sqrt(2 * lst_bins)))
             # integrate the noise temperature over the bands being Fourier Transformed
-            thermal_spectral_norm = (self.freq_array.unit**2
-                                     * integrate.trapz(thermal_power
+            thermal_spectral_norm = (self.freq_array.unit
+                                     * thermal_power.unit**2
+                                     * integrate.trapz(thermal_power.value**2
                                                        * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
                                                        x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
-                                                       axis=-1)**2
+                                                       axis=-1)
                                      )
+            # thermal_spectral_norm = (thermal_spectral_norm
+            #                          * self.freq_array.unit
+            #                          * integrate.trapz(self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
+            #                                            x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
+            #                                            axis=-1)
+            #                          )
             # Thermal sensitivity goes like T_sys^2/B*t, we already have the t
             # but need to divide out by B again
             # thermal_spectral_norm = (thermal_spectral_norm**2
@@ -996,7 +1002,8 @@ class DelaySpectrum(UVBase):
             thermal_conversion = 1. / integrate.trapz(integration_array.value,
                                                       x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
                                                       axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
-            thermal_conversion = thermal_conversion / (1. * integration_array.unit * self.freq_array.unit)
+            thermal_conversion = thermal_conversion / (integration_array.unit
+                                                       * self.freq_array.unit)
             thermal_conversion = thermal_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
             thermal_power = thermal_spectral_norm * thermal_conversion.reshape(self.Nspws, 1, self.Npols, 1, 1)
 
