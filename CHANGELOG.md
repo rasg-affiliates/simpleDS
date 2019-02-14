@@ -33,12 +33,12 @@ All notable changes to this project will be documented in this file.
 - Noise realization to follow data during delay transformation
 - Python 2 and 3 compatibility
 
-##Changed
+## Changed
 - No longer dependent on aipy. Requires antenna position files to read PAPER miriad files
 - better separation of keyword arguments in read_paper_miriad
 - unit handling in cross-multiplication to make unit multiplication as safe as possible.
 
-###Fixed
+### Fixed
 - Beam square area normalization for noise as well.
 - Properly Conjugates paper baselines when adding to UVData object.
 - various typos and PEP8
