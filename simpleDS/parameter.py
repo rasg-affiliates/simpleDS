@@ -23,6 +23,7 @@ class UnitParameter(uvp.UVParameter):
     def __init__(self, name, required=True, value=None, spoof_val=None,
                  form=(), description='', expected_type=int,
                  acceptable_vals=None, acceptable_range=None,
+                 expected_units=None,
                  tols=(1e-05, 1e-08), value_not_quantity=False):
         """Initialize the UVParameter.
 
@@ -33,6 +34,7 @@ class UnitParameter(uvp.UVParameter):
                                 UnitParameter is desired over a UVParameter.
         """
         self.value_not_quantity = value_not_quantity
+        self.expected_units = expected_units
         if isinstance(value, list) and isinstance(value[0], units.Quantity):
             try:
                 value = units.Quantity(value)
@@ -41,6 +43,17 @@ class UnitParameter(uvp.UVParameter):
                                  "from lists whose elements have "
                                  "non-comaptible units.")
         if isinstance(value, units.Quantity):
+            if self.expected_units is None:
+                raise ValueError("Input Quantity must also be accompained "
+                                 "by the expected unit or equivalent unit. "
+                                 "Please set parameter expected_units to "
+                                 "an instance of an astropy Units object.")
+            if not value.unit.is_equivalent(self.expected_units):
+                raise units.UnitConversionError("Input value has units {0} "
+                                                "which are not equivalent to "
+                                                "expected units of {1}"
+                                                .format(value.unit,
+                                                        self.expected_units))
             if isinstance(tols, units.Quantity):
                 if tols.size > 1:
                     raise ValueError("Tolerance values that are Quantity "

@@ -24,35 +24,40 @@ class NonParameter(object):
 def test_error_from_mixed_list():
     """Test that error is raised if input value is list of mixed Quantities."""
     nt.assert_raises(ValueError, unp.UnitParameter, name='unp1',
-                     value=[1 * units.m, 1 * units.Hz])
+                     value=[1 * units.m, 1 * units.Hz], expected_units=units.Hz)
 
 
 def test_incompatible_tolerance_units():
     """Test error is raised if tolerances have incompatible units."""
     nt.assert_raises(units.UnitConversionError, unp.UnitParameter, name='unp1',
-                     value=3 * units.m, tols=1 * units.ns)
+                     value=3 * units.m, tols=1 * units.ns,
+                     expected_units=units.m)
 
 
 def test_incompatible_tolerance_units_from_tuple():
     """Test error is raised if tolerance is a tuple and has incomplatible units."""
     nt.assert_raises(units.UnitConversionError, unp.UnitParameter, name='unp1',
-                     value=3 * units.m, tols=(1e-9, 1 * units.ns))
+                     value=3 * units.m, tols=(1e-9, 1 * units.ns),
+                     expected_units=units.m)
 
 
 def test_tols_cast_up_to_tuple():
     """Test if a single scalar is given as tols it is upgraded to a tuple."""
-    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, tols=1e-3)
+    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, tols=1e-3,
+                             expected_units=units.m)
     nt.assert_true(isinstance(unp1.tols, tuple))
 
 
 def test_error_raised_if_not_quantity_and_no_flag_set():
     """Test an Error is raised if input value is not a quantity and the flag is not set."""
-    nt.assert_raises(ValueError, unp.UnitParameter, name='unp1', value=3)
+    nt.assert_raises(ValueError, unp.UnitParameter, name='unp1', value=3,
+                     expected_units=units.m)
 
 
 def test_tols_cast_up_to_correct_units():
     """Test if a single scalar is given as tols it is upgraded to a tuple with correct Units."""
-    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, tols=1e-3)
+    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, tols=1e-3,
+                             expected_units=units.m)
     nt.assert_true(isinstance(unp1.tols, tuple))
     nt.assert_equal(units.m, unp1.tols[1].unit)
 
@@ -60,12 +65,26 @@ def test_tols_cast_up_to_correct_units():
 def test_error_from_quantity_tolerance():
     """Test error is raised if tolerance is a Quantity Object."""
     nt.assert_raises(ValueError, unp.UnitParameter, name='unp1',
-                     value=3 * units.m, tols=(1e-9, 1) * units.m)
+                     value=3 * units.m, tols=(1e-9, 1) * units.m,
+                     expected_units=units.m)
+
+
+def test_error_if_no_units_with_quantity():
+    """Check and error is raised if instantiating a UnitParameter without expected units."""
+    nt.assert_raises(ValueError, unp.UnitParameter, name='unp1',
+                     value=3 * units.m, tols=(1e-9, 1 * units.m))
+
+
+def test_incompatible_expected_units():
+    """Test error is raised if value and expected_units are not equivalent."""
+    nt.assert_raises(ValueError, unp.UnitParameter, name='unp1',
+                     value=3 * units.m, tols=(1e-9, 1 * units.m),
+                     expected_units=units.Jy)
 
 
 def test_unitparameters_equal_to_uvparameter_with_same_value():
     """Test that UnitParameters are equal to UVParameters if their values match."""
-    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m)
+    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, expected_units=units.m)
     uvp1 = uvp.UVParameter(name='uvp1', value=3)
     warn_message = ['A UnitParameter with quantity value is being cast to '
                     'UVParameter. All quantity information will be lost. '
@@ -84,7 +103,7 @@ def test_unitparameters_equal_to_uvparameter_with_same_value():
 
 def test_unitparameters_not_equal_to_uvp_with_different_type():
     """Test that UnitParameters are not equal to UVParameters if their types differ."""
-    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m)
+    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, expected_units=units.m)
     uvp1 = uvp.UVParameter(name='uvp1', value=3., expected_type=np.float)
     warn_message = ['A UnitParameter with quantity value is being cast to '
                     'UVParameter. All quantity information will be lost. '
@@ -103,7 +122,8 @@ def test_unitparameters_not_equal_to_uvp_with_different_type():
 
 def test_non_required_unitparameters_equal_to_uvparameter():
     """Test that UnitParameter is equal to UVParameters, non-required version."""
-    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m, required=False, spoof_val=10)
+    unp1 = unp.UnitParameter(name='unp1', value=3 * units.m,
+                             required=False, spoof_val=10, expected_units=units.m)
     uvp1 = uvp.UVParameter(name='uvp1', value=3, required=False, spoof_val=10)
     warn_message = ['A UnitParameter with quantity value is being cast to '
                     'UVParameter. All quantity information will be lost. '
@@ -140,8 +160,10 @@ def test_non_value_unitparameter_is_equal_to_uvparameter():
 
 def test_value_class_inequality():
     """Test false is returned if values have different classes."""
-    unp1 = unp.UnitParameter(name='unp1', value=[3 * units.m])
-    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * units.m)
+    unp1 = unp.UnitParameter(name='unp1', value=[3 * units.m],
+                             expected_units=units.m)
+    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * units.m,
+                             expected_units=units.m)
     nt.assert_not_equal(unp1, unp2)
     nt.assert_not_equal(unp2, unp1)
     unp3 = unp.UnitParameter(name='unp3', value='test string', value_not_quantity=True)
@@ -150,40 +172,50 @@ def test_value_class_inequality():
 
 def test_value_unit_inequality():
     """Test parameters are not equal if units are different."""
-    unp1 = unp.UnitParameter(name='unp1', value=np.array(3) * units.m)
-    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * units.Hz)
+    unp1 = unp.UnitParameter(name='unp1', value=np.array(3) * units.m,
+                             expected_units=units.m)
+    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * units.Hz,
+                             expected_units=units.Hz)
     nt.assert_not_equal(unp1, unp2)
 
 
 def test_value_unit_compatibility():
     """Test parameters with compatible units can be compared as equal."""
-    unp1 = unp.UnitParameter(name='unp1', value=np.array(3) * units.ns)
-    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * 1. / units.GHz)
+    unp1 = unp.UnitParameter(name='unp1', value=np.array(3) * units.ns,
+                             expected_units=units.s)
+    unp2 = unp.UnitParameter(name='unp2', value=np.array(3) * 1. / units.GHz,
+                             expected_units=units.s)
     nt.assert_equal(unp1, unp2)
 
 
 def test_not_equal_shapes():
     """Test parameters with different Quantity shapes are not equal."""
-    unp1 = unp.UnitParameter(name='unp1', value=np.array([1, 2]) * units.m)
-    unp2 = unp.UnitParameter(name='unp2', value=np.array([1, 2, 3]) * units.m)
+    unp1 = unp.UnitParameter(name='unp1', value=np.array([1, 2]) * units.m,
+                             expected_units=units.m)
+    unp2 = unp.UnitParameter(name='unp2', value=np.array([1, 2, 3]) * units.m,
+                             expected_units=units.m)
     nt.assert_not_equal(unp1, unp2)
 
 
 def test_value_inequality():
     """Test inequality holds for different arrays."""
     unp1 = unp.UnitParameter(name='unp1', value=np.array([1, 2, 3]) * units.m,
-                             tols=(1e-05, 1e-08 * units.m))
+                             tols=(1e-05, 1e-08 * units.m),
+                             expected_units=units.m)
     unp2 = unp.UnitParameter(name='unp2', value=np.array([1, 2, 4]) * units.m,
-                             tols=(1e-05, 1e-08 * units.m))
+                             tols=(1e-05, 1e-08 * units.m),
+                             expected_units=units.m)
     nt.assert_not_equal(unp1, unp2)
 
 
 def test_value_equality():
     """Test equality holds for different arrays."""
     unp1 = unp.UnitParameter(name='unp1', value=np.array([1, 2, 3]) * units.m,
-                             tols=(1e-05, 1e-08 * units.m))
+                             tols=(1e-05, 1e-08 * units.m),
+                             expected_units=units.m)
     unp2 = unp.UnitParameter(name='unp2', value=np.array([1, 2, 3]) * units.m,
-                             tols=(1e-05, 1e-08 * units.m))
+                             tols=(1e-05, 1e-08 * units.m),
+                             expected_units=units.m)
     nt.assert_equal(unp1, unp2)
 
 
