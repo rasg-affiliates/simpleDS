@@ -192,6 +192,11 @@ class TestBasicFunctions(object):
         nt.assert_raises(ValueError, self.dspec_object.check)
         self.dspec_object.freq_array = freq_back
 
+        freq_back = copy.deepcopy(self.dspec_object.freq_array)
+        self.dspec_object.freq_array = freq_back.value.copy() * units.m
+        nt.assert_raises(units.UnitConversionError, self.dspec_object.check)
+        self.dspec_object.freq_array = freq_back
+
         self.dspec_object.freq_array = freq_back.value.astype(np.complex) * freq_back.unit
         nt.assert_raises(ValueError, self.dspec_object.check)
         self.dspec_object.freq_array = freq_back

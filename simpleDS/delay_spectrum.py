@@ -52,7 +52,7 @@ class DelaySpectrum(UVBase):
         """
         # standard angle tolerance: 10 mas in radians.
         # Should perhaps be decreased to 1 mas in the future
-        radian_tol = 10 * 2 * np.pi * 1e-3 / (60.0 * 60.0 * 360.0)
+        radian_tol = 10 * 2 * np.pi * 1e-3 / (60.0 * 60.0 * 360.0) * units.rad
         self._Ntimes = UnitParameter('Ntimes', description='Number of times',
                                      value_not_quantity=True, expected_type=int)
 
@@ -99,7 +99,11 @@ class DelaySpectrum(UVBase):
         self._data_array = UnitParameter('data_array', description=desc,
                                          form=('Nspws', 'Nuv', 'Npols',
                                                'Nbls', 'Ntimes', 'Nfreqs'),
-                                         expected_type=(np.complex, np.complex128))
+                                         expected_type=(np.complex, np.complex128),
+                                         expected_units=(units.Jy, units.Jy * units.Hz,
+                                                         units.K, units.K * units.sr,
+                                                         units.dimensionless_unscaled,
+                                                         units.dimensionless_unscaled * units.Hz))
 
         desc = ('Array of the simulation noise visibility data, '
                 'shape: (Nspws, Nuv, Npols, Nbls, Ntimes, Nfreqs), '
@@ -110,7 +114,11 @@ class DelaySpectrum(UVBase):
         self._noise_array = UnitParameter('noise_array', description=desc,
                                           form=('Nspws', 'Nuv', 'Npols',
                                                 'Nbls', 'Ntimes', 'Nfreqs'),
-                                          expected_type=(np.complex, np.complex128))
+                                          expected_type=(np.complex, np.complex128),
+                                          expected_units=(units.Jy, units.Jy * units.Hz,
+                                                          units.K, units.K * units.sr,
+                                                          units.dimensionless_unscaled,
+                                                          units.dimensionless_unscaled * units.Hz))
 
         desc = 'Visibility units, options are: "uncalib", "Jy" or "K str"'
         self._vis_units = UnitParameter('vis_units', description=desc,
@@ -144,7 +152,8 @@ class DelaySpectrum(UVBase):
         self._lst_array = UnitParameter('lst_array', description=desc,
                                         form=('Ntimes',),
                                         expected_type=np.float,
-                                        tols=radian_tol)
+                                        tols=radian_tol,
+                                        expected_units=units.rad)
 
         desc = ('Array of first antenna indices, shape (Nbls), '
                 'type = int, 0 indexed')
@@ -169,13 +178,14 @@ class DelaySpectrum(UVBase):
         self._freq_array = UnitParameter('freq_array', description=desc,
                                          form=('Nspws', 'Nfreqs'),
                                          expected_type=np.float,
-                                         tols=1e-3)
+                                         tols=1e-3 * units.Hz, expected_units=units.Hz)
 
         dest = 'Array of delay, shape (Ndelays), units ns'
         self._delay_array = UnitParameter('delay_array', description=desc,
                                           form=('Ndelays',),
                                           expected_type=np.float,
-                                          tols=self._freq_array.tols)
+                                          tols=1e-3 * units.ns,
+                                          expected_units=units.ns)
 
         desc = ('Array of polarization integers, shape (Npols). '
                 'Uses same convention as pyuvdata: '
@@ -190,24 +200,29 @@ class DelaySpectrum(UVBase):
         desc = ('Nominal (u,v,w) vector of baselines in units of meters')
         self._uvw = UnitParameter('uvw', description=desc,
                                   expected_type=np.float,
-                                  form=(3))
+                                  form=(3),
+                                  expected_units=units.m)
 
         desc = ('System receiver temperature used in noise simulation. '
                 'Stored as array of length (Nfreqs), but may be passed as a '
                 'single scalar. Must be a Quantity with units compatible to K.')
         self._trcvr = UnitParameter('trcvr', description=desc,
-                                    expected_type=np.float, form=('Nspws', 'Nfreqs'))
+                                    expected_type=np.float, form=('Nspws', 'Nfreqs'),
+                                    expected_units=units.K)
 
         desc = ('Mean redshift of given frequencies. Calculated with assumed '
                 'cosmology.')
         self._redshift = UnitParameter('redshift', description=desc,
-                                       expected_type=np.float, form=('Nspws',))
+                                       expected_type=np.float, form=('Nspws',),
+                                       expected_units=units.dimensionless_unscaled)
 
         desc = ('Cosmological wavenumber of spatial modes probed perpendicular '
                 ' to the line of sight.')
         self._k_perpendicular = UnitParameter('k_perpendicular',
                                               description=desc,
-                                              expected_type=np.float, form=('Nspws',))
+                                              expected_type=np.float,
+                                              form=('Nspws',),
+                                              expected_units=1. / units.Mpc)
 
         desc = ('Cosmological wavenumber of spatial modes probed along the line of sight. '
                 'This value is awlays calculated, however it is not a realistic '
@@ -215,28 +230,25 @@ class DelaySpectrum(UVBase):
                 'assumes k_tau >> k_perpendicular and as a results '
                 'k_tau  is interpreted as k_parallel.')
         self._k_parallel = UnitParameter('k_parallel', description=desc,
-                                         expected_type=np.float, form=('Nspws', 'Ndelays'))
+                                         expected_type=np.float,
+                                         form=('Nspws', 'Ndelays'),
+                                         expected_units=1. / units.Mpc)
 
         desc = ('The cross-multiplied power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
         self._power_array = UnitParameter('power_array', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
-                                                'Ntimes', 'Ndelays'))
-        desc = ('The predicted thermal sensitivity for input data assuming all '
-                'data will be averaged together.'
-                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
-        self._power_array = UnitParameter('power_array', description=desc,
-                                          expected_type=np.complex, required=False,
-                                          form=('Nspws', 'Npols', 'Nbls', 'Nbls',
-                                                'Ntimes', 'Ndelays'))
+                                                'Ntimes', 'Ndelays'),
+                                          expected_units=(units.mK**2 * units.Mpc**3))
 
         desc = ('The cross-multiplied simulated noise power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
         self._noise_power = UnitParameter('noise_power', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
-                                                'Ntimes', 'Ndelays'))
+                                                'Ntimes', 'Ndelays'),
+                                          expected_units=(units.mK**2 * units.Mpc**3))
 
         desc = ('The predicted thermal variance of the input data averaged over '
                 'all input baselines.'
@@ -244,7 +256,8 @@ class DelaySpectrum(UVBase):
         self._thermal_power = UnitParameter('thermal_power', description=desc,
                                             expected_type=np.complex, required=False,
                                             form=('Nspws', 'Npols', 'Nbls', 'Nbls',
-                                                  'Ntimes',))
+                                                  'Ntimes',),
+                                            expected_units=(units.mK**2 * units.Mpc**3))
 
         desc = ('The cosmological unit conversion factor applied to the data. '
                 'This factor does not include andy Jansky to Kelvin-steradian '
@@ -252,17 +265,23 @@ class DelaySpectrum(UVBase):
         self._unit_conversion = UnitParameter('unit_conversion',
                                               description=desc, required=False,
                                               expected_type=np.float,
-                                              form=('Nspws', 'Npols', 'Ndelays'))
+                                              form=('Nspws', 'Npols', 'Ndelays'),
+                                              expected_units=((units.mK**2 * units.Mpc**3 / (units.Jy**2 * units.Hz**2)),
+                                                              (units.mK**2 * units.Mpc**3 / (units.K**2 * units.sr**2))
+                                                              )
+                                              )
 
         desc = ('The integral of the power beam area. Shape = (Nspws, Npols, Nfreqs)')
         self._beam_area = UnitParameter('beam_area', description=desc,
                                         form=('Nspws', 'Npols', 'Nfreqs'),
-                                        expected_type=np.float)
+                                        expected_type=np.float,
+                                        expected_units=units.sr)
         desc = ('The integral of the squared power beam squared area. '
                 'Shape = (Nspws, Npols, Nfreqs)')
         self._beam_sq_area = UnitParameter('beam_sq_area', description=desc,
                                            form=('Nspws', 'Npols', 'Nfreqs'),
-                                           expected_type=np.float)
+                                           expected_type=np.float,
+                                           expected_units=units.sr)
         desc = ('Length of the integration in seconds, has shape '
                 '(1, Npols, Nbls, Ntimes, 1). units s, assumes inegration time '
                 ' is the same for all spectral windows and all frequncies in a '
@@ -275,7 +294,8 @@ class DelaySpectrum(UVBase):
                                                description=desc,
                                                form=(1, 'Npols',
                                                      'Nbls', 'Ntimes', 1),
-                                               expected_type=np.float)
+                                               expected_type=np.float,
+                                               expected_units=units.s)
 
         desc = ('Spectral taper function used during Fourier Transform. Functions like scipy.signal.windows.blackmanharris')
         self._taper = UnitParameter('taper', description=desc,
@@ -409,6 +429,13 @@ class DelaySpectrum(UVBase):
                             raise ValueError('UnitParameter ' + p + ' is a list. '
                                              'UnitParameters are incompatible with lists')
                         if isinstance(param.value, units.Quantity):
+                            if not param.value.unit.is_equivalent(param.expected_units):
+                                raise units.UnitConversionError("UnitParameter " + p + " "
+                                                                "has units {0} "
+                                                                "which are not equivalent to "
+                                                                "expected units of {1}."
+                                                                .format(param.value.unit,
+                                                                        param.expected_units))
                             if not isinstance(param.value.value.item(0), param.expected_type):
                                 raise ValueError('UnitParameter ' + p + ' is not the appropriate'
                                                  ' type. Is: ' + str(param.value.dtype)
@@ -460,7 +487,7 @@ class DelaySpectrum(UVBase):
         this.Npols = uv.Npols
         this.Nspws = 1
         this.Nuv = 1
-        this.lst_array = np.unique(uv.lst_array)
+        this.lst_array = np.unique(uv.lst_array) * units.rad
         this.polarization_array = uv.polarization_array
         if this.vis_units == 'Jy':
             data_unit = units.Jy
@@ -556,7 +583,8 @@ class DelaySpectrum(UVBase):
                                      "the same.".format(name=p))
             elif p in ['_lst_array']:
                 if my_parm.value is not None and my_parm != other_parm:
-                    time_diff = np.abs(my_parm.value - other_parm.value) * 12. * units.h / np.pi
+                    time_diff = (np.abs(my_parm.value - other_parm.value)
+                                 * 12. * units.h / (np.pi * units.rad))
                     warnings.warn("Input LST arrays differ on average "
                                   "by {time:}. Keeping LST array stored from "
                                   "the first data set read."
@@ -953,7 +981,8 @@ class DelaySpectrum(UVBase):
         # lst_array is stored in radians, multiply by 12*3600/np.pi to convert
         # to seconds s
         if self.lst_array.size > 1:
-            delta_t = np.diff(self.lst_array)[0] * 12. / np.pi * 3600 * units.s
+            delta_t = np.diff(self.lst_array)[0] * 12. * units.h / (np.pi * units.rad)
+            delta_t = delta_t.to('s')
         else:
             delta_t = self.integration_time.to('s')
         lst_bins = (np.size(self.lst_array) * delta_t / self.integration_time.to('s'))
