@@ -27,7 +27,7 @@ simpleDS has one major user class:
 
 and one minor cosmological conversion module:
 
-* cosmo: Uses astropy.cosmology to compute relevant cosmological factors for 21cm radio data to convert between interferometric (f, u,v,w) to (k\_parallel, k\_perpendicular) units.
+* cosmo: Uses astropy.cosmology to compute relevant cosmological factors for 21cm radio data to convert between interferometric (f, u,v,w) to (k<sub>&parallel;</sub>, k<sub>&perp;</sub>) units.
 
 # Installation
 
