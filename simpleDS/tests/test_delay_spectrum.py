@@ -921,3 +921,19 @@ def test_delay_spectrum_thermal_power_shape():
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
     nt.assert_equal(dspec_object._thermal_power.expected_shape(dspec_object), dspec_object.thermal_power.shape)
+
+
+def test_multiple_polarization_file():
+    """Test the units on cosmological parameters."""
+    testfile = os.path.join(DATA_PATH, 'test_two_pol_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_multiple_pol.beamfits')
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    nt.assert_true(dspec_object.check())
+    dspec_object.calculate_delay_spectrum()
+    nt.assert_true(dspec_object.check())

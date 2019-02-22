@@ -254,7 +254,7 @@ class DelaySpectrum(UVBase):
                 'all input baselines.'
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
         self._thermal_power = UnitParameter('thermal_power', description=desc,
-                                            expected_type=np.complex, required=False,
+                                            expected_type=np.float, required=False,
                                             form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                   'Ntimes',),
                                             expected_units=(units.mK**2 * units.Mpc**3))
@@ -265,7 +265,7 @@ class DelaySpectrum(UVBase):
         self._unit_conversion = UnitParameter('unit_conversion',
                                               description=desc, required=False,
                                               expected_type=np.float,
-                                              form=('Nspws', 'Npols', 'Ndelays'),
+                                              form=('Nspws', 'Npols'),
                                               expected_units=((units.mK**2 * units.Mpc**3 / (units.Jy**2 * units.Hz**2)),
                                                               (units.mK**2 * units.Mpc**3 / (units.K**2 * units.sr**2))
                                                               )
@@ -283,7 +283,7 @@ class DelaySpectrum(UVBase):
                                            expected_type=np.float,
                                            expected_units=units.sr)
         desc = ('Length of the integration in seconds, has shape '
-                '(1, Npols, Nbls, Ntimes, 1). units s, assumes inegration time '
+                '(Npols, Nbls, Ntime). units s, assumes inegration time '
                 ' is the same for all spectral windows and all frequncies in a '
                 'spectral window. '
                 'Assumes the same convention as pyuvdata, where this is the '
@@ -292,8 +292,7 @@ class DelaySpectrum(UVBase):
                 'filtering to be properly tracked for noise simulations.')
         self._integration_time = UnitParameter('integration_time',
                                                description=desc,
-                                               form=(1, 'Npols',
-                                                     'Nbls', 'Ntimes', 1),
+                                               form=('Nbls', 'Ntimes'),
                                                expected_type=np.float,
                                                expected_units=units.s)
 
@@ -519,7 +518,7 @@ class DelaySpectrum(UVBase):
 
         temp_data = np.zeros(shape=this._integration_time.expected_shape(this),
                              dtype=np.float)
-        temp_data[:, :, :, :, :] = utils.get_integration_time(uv, reds=this.baseline_array, squeeze=False)
+        temp_data[:, :] = utils.get_integration_time(uv, reds=this.baseline_array, squeeze=False)
 
         this.integration_time = copy.deepcopy(temp_data) * units.s
         # initialize the beam_area and beam_sq_area to help with selections later
@@ -694,22 +693,27 @@ class DelaySpectrum(UVBase):
 
         freq_chans = freq_chans.flatten()
         # For beam_area and beam_sq_area transpose to (Npols, Nspws, Nfreqs)
-        # Take flattened freqs, then reshape tp correct shapes and transpose back
+        # Take flattened freqs, then reshape to correct shapes and transpose back
         beam_sq_area = np.transpose(this.beam_sq_area, [1, 0, 2])
-        beam_sq_area = np.take(beam_sq_area, freq_chans)
+        beam_sq_area = beam_sq_area.reshape(this.Npols, -1)
+        beam_sq_area = np.take(beam_sq_area, freq_chans, axis=1)
         beam_sq_area = beam_sq_area.reshape(this.Npols, this.Nspws, this.Nfreqs)
         this.beam_sq_area = np.transpose(beam_sq_area, [1, 0, 2])
 
         beam_area = np.transpose(this.beam_area, [1, 0, 2])
-        beam_area = np.take(beam_area, freq_chans)
+        beam_area = beam_area.reshape(this.Npols, -1)
+        beam_area = np.take(beam_area, freq_chans, axis=1)
         beam_area = beam_area.reshape(this.Npols, this.Nspws, this.Nfreqs)
         this.beam_area = np.transpose(beam_area, [1, 0, 2])
+
         # to make take easier, reorder to Nuv, Npols, Nbls, Ntimes, Nspws, Nfreqs
         this.data_array = this._take_spectral_windows_from_data_like_array(this.data_array, freq_chans)
         this.noise_array = this._take_spectral_windows_from_data_like_array(this.noise_array, freq_chans)
         this.nsample_array = this._take_spectral_windows_from_data_like_array(this.nsample_array, freq_chans)
         this.flag_array = this._take_spectral_windows_from_data_like_array(this.flag_array, freq_chans)
-        this.integration_time = this.integration_time.reshape(this._integration_time.expected_shape(this))
+
+        # this.integration_time = this._take_spectral_windows_from_data_like_array(this.integration_time, freq_chans)
+        # this.integration_time = this.integration_time.reshape(this._integration_time.expected_shape(this))
         # this.integration_time = np.tile(this.integration_time, (Nspws, 1, 1), subok=True)
         # this.check(check_extra=True, run_check_acceptability=True)
         # This seems obvious for an FFT but in the case that something more
@@ -736,7 +740,8 @@ class DelaySpectrum(UVBase):
                 inds: flattened indices of frequency array to select
         """
         data = np.transpose(data, [1, 2, 3, 4, 0, 5])
-        data = np.take(data, inds, axis=5)
+        data = data.reshape(*data.shape[:4], -1)
+        data = np.take(data, inds, axis=4)
         # reshape to get Nspws, Nfreqs correct along 2 last dimensions
         data = data.reshape(self.Nuv, self.Npols, self.Nbls,
                             self.Ntimes, self.Nspws, self.Nfreqs)
@@ -872,7 +877,7 @@ class DelaySpectrum(UVBase):
         # those for now.
         with np.errstate(divide='ignore', invalid='ignore'):
             noise_power = Tsys.to('K') / np.sqrt(delta_f.to('1/s')
-                                                 * self.integration_time.to('s')
+                                                 * self.integration_time.to('s').reshape(1, 1, 1, self.Nbls, self.Ntimes, 1)
                                                  * self.nsample_array)
         # Want to put noise into Jy units
         # the normalization of noise is defined to have this 1/beam_integral
@@ -891,19 +896,18 @@ class DelaySpectrum(UVBase):
         Take the normalized Fourier transform of the data in objects and cross multiplies baselines.
         Also generates white noise given the frequency range and trcvr and calculates the expected noise power.
         """
-        if self.data_type == 'delay':
-            self.delay_transform()
-
         if self.Nuv == 0:
             raise ValueError("No data has be loaded. Add UVData objects before "
                              "calling calculate_delay_spectrum.")
+        if self.data_type == 'frequency':
+            self.delay_transform()
 
         # NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
         # self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
         # self.unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
         #                         / self.bandwidth.to('1/s') / self.beam_sq_area)
 
-        if self.data_array.unit.is_equivalent(units.Jy):
+        if self.data_array.unit.is_equivalent(units.Jy * units.Hz):
             # This additoinal units.sr term in the c/2*K_b expression may seem
             # weird, however, the temperature to Jy conversion factor is defined
             # such that there is a beam integral, or a sr factor, included.
@@ -914,27 +918,25 @@ class DelaySpectrum(UVBase):
             integration_array = (self.freq_array.reshape(self.Nspws, 1, self.Nfreqs)**4
                                  / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
                                  * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                 * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
+                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
             self.unit_conversion = ((const.c**2 * units.sr / (2 * const.k_B))**2
                                     / integrate.trapz(integration_array.value,
                                                       x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                                                      axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1))
+                                                      axis=-1).reshape(self.Nspws, self.Npols))
             self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
             self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3 /( Jy^2 Hz^2)')
-        elif self.data_array.unit.is_equivalent(units.K * units.sr):
+        elif self.data_array.unit.is_equivalent(units.K * units.sr * units.Hz):
             integration_array = (1.
                                  / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
                                  * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                 * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
+                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
             self.unit_conversion = 1. / integrate.trapz(integration_array.value,
                                                         x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                                                        axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+                                                        axis=-1).reshape(self.Nspws, self.Npols)
             self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
             self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
         else:
-            self.unit_conversion = np.ones(self.Nspws)
-
-        self.delay_transform()
+            self.unit_conversion = np.ones((self.Npols, self.Nspws))
 
         if self.Nuv == 1:
             delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
@@ -948,8 +950,8 @@ class DelaySpectrum(UVBase):
             noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
                                                      array_2=self.noise_array[:, 1],
                                                      axis=2)
-        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
-        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
+        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
 
         if not self.data_array.unit.is_equivalent(units.dimensionless_unscaled * units.Hz):
             self.power_array = self.power_array.to('mK^2 * Mpc^3')
@@ -984,19 +986,19 @@ class DelaySpectrum(UVBase):
             delta_t = np.diff(self.lst_array)[0] * 12. * units.h / (np.pi * units.rad)
             delta_t = delta_t.to('s')
         else:
-            delta_t = self.integration_time.to('s')
-        lst_bins = (np.size(self.lst_array) * delta_t / self.integration_time.to('s'))
+            delta_t = self.integration_time.item(0).to('s')
+        lst_bins = (np.size(self.lst_array) * delta_t / self.integration_time.item(0).to('s'))
         npols_noise = np.array([2 if p in np.arange(1, 5) else 1
                                 for p in self.polarization_array])
-        npols_noise = npols_noise.reshape(1, 1, self.Npols, 1, 1, 1)
+        npols_noise = npols_noise.reshape(1, self.Npols, 1, 1, 1, 1)
         with np.errstate(divide='ignore', invalid='ignore'):
             Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
             Tsys += self.trcvr.to('K')
             Tsys = Tsys.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
             thermal_power = (Tsys.to('mK')
                              * self.beam_area.reshape(self.Nspws, self.Npols, 1, 1, 1, self.Nfreqs)
-                             / np.sqrt(self.integration_time.to('s')
-                                       * thermal_noise_samples
+                             / np.sqrt(self.integration_time.to('s').reshape(1, 1, 1, self.Nbls, self.Ntimes, 1)
+                                       * thermal_noise_samples.reshape(self.Nspws, self.Npols, self.Nbls, self.Nbls, self.Ntimes, self.Nfreqs)
                                        * npols_noise * self.Nbls
                                        * np.sqrt(2 * lst_bins)))
             # integrate the noise temperature over the bands being Fourier Transformed
@@ -1007,34 +1009,21 @@ class DelaySpectrum(UVBase):
                                                        x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
                                                        axis=-1)
                                      )
-            # thermal_spectral_norm = (thermal_spectral_norm
-            #                          * self.freq_array.unit
-            #                          * integrate.trapz(self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
-            #                                            x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
-            #                                            axis=-1)
-            #                          )
-            # Thermal sensitivity goes like T_sys^2/B*t, we already have the t
-            # but need to divide out by B again
-            # thermal_spectral_norm = (thermal_spectral_norm**2
-            #                          / (self.freq_array.unit
-            #                             * integrate.trapz(self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
-            #                                               x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
-            #                                               axis=-1)
-            #                             )
-            #                          )
             # this is _almost_ the same as the unit conversion above
             # but we need the beam_area/beam_sq_area factor
             integration_array = (1.
                                  / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
                                  * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                 * self.beam_sq_area.reshape(self.Nspws, 1, self.Nfreqs))
+                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
             thermal_conversion = 1. / integrate.trapz(integration_array.value,
                                                       x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                                                      axis=-1).reshape(self.Nspws, 1, self.Npols, 1, 1, 1)
+                                                      axis=-1).reshape(self.Nspws, self.Npols, 1, 1, 1)
             thermal_conversion = thermal_conversion / (integration_array.unit
                                                        * self.freq_array.unit)
+            print('conversion:', thermal_conversion.shape)
+            print('thermal_spectral_norm:', thermal_spectral_norm.shape)
             thermal_conversion = thermal_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
-            thermal_power = thermal_spectral_norm * thermal_conversion.reshape(self.Nspws, 1, self.Npols, 1, 1)
+            thermal_power = thermal_spectral_norm * thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
 
         thermal_power = np.ma.masked_invalid(thermal_power)
         self.thermal_power = thermal_power.filled(0).to('mK^2 Mpc^3')
