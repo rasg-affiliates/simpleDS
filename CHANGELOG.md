@@ -16,12 +16,13 @@ All notable changes to this project will be documented in this file.
 - Moved some functions from delay_spectrum to utils package
 - Thermal noise expectation calculation and normalization (work in progress)
 - DelaySpectrum attempts to extract the receiver_temperature_array from a UVBeam object if applicable.
+- `integration_time` array now only nbls, ntimes in shape. This hopefully should not cause a problem with pyuvdata since all input arrays must only have redundant baselines.
 
 ### Fixed
 - Various PEP8 typos
 - Spectral Window Selection bug
 - Unit normalization in cosmo.X2Y now includes 1/sr term
-- Broadcasting of beam_area and beam_sq_area along the polarization axis
+- Broadcasting of computations along polarization axis
 
 ## [v0.1.0] - 1/28/2019
 - Prototype release version
