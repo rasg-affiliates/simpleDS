@@ -189,8 +189,7 @@ def get_integration_time(uv, reds, squeeze=True):
                  This has no effect for data with Npols > 1.
 
     Returns:
-        integration_time : (Nbls, Ntimes, Nfreqs) numpy array
-                           (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+        integration_time : (Nbls, Ntimes) numpy array
     """
     shape = (uv.Nbls, uv.Ntimes)
     integration_time = np.zeros(shape, dtype=np.float)
@@ -203,13 +202,6 @@ def get_integration_time(uv, reds, squeeze=True):
         inds = np.concatenate([blt_inds, conj_inds])
         inds.sort()
         integration_time[count] = uv.integration_time[inds]
-
-    # tile to Npols, Nbls, Ntimes, Nfreqs to be broadcastable with other arrays
-    integration_time = np.tile(integration_time.reshape(uv.Nbls, uv.Ntimes, 1),
-                               (uv.Npols, 1, 1, 1))
-    if squeeze:
-        if integration_time.shape[0] == 1:
-            integration_time = np.squeeze(integration_time, axis=0)
 
     return integration_time
 
