@@ -1023,8 +1023,6 @@ class DelaySpectrum(UVBase):
                                                       axis=-1).reshape(self.Nspws, self.Npols, 1, 1, 1)
             thermal_conversion = thermal_conversion / (integration_array.unit
                                                        * self.freq_array.unit)
-            print('conversion:', thermal_conversion.shape)
-            print('thermal_spectral_norm:', thermal_spectral_norm.shape)
             thermal_conversion = thermal_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
             thermal_power = thermal_spectral_norm * thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
 
