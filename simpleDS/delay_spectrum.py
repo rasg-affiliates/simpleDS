@@ -740,7 +740,10 @@ class DelaySpectrum(UVBase):
                 inds: flattened indices of frequency array to select
         """
         data = np.transpose(data, [1, 2, 3, 4, 0, 5])
-        data = data.reshape(*data.shape[:4], -1)
+        # easily flatten the last two axes for spectral window selection.
+        shape = tuple([_s for _s in data.shape[:4]])
+        shape = shape + (-1,)
+        data = data.reshape(shape)
         data = np.take(data, inds, axis=4)
         # reshape to get Nspws, Nfreqs correct along 2 last dimensions
         data = data.reshape(self.Nuv, self.Npols, self.Nbls,
