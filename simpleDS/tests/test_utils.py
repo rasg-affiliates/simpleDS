@@ -799,36 +799,6 @@ def test_get_integration_time_shape():
     nt.assert_equal(test_shape, inttime_array.shape)
 
 
-# def test_get_integration_time_shape_with_pol():
-#     """Test the shape of the integration_time array is correct with pols."""
-#     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
-#     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-#     warn_message = ['Antenna positions are not present in the file.',
-#                     'Antenna positions are not present in the file.',
-#                     'Ntimes does not match the number of unique '
-#                     'times in the data',
-#                     'Xantpos in extra_keywords is a list, array or dict, '
-#                     'which will raise an error when writing uvfits '
-#                     'or miriad file types']
-#     pend_dep_message = ['antenna_positions are not defined. '
-#                         'antenna_positions will be a required parameter in '
-#                         'future versions.']
-#     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-#                                    func_args=[test_miriad, test_antpos_file],
-#                                    func_kwargs={'skip_header': 3,
-#                                                 'usecols': [1, 2, 3]},
-#                                    category=[UserWarning] * len(warn_message)
-#                                    + [PendingDeprecationWarning],
-#                                    nwarnings=len(warn_message) + 1,
-#                                    message=warn_message + pend_dep_message)
-#
-#     baseline_array = np.array(list(set(test_uv.baseline_array)))
-#     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array,
-#                                                squeeze=False)
-#     test_shape = (1, test_uv.Nbls, test_uv.Ntimes, 1)
-#     nt.assert_equal(test_shape, inttime_array.shape)
-
-
 def test_get_integration_time_vals():
     """Test the values of the integration_time array is correct."""
     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
@@ -858,38 +828,6 @@ def test_get_integration_time_vals():
     test_array = test_uv.integration_time.copy()
     test_array = test_array.reshape(test_shape)
     nt.assert_true(np.allclose(test_array, inttime_array))
-
-
-# def test_get_integration_time_vals_with_pol():
-#     """Test the values of the integration_time array is correct with pols."""
-#     test_miriad = os.path.join(DATA_PATH, 'paper_test_file.uv')
-#     test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
-#     warn_message = ['Antenna positions are not present in the file.',
-#                     'Antenna positions are not present in the file.',
-#                     'Ntimes does not match the number of unique '
-#                     'times in the data',
-#                     'Xantpos in extra_keywords is a list, array or dict, '
-#                     'which will raise an error when writing uvfits '
-#                     'or miriad file types']
-#     pend_dep_message = ['antenna_positions are not defined. '
-#                         'antenna_positions will be a required parameter in '
-#                         'future versions.']
-#     test_uv = uvtest.checkWarnings(utils.read_paper_miriad,
-#                                    func_args=[test_miriad, test_antpos_file],
-#                                    func_kwargs={'skip_header': 3,
-#                                                 'usecols': [1, 2, 3]},
-#                                    category=[UserWarning] * len(warn_message)
-#                                    + [PendingDeprecationWarning],
-#                                    nwarnings=len(warn_message) + 1,
-#                                    message=warn_message + pend_dep_message)
-#
-#     baseline_array = np.array(list(set(test_uv.baseline_array)))
-#     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array,
-#                                                squeeze=False)
-#     test_shape = (1, test_uv.Nbls, test_uv.Ntimes, 1)
-#     test_array = test_uv.integration_time.copy()
-#     test_array = test_array.reshape(test_shape)
-#     nt.assert_true(np.allclose(test_array, inttime_array))
 
 
 def test_jy_to_mk_value():
