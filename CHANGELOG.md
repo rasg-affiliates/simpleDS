@@ -17,7 +17,7 @@ All notable changes to this project will be documented in this file.
 - Thermal noise expectation calculation and normalization (work in progress)
 - DelaySpectrum attempts to extract the receiver_temperature_array from a UVBeam object if applicable.
 - `integration_time` array now only nbls, ntimes in shape. This hopefully should not cause a problem with pyuvdata since all input arrays must only have redundant baselines.
-
+- Added tolerance to simple lst_align function to allow slight differences between uvdata objects
 ### Fixed
 - Various PEP8 typos
 - Spectral Window Selection bug
