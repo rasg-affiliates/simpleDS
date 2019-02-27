@@ -346,11 +346,11 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
     return cross_array * unit_1 * unit_2
 
 
-def lst_align(uv1, uv2, ra_range, inplace=True):
+def lst_align(uv1, uv2, ra_range, inplace=True, atol=1e-08, rtol=1e-05):
     """Align the LST values of two pyuvdata objects within the given range."""
     delta_t_1 = uv1._calc_single_integration_time()
     delta_t_2 = uv2._calc_single_integration_time()
-    if not np.isclose(delta_t_1, delta_t_2):
+    if not np.isclose(delta_t_1, delta_t_2, rtol=rtol, atol=atol):
         raise ValueError("The two UVData objects much have matching "
                          "time sample rates. "
                          "values were uv1: {0} and uv2: {1}"
