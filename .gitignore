@@ -64,3 +64,10 @@ simpleDS/data/test/
 simpleDS/GIT_INFO
 docs/references/*.aux
 docs/references/*.out
+
+
+# ignore kernel information
+.available_kernels
+.installed_kernels
+.inxi_info
+.running_kernel
