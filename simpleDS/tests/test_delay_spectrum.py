@@ -33,7 +33,7 @@ class TestDealySpectrumInit(object):
     """A test class to check DelaySpectrum objects."""
 
     def setUp(self):
-        """Setup for basic parameter, property and iterator tests."""
+        """Initialize basic parameter, property and iterator tests."""
         self.required_parameters = ['_Ntimes', '_Nbls', '_Nfreqs',
                                     '_Npols', '_vis_units', '_Ndelays',
                                     '_freq_array', '_delay_array',
@@ -120,7 +120,7 @@ class TestBasicFunctions(object):
     """Test basic equality functions."""
 
     def setUp(self):
-        """Setup for tests of basic methods."""
+        """Initialize tests of basic methods."""
         self.uvdata_object = UVData()
         self.testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
         self.uvdata_object.read(self.testfile)
