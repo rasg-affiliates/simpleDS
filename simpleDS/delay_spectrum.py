@@ -325,11 +325,13 @@ class DelaySpectrum(UVBase):
         """Set spectral taper function used during Fourier Transform.
 
         Raises:
-            ValueError: Input spectral taper must be a function or callable whose arguments are the length of the band over which Fourier Transform is taken.
+            ValueError:
+                Input spectral taper must be a function or callable whose arguments are the length of the band over which Fourier Transform is taken.
 
         Arguments:
             taper: type callable;
                    must be a function or callable whose arguments are a scalar N. This is interpreted as the length of the spectral window to be returned. Examples scipy.signal.windows.blackmanharris
+
         """
         if not callable(taper):
             raise ValueError("Input spectral taper must be a function or "
@@ -646,7 +648,8 @@ class DelaySpectrum(UVBase):
 
             inplace: Bool; Default True
                      choose whether spectral window selection is done inplace on the object, or a new object is returned.
-        """
+
+         """
         if inplace:
             this = self
         else:
