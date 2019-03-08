@@ -715,10 +715,6 @@ class DelaySpectrum(UVBase):
         this.nsample_array = this._take_spectral_windows_from_data_like_array(this.nsample_array, freq_chans)
         this.flag_array = this._take_spectral_windows_from_data_like_array(this.flag_array, freq_chans)
 
-        # this.integration_time = this._take_spectral_windows_from_data_like_array(this.integration_time, freq_chans)
-        # this.integration_time = this.integration_time.reshape(this._integration_time.expected_shape(this))
-        # this.integration_time = np.tile(this.integration_time, (Nspws, 1, 1), subok=True)
-        # this.check(check_extra=True, run_check_acceptability=True)
         # This seems obvious for an FFT but in the case that something more
         # sophisticated is added later this hook will exist.
         this.Ndelays = np.int(this.Nfreqs)
@@ -728,6 +724,8 @@ class DelaySpectrum(UVBase):
         this.delay_array = delays.to('ns')
 
         this.update_cosmology()
+
+        this.check(check_extra=True, run_check_acceptability=True)
 
         if not inplace:
             return this
