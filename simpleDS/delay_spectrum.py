@@ -637,9 +637,8 @@ class DelaySpectrum(UVBase):
         """Select the spectral windows from loaded data.
 
         Raises:
-            ValueError:
-                    Spectral window tuples must only have two elements (stard_index, end_index)
-                    Spectra windows must all have the same size
+            ValueError: Spectral window tuples must only have two elements (stard_index, end_index)
+                        Spectra windows must all have the same size
         Arguments:
             spectral_windows: tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
                               spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
@@ -649,7 +648,7 @@ class DelaySpectrum(UVBase):
             inplace: Bool; Default True
                      choose whether spectral window selection is done inplace on the object, or a new object is returned.
 
-         """
+        """
         if inplace:
             this = self
         else:
