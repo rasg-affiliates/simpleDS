@@ -30,21 +30,22 @@ class DelaySpectrum(UVBase):
         If only one UVData Object is specified, data is multiplied by itself.
 
         Arguments
-            uv1: One of the pyuvdata objects to cross correlate.
+            uv1: (list, pyuvdata object)
+                 objects to cross correlate.
                  Optional, can be added later
-                 If given assumes all baselines in UVData object will be
-                 cross multiplied togeter.
-            uv2: Other pyuvdata object to multiply with uv1.
-                 Optional, can be added later
-                 Assunmes baselines are identical to uv1.
-            uvb: UVBeam object with relevent beam info.
+                 Assumes all baselines in UVData object will be
+                 cross multiplied togeter, required to have only one reduntant group as computed with pyuvdata redundancy functions.
+            uvb: (UVBeam object)
+                 Containts relevent beam info.
                  Currently assumes 1 beam object can describe all baselines
                  Must be power beam in healpix coordinates and peak normalized
                  Optional can be added later.
-            trcvr: Receiver Temperature of antenna to calculate noise power
+            trcvr: (astropy Quantity)
+                   Receiver Temperature of antenna to calculate noise power
                    Must be an astropy Quantity object with units of temperature.
                    Optional can be added later.
-            taper: Spectral taper function used during frequency Fourier Transforms
+            taper: (fucntion, callable)
+                    Spectral taper function used during frequency Fourier Transforms
                     Accepts scipy.signal.windows functions or any function
                     whose argument is the len(data) and returns a numpy array.
                     Default: scipy.signal.windows.blackmanharris
