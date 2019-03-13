@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+### Changed
+### Fixed
+
+## [1.0.0]
+### Added
 - DelaySpectrum Object for handing data, checking units, and performing Fourier Transform
 - Parameter Class to handle units and verify shape, type, etc of data in the DelaySpectrum Object, subclass of UVParameter.
 - IPython notebook to provide some examples oh how to create and interact with DelaySpectrum Object.
