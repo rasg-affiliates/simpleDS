@@ -1,39 +1,67 @@
-language: python
-python:
-  # We don't actually use the Travis Python, but this keeps it organized.
-  - "2.7"
-  - "3.6"
+sudo: required
+dist: trusty
+os:
+  - 'linux'
+  - 'osx'
 env:
   global:
     - COVERALLS_PARALLEL=true
+  matrix:
+    - PYTHON_VERSION=2.7
+    - PYTHON_VERSION=3.6
+    - PYTHON_VERSION=3.7
+
 install:
   # ensure that we have the full tag information available for version.py
   #--unshallow --tags
-  - git fetch
-  - sudo apt-get update
+  - git fetch --unshallow --tags
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-get update;
+      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+        wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+      else
+        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+      fi
     else
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+        wget https://repo.anaconda.com/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O miniconda.sh;
+      else
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+      fi
     fi
+
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
-  - conda config --remove channels defaults && conda config --add channels conda-forge
   - conda update -q conda
+
+  - conda create -q -n testenv python=$PYTHON_VERSION
+  - source activate testenv
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      conda install -c defaults -y 'libgfortran =3.0.0' 'libgfortran-ng =7.2.0';
+    else
+      conda install -c defaults -y 'libgfortran =3.0.0' libgfortran-ng;
+    fi
+
+  - conda config --add channels conda-forge
+  # - conda config --remove channels defaults
   # Useful for debugging any issues with conda
   - conda info -a
 
   # install dependencies
-  #- conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy nose pip matplotlib coverage
-  - conda install numpy scipy nose pip matplotlib coverage astropy six coveralls coverage pycodestyle pip
-  - conda install -y 'libgfortran =3.0.0'
-  - pip install coveralls
+
+  - conda install numpy scipy nose pip coverage astropy six coveralls coverage pycodestyle h5py
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - conda list
+  - python --version
+  # check that the python version matches the desired one; exit immediately if not
+  - PYVER=`python -c "from __future__ import print_function; import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+  - if [[ $PYVER != $PYTHON_VERSION ]]; then
+      exit 1;
+    fi
 
 script:
   - python setup.py build_ext --force --inplace

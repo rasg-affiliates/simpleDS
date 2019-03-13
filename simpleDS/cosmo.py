@@ -61,7 +61,7 @@ def u2kperp(u, z, cosmo=None):
     """
     if cosmo is None:
         cosmo = default_cosmology.get()
-    return 2 * np.pi * u / cosmo.comoving_distance(z)
+    return 2 * np.pi * u / cosmo.comoving_transverse_distance(z)
 
 
 @units.quantity_input(kperp='wavenumber')
@@ -79,7 +79,7 @@ def kperp2u(kperp, z, cosmo=None):
     """
     if cosmo is None:
         cosmo = default_cosmology.get()
-    return kperp * cosmo.comoving_distance(z) / (2 * np.pi)
+    return kperp * cosmo.comoving_transverse_distance(z) / (2 * np.pi)
 
 
 @units.quantity_input(eta='time')
@@ -135,6 +135,6 @@ def X2Y(z, cosmo=None):
     """
     if cosmo is None:
         cosmo = default_cosmology.get()
-    X2Y = const.c * (1 + z)**2 * cosmo.comoving_distance(z)**2
-    X2Y /= cosmo.H0 * f21 * cosmo.efunc(z)
-    return X2Y.to('Mpc^3*s')
+    X2Y = const.c * (1 + z)**2 * cosmo.comoving_transverse_distance(z)**2
+    X2Y /= cosmo.H0 * f21 * cosmo.efunc(z) * units.sr
+    return X2Y.to('Mpc^3*s/sr')

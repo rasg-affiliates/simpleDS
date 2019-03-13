@@ -36,7 +36,7 @@ setup_args = {
     'version': version.version,
     'include_package_data': True,
     'install_requires': ['numpy>1.10', 'astropy>1.2', 'scipy',
-                         'nose', 'pyuvdata', 'six'],
+                         'nose', 'pyuvdata', 'six', 'h5py'],
     'test_suite': 'nose'
 }
 

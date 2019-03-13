@@ -191,13 +191,13 @@ def test_X2Y_unit():
     """Test unit on X2Y are 1/(Hz/Mpc)^3 or Mpc^3 * s."""
     test_z = 7
     test_x2y = cosmo.X2Y(test_z)
-    nt.assert_equal(units.Mpc**3 * units.s, test_x2y.unit)
+    nt.assert_equal(units.Mpc**3 * units.s / units.sr, test_x2y.unit)
 
 
 def tests_X2Y_val():
     """Test value of X2Y."""
     test_z = 7
     test_x2y = cosmo.X2Y(test_z)
-    compare_x2y = (2 * np.pi)**3 / (cosmo.u2kperp(1, test_z)**2
+    compare_x2y = (2 * np.pi)**3 / (cosmo.u2kperp(1, test_z)**2 * units.sr
                                     * cosmo.eta2kparr(1 * units.s, test_z))
     nt.assert_true(np.isclose(compare_x2y.value, test_x2y.value))

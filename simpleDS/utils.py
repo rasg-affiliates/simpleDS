@@ -12,6 +12,7 @@ import numpy as np
 from astropy import constants as const
 from astropy import units
 from pyuvdata import UVData, utils as uvutils
+from scipy.signal import windows
 
 
 def read_paper_miriad(filename, antpos_file=None, **kwargs):
@@ -31,7 +32,7 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     uvdata_argspec = six.get_function_code(uv.read).co_varnames
     kwargs_uvdata = {key: kwargs[key] for key in kwargs
                      if key in uvdata_argspec}
-    uv.read(filename, **kwargs_uvdata)
+    uv.read_miriad(filename, **kwargs_uvdata)
 
     if antpos_file is None:
         raise ValueError("An antpos_file file "
@@ -50,9 +51,13 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     antpos_ecef = uvutils.ECEF_from_ENU(antpos,
                                         *uv.telescope_location_lat_lon_alt)
     antpos_itrf = antpos_ecef - uv.telescope_location
-    good_ants = list(map(int, uv.antenna_names))
-    antpos_itrf = np.take(antpos_itrf, good_ants, axis=0)
+    setattr(uv, 'Nants_telescope', antpos_itrf.shape[0])
+    ant_names = [str(x) for x in range(uv.Nants_telescope)]
+    setattr(uv, 'antenna_names', ant_names)
+    ant_nums = [x for x in range(uv.Nants_telescope)]
+    setattr(uv, 'antenna_numbers', ant_nums)
     setattr(uv, 'antenna_positions', antpos_itrf)
+
     uv.set_uvws_from_antenna_positions()
 
     # PAPER uses Eastward pointing baselines, look for and baselines
@@ -122,7 +127,7 @@ def get_nsample_array(uv, reds, squeeze=True):
                         (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    nsample_array = np.zeros(nsample_shape, dtype=np.complex)
+    nsample_array = np.zeros(nsample_shape, dtype=np.float)
 
     for count, baseline in enumerate(reds):
         tmp_data = uv.get_nsamples(baseline, squeeze='none')
@@ -154,7 +159,7 @@ def get_flag_array(uv, reds, squeeze=True):
                      (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
     """
     flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    flag_array = np.zeros(flag_shape, dtype=np.complex)
+    flag_array = np.zeros(flag_shape, dtype=np.bool)
     reds = np.array(reds)
 
     for count, baseline in enumerate(reds):
@@ -184,11 +189,10 @@ def get_integration_time(uv, reds, squeeze=True):
                  This has no effect for data with Npols > 1.
 
     Returns:
-        integration_time : (Nbls, Ntimes, Nfreqs) numpy array
-                           (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+        integration_time : (Nbls, Ntimes) numpy array
     """
     shape = (uv.Nbls, uv.Ntimes)
-    integration_time = np.zeros(shape, dtype=np.complex)
+    integration_time = np.zeros(shape, dtype=np.float)
     reds = np.array(reds)
 
     for count, baseline in enumerate(reds):
@@ -198,13 +202,6 @@ def get_integration_time(uv, reds, squeeze=True):
         inds = np.concatenate([blt_inds, conj_inds])
         inds.sort()
         integration_time[count] = uv.integration_time[inds]
-
-    # tile to Npols, Nbls, Ntimes, Nfreqs to be broadcastable with other arrays
-    integration_time = np.tile(integration_time.reshape(uv.Nbls, uv.Ntimes, 1),
-                               (uv.Npols, 1, 1, 1))
-    if squeeze:
-        if integration_time.shape[0] == 1:
-            integration_time = np.squeeze(integration_time, axis=0)
 
     return integration_time
 
@@ -223,7 +220,7 @@ def bootstrap_array(array, nboot=100, axis=0):
     if axis >= len(np.shape(array)):
         raise ValueError("Specified axis must be shorter than the lenght "
                          "of input array.\n"
-                         "axis value was {0} but array has {} dimensions"
+                         "axis value was {0} but array has {1} dimensions"
                          .format(axis, len(np.shape(array))))
 
     sample_inds = np.random.choice(array.shape[axis],
@@ -235,6 +232,75 @@ def bootstrap_array(array, nboot=100, axis=0):
 def noise_equivalent_bandwidth(window):
     """Calculate the relative equivalent noise bandwidth of window function."""
     return np.sum(window)**2 / (np.sum(window**2) * len(window))
+
+
+def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
+    """Combine the nsample arrays for use in cross-multiplication.
+
+    Uses numpy slicing to generate array of all sample cross-multiples.
+    Used to find the combine samples for a the delay spectrum.
+    The geometric mean is taken between nsamples_1 and nsamples_2 because
+    nsmaples array is used to compute thermal variance in the delay spectrum.
+
+    Arguments:
+        nsample_1 : (Nbls, Ntimes, Nfreqs) array from get_nsamples_array
+                    can also have shape (Npols, Nbls, Ntimes, Nfreqs)
+        nsample_2 : same type as nsample_1 if take cross-multiplication
+                       Defaults to copying nsample_1 for auto-correlation
+    Returns:
+        samples_out: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
+                     the input sample arrays.
+                     Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+    """
+    if nsample_2 is None:
+        nsample_2 = nsample_1.copy()
+
+    if not nsample_1.shape == nsample_2.shape:
+        raise ValueError('nsample_1 and nsample_2 must have same shape, '
+                         'but nsample_1 has shape {d1_s} and '
+                         'nsample_2 has shape {d2_s}'
+                         .format(d1_s=nsample_1.shape,
+                                 d2_s=nsample_2.shape))
+
+    samples_out = cross_multiply_array(array_1=nsample_1,
+                                       array_2=nsample_2,
+                                       axis=axis)
+
+    # The nsamples array is used to construct the thermal variance
+    # Cross-correlation takes the geometric mean of thermal variance.
+    return np.sqrt(samples_out)
+
+
+def remove_auto_correlations(data_array, axes=(0, 1)):
+    """Remove the auto-corrlation term from input array.
+
+    Argument:
+        data_array : (Nbls, Nbls, Ntimes, Nfreqs)
+                     Removes same baseline diagonal along the first 2 diemsions
+    Returns:
+        data_out : (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
+                   if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
+    """
+    if not np.shape(axes)[0] == 2:
+        raise ValueError("Shape must be a length 2 tuple/array/list of "
+                         "axis indices.")
+    if axes[0] != axes[1] - 1:
+        raise ValueError("Axes over which diagonal components are to be "
+                         "remove must be adjacent.")
+    if data_array.shape[axes[0]] != data_array.shape[axes[1]]:
+        raise ValueError("The axes over which diagonal components are to be "
+                         "removed must have the same shape.")
+    n_inds = data_array.shape[axes[0]]
+    # make a boolean index array with True off the diagonal and
+    # False on the diagonal.
+    indices = np.logical_not(np.diag(np.ones(n_inds, dtype=bool)))
+    # move the axes so axes[0] is the 0th axis and axis 1 is the 1th
+    data_array = np.moveaxis(data_array, axes[0], 0)
+    data_array = np.moveaxis(data_array, axes[1], 1)
+    data_out = data_array[indices]
+    # put the compressed axis back in the original spot
+    data_out = np.moveaxis(data_out, 0, axes[0])
+    return data_out
 
 
 def cross_multiply_array(array_1, array_2=None, axis=0):
@@ -280,14 +346,14 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
     return cross_array * unit_1 * unit_2
 
 
-def lst_align(uv1, uv2, ra_range, inplace=True):
+def lst_align(uv1, uv2, ra_range, inplace=True, atol=1e-08, rtol=1e-05):
     """Align the LST values of two pyuvdata objects within the given range."""
     delta_t_1 = uv1._calc_single_integration_time()
     delta_t_2 = uv2._calc_single_integration_time()
-    if not np.isclose(delta_t_1, delta_t_2):
+    if not np.isclose(delta_t_1, delta_t_2, rtol=rtol, atol=atol):
         raise ValueError("The two UVData objects much have matching "
                          "time sample rates. "
-                         "values were uv1: {0} and uv2:{1}"
+                         "values were uv1: {0} and uv2: {1}"
                          .format(delta_t_1, delta_t_2))
     bl1 = uv1.baseline_array[0]
     bl2 = uv2.baseline_array[0]
@@ -317,13 +383,139 @@ def lst_align(uv1, uv2, ra_range, inplace=True):
             uv2.select(times=new_times_2, inplace=inplace))
 
 
+@units.quantity_input(freqs='frequency')
+def jy_to_mk(freqs):
+    """Calculate the Jy/sr to mK conversion lambda^2/(2 * K_boltzman)."""
+    jy2t = units.sr * const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
+                                              * const.k_B)
+    return jy2t.to('mK*sr/Jy')
+
+
+def generate_noise(noise_power):
+    """Generate noise given an input array of noise power.
+
+    Argument:
+        noise_power: N-dimensional array of noise power to generate white
+                     noise.
+    Returns:
+        noise: Complex white noise drawn from a Gaussian distribution with
+               width given by the value of the input noise_power array.
+    """
+    # divide by sqrt(2) to conserve total noise amplitude over real and imag
+    noise = noise_power * (1 * np.random.normal(size=noise_power.shape)
+                           + 1j * np.random.normal(size=noise_power.shape))
+    noise /= np.sqrt(2)
+    return noise
+
+
+def normalized_fourier_transform(data_array, delta_x, axis=-1,
+                                 taper=windows.blackmanharris, inverse=False):
+    """Perform the Fourier transform over specified axis.
+
+    Perform the FFT over frequency using the specified taper function
+    and normalizes by delta_x (the discrete of sampling rate along the axis).
+
+    Arguments:
+        data_array : (N-dimenaional) array of data to Fourier Transform
+        delta_x: The difference between frequency channels in the data.
+                 This is used to properly normalize the Fourier Transform.
+                 Must be an astropy Quantity object
+        taper : Window function used in delay transform.
+                 Default is scipy.signal.windows.blackmanharris
+        inverse: (bool; Default False) Perform the inverse Fourier Transform
+    Returns:
+        fourier_arry: (N-Dimenaional) array of the Fourier transform along
+                       specified axis, and normalized by the provided delta_x
+    """
+    if isinstance(data_array, units.Quantity):
+        unit = data_array.unit
+    else:
+        unit = 1.
+
+    if not isinstance(delta_x, units.Quantity):
+        raise ValueError('delta_x must be an astropy Quantity object. '
+                         'value was : {df}'.format(df=delta_x))
+
+    n_axis = data_array.shape[axis]
+    data_shape = np.ones_like(data_array.shape)
+    data_shape[axis] = n_axis
+    # win = taper(n_axis).reshape(1, n_axis)
+    win = np.broadcast_to(taper(n_axis), data_shape)
+
+    # Fourier Transforms should have a delta_x term multiplied
+    # This is the proper normalization of the FT but is not
+    # accounted for in an fft.
+    if not inverse:
+        fourier_array = np.fft.fft(data_array * win, axis=axis)
+        fourier_array = np.fft.fftshift(fourier_array, axes=axis)
+        fourier_array = fourier_array * delta_x.si * unit
+    else:
+        fourier_array = np.fft.ifft(data_array, axis=axis)
+        fourier_array = np.fft.ifftshift(fourier_array, axes=axis)
+        fourier_array = fourier_array / win * delta_x.si * unit
+
+    return fourier_array
+
+
+def weighted_average(array, uncertainty, weights=None, axis=-1):
+    """Compute the weighted average and propagate uncertainty.
+
+    Performs weighted average of input array, and propagates the weighted average into the uncertainty.
+
+    Arguments:
+        array: (N-dimensional) array over which to average an axis.
+        uncertainty: (N-dimensional) array of uncertainties associated with each point in input array
+        weights: (N-dimenional or 1-Dimenaional, Default None) array of weights to apply to each data point.
+                  If weights are one dimensional must be of length N and assumped to be the same for each row M.
+                  if weights is None, uses inverse variance weighting
+        axis: (integer, Default -1) The axis over which the average is taken.
+    Retruns:
+        array: (MxN-1 dimenionals) array averaged array with given weights
+        uncertainty: (MxN-1 dimensional) propagated array array for given weights
+    """
+    if isinstance(array, units.Quantity):
+        if isinstance(uncertainty, units.Quantity):
+            uncertainty = uncertainty.to(array.unit)
+        else:
+            raise ValueError("Input array is a Quantity Objcet but "
+                             "uncertainty is not. Either both arrays must be "
+                             "Quantity objects or neither must be.")
+    elif isinstance(uncertainty, units.Quantity):
+        raise ValueError("Input array is a not Quantity Objcet but "
+                         "uncertainty is. Either both arrays must be "
+                         "Quantity objects or neither must be.")
+    # check shapes of array and uncertainty
+    if not array.shape == uncertainty.shape:
+        raise ValueError("Input array and uncertainties must have the same "
+                         "shape. Array shape: {array}, Uncertainty shape: "
+                         "{error}".format(array=array.shape,
+                                          error=uncertainty.shape))
+    # if weights is none use uniform? inverse variance?
+    if weights is None:
+        weights = 1. / uncertainty**2
+    # check shape of weights
+    if np.ndim(weights) == 1 and weights.size != array.shape[axis]:
+        raise ValueError("1-Dimenionals weights must have the same shape "
+                         "as the axis over which the average is taken.")
+    elif not np.shape(weights) == array.shape:
+        raise ValueError("Input array and uncertainties must have the same "
+                         "shape. Array shape: {array}, Uncertainty shape: "
+                         "{weights}".format(array=array.shape,
+                                            weights=weights.shape))
+    array_out = np.average(array, weights=weights, axis=axis)
+    uncertainty_out = np.sqrt(np.sum(uncertainty**2 * weights**2, axis=axis)
+                              / np.abs(np.sum(weights, axis=axis))**2)
+    return array_out, uncertainty_out
+
+
 @units.quantity_input(delays='time', array=['mK^2*Mpc^3', 'time'])
-def fold_along_delay(array, delays, weights=None, axis=-1):
+def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
     """Fold input array over the delay axis.
 
     Arguments
-        array: An N-Dimensional numpy array or nested lists.
         delays: A 1-Dimensional numpy array of interferometric delays.
+        array: An N-Dimensional numpy array or nested lists.
+        uncertainty: An N-Dimensional numpy array or nested lists of uncertainty values for input array
         weights: Weights to use while averaging the input array.
                  Must have same shape as input array.
                  Default: np.ones_like(array)
@@ -333,8 +525,11 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         array: The N-Dimensional input array folded over the axis specified
                give axis will have size np.shape(array)[axis]/2 if shape is even
                or (np.shape(array)[axis] + 1)/2 if shape is odd
-        weights: The folded weights used corresponding to the input array.
+        uncertainty: The folded uncertainties corresponding to the input array.
     """
+    delays = copy.deepcopy(delays)
+    array = copy.deepcopy(array)
+    uncertainty = copy.deepcopy(uncertainty)
     # This function assumes your array is a block-square array,
     # e.g. all delays are the same.
     if array.shape[axis] != len(delays):
@@ -347,6 +542,13 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
     if (len(delays) % 2 != 0 and np.abs(delays).min() != 0):
         raise ValueError(("Input delays must have either a delay=0 bin "
                           "as the central value or have an even size."))
+
+    # check shapes of array and uncertainty
+    if not array.shape == uncertainty.shape:
+        raise ValueError("Input array and uncertainties must have the same "
+                         "shape. Array shape: {array}, Uncertainty shape: "
+                         "{error}".format(array=array.shape,
+                                          error=uncertainty.shape))
 
     if weights is None:
         no_input_weights = True
@@ -365,6 +567,17 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         pos_vals = np.concatenate([zero_bin, pos_vals], axis=axis)
         neg_vals = np.concatenate([zero_bin, neg_vals], axis=axis)
 
+        neg_errors, zero_errors, pos_errors = np.split(uncertainty, split_inds,
+                                                       axis=axis)
+        # the error on the 0 delay mode will go down like 1/sqrt(2) with the
+        # inverse vaiance weighting scheme, but we didn't actually gain any information
+        # so rescale the error, this _could_ be avoided if we didn't concatenate along
+        # the 0th dimension but would make it require two different calculations
+        zero_errors *= np.sqrt(2)
+        neg_errors = np.flip(neg_errors, axis=axis)
+        pos_errors = np.concatenate([zero_errors, pos_errors], axis=axis)
+        neg_errors = np.concatenate([zero_errors, neg_errors], axis=axis)
+
         neg_weights, zero_weights, pos_weights = np.split(weights, split_inds,
                                                           axis=axis)
         neg_weights = np.flip(neg_weights, axis=axis)
@@ -379,23 +592,26 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
         neg_vals, pos_vals = np.split(array, split_inds, axis=axis)
         neg_vals = np.flip(neg_vals, axis=axis)
 
+        neg_errors, pos_errors = np.split(uncertainty, split_inds, axis=axis)
+        neg_errors = np.flip(neg_errors, axis=axis)
+
         neg_weights, pos_weights = np.split(weights, split_inds, axis=axis)
         neg_weights = np.flip(neg_weights, axis=axis)
 
     _array = np.stack([pos_vals, neg_vals], axis=0)
+    _errors = np.stack([pos_errors, neg_errors], axis=0)
     _weights = np.stack([pos_weights, neg_weights], axis=0)
 
     if _array.unit is None:
         _array = _array.value * array.unit
+    if _errors.unit is None:
+        _errors = _errors.value * uncertainty.unit
     if _weights.unit is None:
         _weights = _weights.value * weights.unit
 
     if not _array.imag.value.any():
-        out_array = np.average(_array.real, weights=1. / _weights.real**2,
-                               axis=0)
-        out_weights = np.sqrt(np.average(_weights.real**2,
-                                         weights=1. / _weights.real**2, axis=0))
-        return out_array, out_weights
+        out_array, out_errors = weighted_average(_array.real, _errors.real,
+                                                 weights=_weights, axis=0)
     else:
         weight_check = _weights.imag.value.any()
         if not weight_check:
@@ -404,13 +620,16 @@ def fold_along_delay(array, delays, weights=None, axis=-1):
             except TypeError:
                 _weights = _weights.astype(np.complex)
                 _weights.imag = np.ones_like(_weights.real)
-        out_array = (np.average(_array.real, weights=1. / _weights.real**2, axis=0)
-                     + 1j * np.average(_array.imag, weights=1. / _weights.imag**2, axis=0))
+        out_array_real, out_errors_real = weighted_average(_array.real,
+                                                           _errors.real,
+                                                           weights=_weights.real,
+                                                           axis=0)
+        out_array_imag, out_errors_imag = weighted_average(_array.imag,
+                                                           _errors.imag,
+                                                           weights=_weights.imag,
+                                                           axis=0)
 
-        out_weights = (np.sqrt(np.average(_weights.real**2, weights=1. / _weights.real**2, axis=0))
-                       + 1j * np.sqrt(np.average(_weights.imag**2, weights=1. / _weights.imag**2, axis=0)))
+        out_array = out_array_real + 1j * out_array_imag
+        out_errors = out_errors_real + 1j * out_errors_imag
 
-        if not weight_check:
-            out_weights.imag = np.zeros_like(out_weights.real)
-
-        return out_array, out_weights
+    return out_array, out_errors
