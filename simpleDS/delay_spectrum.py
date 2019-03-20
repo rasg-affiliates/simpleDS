@@ -794,22 +794,90 @@ class DelaySpectrum(UVBase):
         noise_power = self.calculate_noise_power()
         self.noise_array = utils.generate_noise(noise_power)
 
-    def update_cosmology(self, cosmo=None):
+    def update_cosmology(self, cosmology=None):
         """Update cosmological information with the assumed cosmology.
 
         Arguments:
             cosmo: input assumed cosmology. Must be an astropy cosmology object.
         """
+        if cosmology is not None:
+            if not isinstance(cosmology, reference_cosmology_object):
+                raise ValueError("Input cosmology must a sub-class of astropy.cosmology.core.Cosmology")
+            self.cosmology = cosmology
         # find the mean redshift for each spectral window
         self.redshift = simple_cosmo.calc_z(self.freq_array).mean(axis=1)
         self.k_parallel = simple_cosmo.eta2kparr(self.delay_array.reshape(1, self.Ndelays),
-                                                 self.redshift.reshape(self.Nspws, 1), cosmo=cosmo)
+                                                 self.redshift.reshape(self.Nspws, 1),
+                                                 cosmo=self.cosmology)
 
         uvw_wave = np.linalg.norm(self.uvw.value) * self.uvw.unit
         mean_freq = np.mean(self.freq_array.value, axis=1) * self.freq_array.unit
         uvw_wave = uvw_wave / (const.c / mean_freq.to('1/s')).to('m')
         self.k_perpendicular = simple_cosmo.u2kperp(uvw_wave, self.redshift,
-                                                    cosmo=cosmo)
+                                                    cosmo=self.cosmology)
+        # If power spectrum estimation has already occurred, need to re-normalize
+        # in the new cosmological framework.
+        if self.power_array is not None:
+            if self.unit_conversion is not None:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    self.power_array = self.power_array / self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
+                    self.noise_power = self.noise_power / self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
+            if self.power_array.unit.is_equivalent((units.Jy * units.Hz)**2):
+                # This additoinal units.sr term in the c/2*K_b expression may seem
+                # weird, however, the temperature to Jy conversion factor is defined
+                # such that there is a beam integral, or a sr factor, included.
+                # this helps the units work out.
+
+                # This is the full unit conversion integral.
+                # See liu et al 2014ab or write the visibility equation and convert to cosmological units without pulling anything outside the integral.
+                integration_array = (self.freq_array.reshape(self.Nspws, 1, self.Nfreqs)**4
+                                     / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array),
+                                                        cosmo=self.cosmology).reshape(self.Nspws, 1, self.Nfreqs)
+                                     * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                     * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
+                self.unit_conversion = ((const.c**2 * units.sr / (2 * const.k_B))**2
+                                        / integrate.trapz(integration_array.value,
+                                                          x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                                                          axis=-1).reshape(self.Nspws, self.Npols))
+                self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
+                self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3 /( Jy^2 Hz^2)')
+            elif self.power_array.unit.is_equivalent((units.K * units.sr * units.Hz)**2):
+                integration_array = (1.
+                                     / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array),
+                                                        cosmo=self.cosmology).reshape(self.Nspws, 1, self.Nfreqs)
+                                     * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                     * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
+                self.unit_conversion = 1. / integrate.trapz(integration_array.value,
+                                                            x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                                                            axis=-1).reshape(self.Nspws, self.Npols)
+                self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
+                self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3 /( K^2 sr^2 Hz^2)')
+            else:
+                self.unit_conversion = np.ones((self.Npols, self.Nspws)) * units.dimensionless_unscaled
+
+            self.power_array = self.power_array * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
+            self.noise_power = self.noise_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
+            if not self.data_array.unit.is_equivalent(units.dimensionless_unscaled * units.Hz):
+                self.power_array = self.power_array.to('mK^2 * Mpc^3')
+                self.noise_power = self.noise_power.to('mK^2 * Mpc^3')
+
+        if self.thermal_power is not None:
+            if self.thermal_conversion is not None:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    self.thermal_power = self.thermal_power / self.thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
+            integration_array = (1.
+                                 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array),
+                                                    cosmo=self.cosmology).reshape(self.Nspws, 1, self.Nfreqs)
+                                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
+                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
+            thermal_conversion = 1. / integrate.trapz(integration_array.value,
+                                                      x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                                                      axis=-1).reshape(self.Nspws, self.Npols)
+            thermal_conversion = thermal_conversion / (integration_array.unit
+                                                       * self.freq_array.unit)
+            self.thermal_conversion = thermal_conversion.to('mK^2 Mpc^3 /( K^2 sr^2 Hz^2)')
+            self.thermal_power = self.thermal_power * self.thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
+            self.thermal_power = self.thermal_power.to('mK^2 Mpc^3')
 
     def add_uvbeam(self, uvb, no_read_trcvr=False):
         """Add the beam_area and beam_square_area integrals into memory.
@@ -942,62 +1010,20 @@ class DelaySpectrum(UVBase):
         if self.data_type == 'frequency':
             self.delay_transform()
 
-        # NEBW = utils.noise_equivalent_bandwidth(self.taper(self.Nfreqs))
-        # self.bandwidth = (self.freq_array[0][-1] - self.freq_array[0][0]) * NEBW
-        # self.unit_conversion = (simple_cosmo.X2Y(self.redshift).reshape(self.Nspws, 1, 1)
-        #                         / self.bandwidth.to('1/s') / self.beam_sq_area)
-
-        if self.data_array.unit.is_equivalent(units.Jy * units.Hz):
-            # This additoinal units.sr term in the c/2*K_b expression may seem
-            # weird, however, the temperature to Jy conversion factor is defined
-            # such that there is a beam integral, or a sr factor, included.
-            # this helps the units work out.
-
-            # This is the full unit conversion integral.
-            # See liu et al 2014ab or write the visibility equation and convert to cosmological units without pulling anything outside the integral.
-            integration_array = (self.freq_array.reshape(self.Nspws, 1, self.Nfreqs)**4
-                                 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
-                                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
-            self.unit_conversion = ((const.c**2 * units.sr / (2 * const.k_B))**2
-                                    / integrate.trapz(integration_array.value,
-                                                      x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                                                      axis=-1).reshape(self.Nspws, self.Npols))
-            self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
-            self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3 /( Jy^2 Hz^2)')
-        elif self.data_array.unit.is_equivalent(units.K * units.sr * units.Hz):
-            integration_array = (1.
-                                 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
-                                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
-            self.unit_conversion = 1. / integrate.trapz(integration_array.value,
-                                                        x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                                                        axis=-1).reshape(self.Nspws, self.Npols)
-            self.unit_conversion = self.unit_conversion / (1. * integration_array.unit * self.freq_array.unit)
-            self.unit_conversion = self.unit_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
-        else:
-            self.unit_conversion = np.ones((self.Npols, self.Nspws))
-
         if self.Nuv == 1:
-            delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
-                                                     axis=2)
-            noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
-                                                     axis=2)
+            self.power_array = utils.cross_multiply_array(array_1=self.data_array[:, 0],
+                                                          axis=2)
+            self.noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
+                                                          axis=2)
         else:
-            delay_power = utils.cross_multiply_array(array_1=self.data_array[:, 0],
-                                                     array_2=self.data_array[:, 1],
-                                                     axis=2)
-            noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
-                                                     array_2=self.noise_array[:, 1],
-                                                     axis=2)
-        self.power_array = delay_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
-        self.noise_power = noise_power * self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
-
-        if not self.data_array.unit.is_equivalent(units.dimensionless_unscaled * units.Hz):
-            self.power_array = self.power_array.to('mK^2 * Mpc^3')
-            self.noise_power = self.noise_power.to('mK^2 * Mpc^3')
-
+            self.power_array = utils.cross_multiply_array(array_1=self.data_array[:, 0],
+                                                          array_2=self.data_array[:, 1],
+                                                          axis=2)
+            self.noise_power = utils.cross_multiply_array(array_1=self.noise_array[:, 0],
+                                                          array_2=self.noise_array[:, 1],
+                                                          axis=2)
         self.calculate_thermal_sensitivity()
+        self.update_cosmology()
 
     def calculate_thermal_sensitivity(self):
         """Calculate the Thermal sensitivity for the power spectrum.
@@ -1042,26 +1068,12 @@ class DelaySpectrum(UVBase):
                                        * npols_noise * self.Nbls
                                        * np.sqrt(2 * lst_bins)))
             # integrate the noise temperature over the bands being Fourier Transformed
-            thermal_spectral_norm = (self.freq_array.unit
-                                     * thermal_power.unit**2
-                                     * integrate.trapz(thermal_power.value**2
-                                                       * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
-                                                       x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
-                                                       axis=-1)
-                                     )
-            # this is _almost_ the same as the unit conversion above
-            # but we need the beam_area/beam_sq_area factor
-            integration_array = (1.
-                                 / simple_cosmo.X2Y(simple_cosmo.calc_z(self.freq_array)).reshape(self.Nspws, 1, self.Nfreqs)
-                                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs)**2
-                                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs))
-            thermal_conversion = 1. / integrate.trapz(integration_array.value,
-                                                      x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                                                      axis=-1).reshape(self.Nspws, self.Npols, 1, 1, 1)
-            thermal_conversion = thermal_conversion / (integration_array.unit
-                                                       * self.freq_array.unit)
-            thermal_conversion = thermal_conversion.to('mK^2 Mpc^3  s^2/( K^2 sr^2)')
-            thermal_power = thermal_spectral_norm * thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
-
+            thermal_power = (self.freq_array.unit
+                             * thermal_power.unit**2
+                             * integrate.trapz(thermal_power.value**2
+                                               * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
+                                               x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
+                                               axis=-1)
+                             )
         thermal_power = np.ma.masked_invalid(thermal_power)
-        self.thermal_power = thermal_power.filled(0).to('mK^2 Mpc^3')
+        self.thermal_power = thermal_power.filled(0).to('K^2 sr^2 Hz^2')

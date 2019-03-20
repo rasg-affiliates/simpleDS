@@ -3,11 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- update_cosmology now recomputes cosmological conversions and re-normalizes power spectrum
 - thermal_conversion parameter to track the conversion of the thermal_power array to cosmological units
 - cosmology object support in UnitParameters
 ### Changed
 - Various typos
 - Docstring Formatting
+- Moved all cosmological calculations to update_cosmology function
 ### Fixed
 - definition of acceptable units for data_array and noise_array. Previously had units.K not units.K * units.sr * units.Hz
 - definition of units for power_array and noise_power when data is uncalibrated

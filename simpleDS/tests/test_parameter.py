@@ -232,3 +232,23 @@ def test_not_equal_to_different_object():
     unp1 = unp.UnitParameter(name='unp1', value=3, value_not_quantity=True)
     test_obj = NonParameter()
     nt.assert_not_equal(unp1, test_obj)
+
+
+def test_cosmologies_not_equal_value():
+    """Test two cosmologies are not equal if a value is different."""
+    wmap = WMAP9.clone()
+    test_cosmo = WMAP9.clone(Neff=10)
+
+    unp1 = unp.UnitParameter(name='wmap', value=wmap, value_not_quantity=True)
+    unp2 = unp.UnitParameter(name='test_cosmo', value=test_cosmo, value_not_quantity=True)
+    nt.assert_not_equal(unp1, unp2)
+
+
+def test_cosmologies_not_equal_quantity():
+    """Test two cosmologies are not equal if a quantity is different."""
+    wmap = WMAP9.clone()
+    test_cosmo = WMAP9.clone(Tcmb0=10 * units.K)
+
+    unp1 = unp.UnitParameter(name='wmap', value=wmap, value_not_quantity=True)
+    unp2 = unp.UnitParameter(name='test_cosmo', value=test_cosmo, value_not_quantity=True)
+    nt.assert_not_equal(unp1, unp2)
