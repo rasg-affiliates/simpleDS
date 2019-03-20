@@ -487,7 +487,7 @@ class DelaySpectrum(UVBase):
                                          + message)
         return True
 
-    def add_uvdata(self, uv, spectral_windows=None):
+    def add_uvdata(self, uv, spectral_windows=None, tol=1.0):
         """Add the relevant uvdata object data to DelaySpectrum object.
 
         Unloads the data, flags, and nsamples arrays from the input UVData
@@ -501,12 +501,18 @@ class DelaySpectrum(UVBase):
         Arguments:
             uv  : A UVData object or subclass of UVData to add to the existing
                   datasets
+
+            spectral_windows :
+
+            tol : float
+                  Tolerance in meters of the redundancy allowed for pyuvdata.get_baseline_redundancies calculation
+
         """
         if not isinstance(uv, UVData):
             raise ValueError('Input data object must be an instance or '
                              'subclass of UVData.')
 
-        red_groups, uvw_centers, lengths, conjugates = uv.get_baseline_redundancies()
+        red_groups, uvw_centers, lengths, conjugates = uv.get_baseline_redundancies(tol=tol)
         if len(red_groups) > 1:
             raise ValueError('A DelaySpectrum object can only perform a Fourier '
                              'Transform along a single baseline vector. '
