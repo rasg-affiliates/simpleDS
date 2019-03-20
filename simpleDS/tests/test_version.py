@@ -11,24 +11,61 @@ import six
 from six import StringIO
 import subprocess
 import json
+
 import simpleDS
+from simpleDS.data import DATA_PATH
+
+
+def test_get_gitinfo_file():
+    """Test get git info produces correct file."""
+    simpleDS_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+    git_file = os.path.join(simpleDS_dir, 'GIT_INFO')
+    if not os.path.exists(git_file):
+        # write a file to read in
+        temp_git_file = os.path.join(DATA_PATH, 'test/GIT_INFO')
+        version_info = simpleDS.version.construct_version_info()
+        data = [version_info['git_origin'], version_info['git_origin'],
+                version_info['git_origin'], version_info['git_origin']]
+        with open(temp_git_file, 'w') as outfile:
+            json.dump(data, outfile)
+        git_file = temp_git_file
+
+    with open(git_file) as data_file:
+        data = [simpleDS.version._unicode_to_str(x) for x in json.loads(data_file.read().strip())]
+        git_origin = data[0]
+        git_hash = data[1]
+        git_description = data[2]
+        git_branch = data[3]
+
+    test_file_info = {'git_origin': git_origin, 'git_hash': git_hash,
+                      'git_description': git_description, 'git_branch': git_branch}
+
+    if 'temp_git_file' in locals():
+        file_info = simpleDS.version._get_gitinfo_file(git_file=temp_git_file)
+        os.remove(temp_git_file)
+    else:
+        file_info = simpleDS.version._get_gitinfo_file()
+
+    nt.assert_equal(file_info, test_file_info)
 
 
 def test_construct_version_info():
-    """Test gathering git version info."""
-    # this test is a bit silly because it uses the nearly
-    #  the same code as the original,
+    """Test construct version info dict is the same."""
+    # this test is a bit silly because it uses the nearly the same code as the original,
     # but it will detect accidental changes that could cause problems.
     # It does test that the __version__ attribute is set on simpleDS.
-    # I can't figure out how to test the except
-    # clause in construct_version_info.
-    # this line is modified from the main implementation
-    # since we're in simpleDS/tests/
+
+    # this line is modified from the main implementation since we're in simpleDS/tests/
     simpleDS_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     def get_git_output(args, capture_stderr=False):
-        """Get output from Git. ensuring that it is of the ``str`` type, not bytes."""
+        """Get output from Git.
+
+        Ensuring that it is of the ``str`` type, not bytes.
+        """
         argv = ['git', '-C', simpleDS_dir] + args
+
         if capture_stderr:
             data = subprocess.check_output(argv, stderr=subprocess.STDOUT)
         else:
@@ -46,22 +83,22 @@ def test_construct_version_info():
         return u
 
     try:
-        git_origin = get_git_output(['config', '--get', 'remote.origin.url'],
-                                    capture_stderr=True)
+        git_origin = get_git_output(['config', '--get', 'remote.origin.url'], capture_stderr=True)
+
+        if git_origin.split('/')[-1] != 'simpleDS.git':
+            # this is version info for a non-simpleDS repo, don't use it
+            raise ValueError('This is not a simpleDS repo')
+
         git_hash = get_git_output(['rev-parse', 'HEAD'], capture_stderr=True)
-        git_description = get_git_output(['describe', '--dirty', '--tag',
-                                          '--always'])
-        git_branch = get_git_output(['rev-parse', '--abbrev-ref', 'HEAD'],
-                                    capture_stderr=True)
-        git_version = get_git_output(['describe', '--tags', '--abbrev=0',
-                                      '--always'])
-    except subprocess.CalledProcessError:
+        git_description = get_git_output(['describe', '--dirty', '--tag', '--always'])
+        git_branch = get_git_output(['rev-parse', '--abbrev-ref', 'HEAD'], capture_stderr=True)
+        git_version = get_git_output(['describe', '--tags', '--abbrev=0'])
+    except (subprocess.CalledProcessError, ValueError):
         try:
             # Check if a GIT_INFO file was created when installing package
             git_file = os.path.join(simpleDS_dir, 'GIT_INFO')
             with open(git_file) as data_file:
-                data = [unicode_to_str(x)
-                        for x in json.loads(data_file.read().strip())]
+                data = [unicode_to_str(x) for x in json.loads(data_file.read().strip())]
                 git_origin = data[0]
                 git_hash = data[1]
                 git_description = data[2]
@@ -72,23 +109,20 @@ def test_construct_version_info():
             git_description = ''
             git_branch = ''
 
-    test_version_info = {'version': simpleDS.__version__,
-                         'git_origin': git_origin,
-                         'git_hash': git_hash,
-                         'git_description': git_description,
+    test_version_info = {'version': simpleDS.__version__, 'git_origin': git_origin,
+                         'git_hash': git_hash, 'git_description': git_description,
                          'git_branch': git_branch}
 
-    nt.assert_equal(simpleDS.version.construct_version_info(),
-                    test_version_info)
+    nt.assert_equal(simpleDS.version.construct_version_info(), test_version_info)
 
 
 def test_main():
-    """Test the main function of version."""
+    """Test calling version produces desired output."""
     version_info = simpleDS.version.construct_version_info()
 
     saved_stdout = sys.stdout
     try:
-        out = StringIO()
+        out = six.StringIO()
         sys.stdout = out
         simpleDS.version.main()
         output = out.getvalue()
