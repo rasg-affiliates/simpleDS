@@ -9,6 +9,7 @@ import numpy as np
 import nose.tools as nt
 from simpleDS import parameter as unp
 from astropy import units
+from astropy.cosmology import WMAP9
 from pyuvdata import parameter as uvp
 import pyuvdata.tests as uvtest
 

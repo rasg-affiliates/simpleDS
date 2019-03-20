@@ -14,6 +14,8 @@ from pyuvdata import UVData, UVBase, utils as uvutils
 import astropy.units as units
 from astropy.units import Quantity
 from astropy import constants as const
+from astropy.cosmology.core import Cosmology as reference_cosmology_object
+
 from scipy.signal import windows
 import scipy.integrate as integrate
 from . import utils, cosmo as simple_cosmo
@@ -326,6 +328,12 @@ class DelaySpectrum(UVBase):
                                     form=(), expected_type=collections.Callable,
                                     value=windows.blackmanharris,
                                     value_not_quantity=True)
+
+        desc = ('Astropy cosmology object cabale of performing necessary cosmological calculations. Defaults to WMAP 9-Year.')
+        self._cosmology = UnitParameter('cosmology', description=desc,
+                                        form=(), expected_type=reference_cosmology_object,
+                                        value=simple_cosmo.default_cosmology.get(),
+                                        value_not_quantity=True)
 
         super(DelaySpectrum, self).__init__()
 
@@ -672,6 +680,10 @@ class DelaySpectrum(UVBase):
 
             inplace: Bool; Default True
                      choose whether spectral window selection is done inplace on the object, or a new object is returned.
+
+        Returns:
+            DelaySpectrum Object: Default None
+                        if inplace is False the returns new object with given spectral windows
 
         """
         if inplace:

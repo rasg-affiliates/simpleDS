@@ -18,6 +18,7 @@ from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 from astropy import constants as const
 from astropy import units
+from astropy.cosmology import Planck15
 from scipy.signal import windows
 
 
@@ -29,7 +30,7 @@ class TestClass(object):
         pass
 
 
-class TestDealySpectrumInit(object):
+class TestDelaySpectrumInit(object):
     """A test class to check DelaySpectrum objects."""
 
     def setUp(self):
