@@ -102,7 +102,8 @@ class DelaySpectrum(UVBase):
                                                'Nbls', 'Ntimes', 'Nfreqs'),
                                          expected_type=(np.complex, np.complex128),
                                          expected_units=(units.Jy, units.Jy * units.Hz,
-                                                         units.K, units.K * units.sr,
+                                                         units.K * units.sr * units.Hz,
+                                                         units.K * units.sr,
                                                          units.dimensionless_unscaled,
                                                          units.dimensionless_unscaled * units.Hz))
 
@@ -117,7 +118,8 @@ class DelaySpectrum(UVBase):
                                                 'Nbls', 'Ntimes', 'Nfreqs'),
                                           expected_type=(np.complex, np.complex128),
                                           expected_units=(units.Jy, units.Jy * units.Hz,
-                                                          units.K, units.K * units.sr,
+                                                          units.K * units.sr * units.Hz,
+                                                          units.K * units.sr,
                                                           units.dimensionless_unscaled,
                                                           units.dimensionless_unscaled * units.Hz))
 
@@ -236,20 +238,29 @@ class DelaySpectrum(UVBase):
                                          expected_units=1. / units.Mpc)
 
         desc = ('The cross-multiplied power spectrum estimates. '
-                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
+                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).'
+                'For uncalibrated data the cosmological power is not well defined '
+                'the power array instead represents the power in the delay domain '
+                'adn will have units (Hz^2)')
         self._power_array = UnitParameter('power_array', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'),
-                                          expected_units=(units.mK**2 * units.Mpc**3))
+                                          expected_units=((units.mK**2 * units.Mpc**3),
+                                                          (units.Hz**2))
+                                          )
 
         desc = ('The cross-multiplied simulated noise power spectrum estimates. '
-                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
+                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).'
+                'For uncalibrated data the noise simulation is not well defined '
+                'but is still calculated and will have units (Jy Hz)^2.')
         self._noise_power = UnitParameter('noise_power', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'),
-                                          expected_units=(units.mK**2 * units.Mpc**3))
+                                          expected_units=((units.mK**2 * units.Mpc**3),
+                                                          (units.Jy * units.Hz)**2)
+                                          )
 
         desc = ('The predicted thermal variance of the input data averaged over '
                 'all input baselines.'
@@ -261,17 +272,30 @@ class DelaySpectrum(UVBase):
                                             expected_units=(units.mK**2 * units.Mpc**3))
 
         desc = ('The cosmological unit conversion factor applied to the data. '
-                'This factor does not include andy Jansky to Kelvin-steradian '
-                'factors. Only used for conversion from (k*sr)^2 to mk^2*[h/Mpc]^-3')
+                'Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.'
+                'Depending on units of input visibilities it may take units of '
+                'mK^2/(h/Mpc)^3 / (K * sr * Hz)^2 or mK^2/[h/Mpc]^3 / (Jy * Hz)^2')
         self._unit_conversion = UnitParameter('unit_conversion',
                                               description=desc, required=False,
                                               expected_type=np.float,
                                               form=('Nspws', 'Npols'),
-                                              expected_units=((units.mK**2 * units.Mpc**3 / (units.Jy**2 * units.Hz**2)),
-                                                              (units.mK**2 * units.Mpc**3 / (units.K**2 * units.sr**2))
+                                              expected_units=((units.mK**2 * units.Mpc**3 / (units.Jy * units.Hz)**2),
+                                                              (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz)**2),
+                                                              (units.dimensionless_unscaled)
                                                               )
                                               )
 
+        desc = ('The cosmological unit conversion factor applied to the thermal noise estimate. '
+                'Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.'
+                'Always has units mK^2 Mpc^3 /( K^2 sr^2 Hz^2)')
+        self._thermal_conversion = UnitParameter('thermal_conversion',
+                                                 description=desc, required=False,
+                                                 expected_type=np.float,
+                                                 form=('Nspws', 'Npols'),
+                                                 expected_units=((units.mK**2 * units.Mpc**3
+                                                                 / (units.K * units.sr * units.Hz)**2)
+                                                                 )
+                                                 )
         desc = ('The integral of the power beam area. Shape = (Nspws, Npols, Nfreqs)')
         self._beam_area = UnitParameter('beam_area', description=desc,
                                         form=('Nspws', 'Npols', 'Nfreqs'),
