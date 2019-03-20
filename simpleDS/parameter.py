@@ -10,8 +10,10 @@ from __future__ import print_function, absolute_import, division
 
 import numpy as np
 import warnings
+import copy
 from pyuvdata import parameter as uvp, utils as uvutils
 import astropy.units as units
+from astropy.cosmology.core import Cosmology as reference_cosmology_object
 
 
 class UnitParameter(uvp.UVParameter):
@@ -135,6 +137,27 @@ class UnitParameter(uvp.UVParameter):
                         return False
                     else:
                         return True
+
+            elif isinstance(self.value, reference_cosmology_object):
+                cosmo_dict = copy.deepcopy(self.value.__dict__)
+                # remove string entries from the dict
+                cosmo_dict.pop('name', None)
+                cosmo_dict.pop('__doc__', None)
+                for p in cosmo_dict:
+                    parm = getattr(self.value, p)
+                    other_parm = getattr(other.value, p)
+                    # This line is not necessarily going to be hit by the equality checker
+                    # Changing a value in an astropy cosmology object also updates other values
+                    # As necessary so it may find non-quantities that are not equal first
+                    # But it is a good checkt to have
+                    if isinstance(parm, units.Quantity):
+                        if not np.allclose(parm.value, other_parm.to(parm.unit).value):
+                            print('Assumed Cosmologies are not equal. '
+                                  '{name} parameter values are not close'.format(name=p))
+                            return False
+                    elif parm != other_parm:
+                        return False
+                return True
 
             else:
                 return super(UnitParameter, self).__eq__(other)

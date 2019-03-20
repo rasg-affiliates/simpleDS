@@ -18,6 +18,7 @@ from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 from astropy import constants as const
 from astropy import units
+from astropy.cosmology import Planck15
 from scipy.signal import windows
 
 
@@ -29,7 +30,7 @@ class TestClass(object):
         pass
 
 
-class TestDealySpectrumInit(object):
+class TestDelaySpectrumInit(object):
     """A test class to check DelaySpectrum objects."""
 
     def setUp(self):
@@ -936,4 +937,139 @@ def test_multiple_polarization_file():
     dspec_object.add_uvbeam(uvb=uvb)
     nt.assert_true(dspec_object.check())
     dspec_object.calculate_delay_spectrum()
+    nt.assert_true(dspec_object.check())
+
+
+def test_update_cosmology_units_and_shapes():
+    """Test the check function on DelaySpectrum after changing cosmologies."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    test_cosmo = Planck15
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum()
+    nt.assert_true(dspec_object.check())
+
+    dspec_object.update_cosmology(cosmology=test_cosmo)
+    nt.assert_true(dspec_object.check())
+
+
+def test_update_cosmology_error_if_not_cosmology_object():
+    """Test update cosmology function errors if new cosmology is not a Cosmology object."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    bad_input = TestClass()
+
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum()
+    nt.assert_true(dspec_object.check())
+
+    nt.assert_raises(ValueError, dspec_object.update_cosmology, cosmology=bad_input)
+
+
+def test_update_cosmology_unit_and_shape_kelvin_sr():
+    """Test the check function after changing cosmolgies, input visibility Kelvin * sr."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_k_units.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+    test_cosmo = Planck15
+
+    warn_message = ['Antenna positions are not present in the file.',
+                    'Antenna positions are not present in the file.']
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
+
+    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
+                                     func_args=[test_miriad, test_antpos_file],
+                                     func_kwargs={'skip_header': 3,
+                                                  'usecols': [1, 2, 3]},
+                                     category=[UserWarning] * len(warn_message)
+                                     + [PendingDeprecationWarning],
+                                     nwarnings=len(warn_message) + 1,
+                                     message=warn_message + pend_dep_message)
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
+
+    dspec_object.calculate_delay_spectrum()
+    dspec_object.add_trcvr(144 * units.K)
+    nt.assert_true(dspec_object.check())
+
+    dspec_object.update_cosmology(cosmology=test_cosmo)
+    nt.assert_true(dspec_object.check())
+
+
+def test_update_cosmology_unit_and_shape_uncalib():
+    """Test the check function after changing cosmolgies, input visibility uncalibrated."""
+    test_miriad = os.path.join(DATA_PATH, 'paper_test_file_uncalib_units.uv')
+    test_antpos_file = os.path.join(DATA_PATH, 'paper_antpos.txt')
+    test_cosmo = Planck15
+
+    warn_message = ['Antenna positions are not present in the file.',
+                    'Antenna positions are not present in the file.']
+    pend_dep_message = ['antenna_positions are not defined. '
+                        'antenna_positions will be a required parameter in '
+                        'future versions.']
+
+    test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
+                                     func_args=[test_miriad, test_antpos_file],
+                                     func_kwargs={'skip_header': 3,
+                                                  'usecols': [1, 2, 3]},
+                                     category=[UserWarning] * len(warn_message)
+                                     + [PendingDeprecationWarning],
+                                     nwarnings=len(warn_message) + 1,
+                                     message=warn_message + pend_dep_message)
+    test_uv_2 = copy.deepcopy(test_uv_1)
+    reds = np.array(list(set(test_uv_2.baseline_array)))
+
+    beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
+
+    uvb = UVBeam()
+    uvb.read_beamfits(beam_file)
+
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
+
+    warn_message = ['Data is uncalibrated. Unable to covert noise '
+                    'array to unicalibrated units.',
+                    'Data is uncalibrated. Unable to covert noise '
+                    'array to unicalibrated units.']
+    dspec_object = uvtest.checkWarnings(DelaySpectrum,
+                                        func_kwargs={'uv': [test_uv_1, test_uv_2]},
+                                        message=warn_message,
+                                        nwarnings=len(warn_message),
+                                        category=UserWarning)
+
+    dspec_object.add_trcvr(144 * units.K)
+    warn_message = ['Fourier Transforming uncalibrated data. '
+                    'Units will not have physical meaning. '
+                    'Data will be arbitrarily scaled.']
+    uvtest.checkWarnings(dspec_object.calculate_delay_spectrum,
+                         message=warn_message,
+                         nwarnings=len(warn_message),
+                         category=UserWarning)
+    print('Data units:', dspec_object.data_array.unit)
+    nt.assert_true(dspec_object.check())
+
+    dspec_object.update_cosmology(cosmology=test_cosmo)
     nt.assert_true(dspec_object.check())

@@ -33,6 +33,7 @@ def calc_z(freq):
               Must be an astropy.units.Quantity object with units consistent with frequency.
     Returns
         redshift: The redshift consistent with 21cm observations of the input frequency.
+
     """
     return (f21 / freq).si.value - 1
 
