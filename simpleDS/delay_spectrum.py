@@ -7,6 +7,8 @@ from __future__ import print_function, absolute_import, division
 import os
 import sys
 import copy
+import six
+
 import numpy as np
 import collections
 import warnings
@@ -221,13 +223,18 @@ class DelaySpectrum(UVBase):
                                        expected_type=np.float, form=('Nspws',),
                                        expected_units=units.dimensionless_unscaled)
 
+        if six.PY2:
+            _kval_units = (1. / units.Mpc)
+        else:
+            _kval_units = (1. / units.Mpc, units.littleh / units.Mpc)
+
         desc = ('Cosmological wavenumber of spatial modes probed perpendicular '
                 ' to the line of sight.')
         self._k_perpendicular = UnitParameter('k_perpendicular',
                                               description=desc,
                                               expected_type=np.float,
                                               form=('Nspws',),
-                                              expected_units=1. / units.Mpc)
+                                              expected_units=_kval_units)
 
         desc = ('Cosmological wavenumber of spatial modes probed along the line of sight. '
                 'This value is awlays calculated, however it is not a realistic '
@@ -237,7 +244,13 @@ class DelaySpectrum(UVBase):
         self._k_parallel = UnitParameter('k_parallel', description=desc,
                                          expected_type=np.float,
                                          form=('Nspws', 'Ndelays'),
-                                         expected_units=1. / units.Mpc)
+                                         expected_units=_kval_units)
+        if six.PY2:
+            _power_units = ((units.mK**2 * units.Mpc**3), (units.Hz**2))
+        else:
+            _power_units = ((units.mK**2 * units.Mpc**3),
+                            (units.mK**2 * (units.Mpc / units.littleh)**3),
+                            (units.Hz**2))
 
         desc = ('The cross-multiplied power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).'
@@ -248,10 +261,15 @@ class DelaySpectrum(UVBase):
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'),
-                                          expected_units=((units.mK**2 * units.Mpc**3),
-                                                          (units.Hz**2))
+                                          expected_units=_power_units
                                           )
-
+        if six.PY2:
+            _noise_power_units = ((units.mK**2 * units.Mpc**3),
+                                  (units.Jy * units.Hz)**2)
+        else:
+            _noise_power_units = ((units.mK**2 * units.Mpc**3),
+                                  (units.mK**2 * (units.Mpc / units.littleh)**3),
+                                  (units.Jy * units.Hz)**2)
         desc = ('The cross-multiplied simulated noise power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).'
                 'For uncalibrated data the noise simulation is not well defined '
@@ -260,10 +278,14 @@ class DelaySpectrum(UVBase):
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                 'Ntimes', 'Ndelays'),
-                                          expected_units=((units.mK**2 * units.Mpc**3),
-                                                          (units.Jy * units.Hz)**2)
+                                          expected_units=_noise_power_units
                                           )
 
+        if six.PY2:
+            _thermal_power_units = (units.mK**2 * units.Mpc**3)
+        else:
+            _thermal_power_units = ((units.mK**2 * units.Mpc**3),
+                                    (units.mK**2 * (units.Mpc / units.littleh)**3))
         desc = ('The predicted thermal variance of the input data averaged over '
                 'all input baselines.'
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
@@ -271,8 +293,21 @@ class DelaySpectrum(UVBase):
                                             expected_type=np.float, required=False,
                                             form=('Nspws', 'Npols', 'Nbls', 'Nbls',
                                                   'Ntimes',),
-                                            expected_units=(units.mK**2 * units.Mpc**3))
+                                            expected_units=_thermal_power_units
+                                            )
 
+        if six.PY2:
+            _conversion_units = ((units.mK**2 * units.Mpc**3 / (units.Jy * units.Hz)**2),
+                                 (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz)**2),
+                                 (units.dimensionless_unscaled)
+                                 )
+        else:
+            _conversion_units = ((units.mK**2 * units.Mpc**3 / (units.Jy * units.Hz)**2),
+                                 (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz)**2),
+                                 (units.mK**2 * (units.Mpc / units.littleh)**3 / (units.Jy * units.Hz)**2),
+                                 (units.mK**2 * (units.Mpc / units.littleh)**3 / (units.K * units.sr * units.Hz)**2),
+                                 (units.dimensionless_unscaled)
+                                 )
         desc = ('The cosmological unit conversion factor applied to the data. '
                 'Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.'
                 'Depending on units of input visibilities it may take units of '
@@ -281,12 +316,15 @@ class DelaySpectrum(UVBase):
                                               description=desc, required=False,
                                               expected_type=np.float,
                                               form=('Nspws', 'Npols'),
-                                              expected_units=((units.mK**2 * units.Mpc**3 / (units.Jy * units.Hz)**2),
-                                                              (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz)**2),
-                                                              (units.dimensionless_unscaled)
-                                                              )
+                                              expected_units=_conversion_units
                                               )
+        if six.PY2:
+            _tconversion_units = (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz)**2),
 
+        else:
+            _tconversion_units = ((units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz)**2),
+                                  (units.mK**2 * (units.Mpc / units.littleh)**3 / (units.K * units.sr * units.Hz)**2),
+                                  )
         desc = ('The cosmological unit conversion factor applied to the thermal noise estimate. '
                 'Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.'
                 'Always has units mK^2 Mpc^3 /( K^2 sr^2 Hz^2)')
@@ -294,9 +332,7 @@ class DelaySpectrum(UVBase):
                                                  description=desc, required=False,
                                                  expected_type=np.float,
                                                  form=('Nspws', 'Npols'),
-                                                 expected_units=((units.mK**2 * units.Mpc**3
-                                                                 / (units.K * units.sr * units.Hz)**2)
-                                                                 )
+                                                 expected_units=_tconversion_units
                                                  )
         desc = ('The integral of the power beam area. Shape = (Nspws, Npols, Nfreqs)')
         self._beam_area = UnitParameter('beam_area', description=desc,

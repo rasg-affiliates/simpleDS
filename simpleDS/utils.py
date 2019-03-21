@@ -508,7 +508,13 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
     return array_out, uncertainty_out
 
 
-@units.quantity_input(delays='time', array=['mK^2*Mpc^3', 'time'])
+if six.PY2:
+    accepted_units = ['mK^2*Mpc^3', 'time']
+else:
+    accepted_units = ['mK^2*Mpc^3', 'mK^2*Mpc^3/littleh^3', 'time']
+
+
+@units.quantity_input(delays='time', array=accepted_units)
 def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
     """Fold input array over the delay axis.
 

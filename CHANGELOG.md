@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - update_cosmology now recomputes cosmological conversions and re-normalizes power spectrum
 - thermal_conversion parameter to track the conversion of the thermal_power array to cosmological units
 - cosmology object support in UnitParameters
+- littleh units compatibility in python 3
 ### Changed
 - Various typos
 - Docstring Formatting
