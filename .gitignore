@@ -62,6 +62,7 @@ target/
 simpleDS/data/
 simpleDS/data/test/
 simpleDS/GIT_INFO
+simpleDS/examples/.ipynb_checkpoints/
 docs/references/*.aux
 docs/references/*.out
 
