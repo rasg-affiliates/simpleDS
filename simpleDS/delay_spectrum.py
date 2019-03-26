@@ -229,7 +229,9 @@ class DelaySpectrum(UVBase):
             _kval_units = (1. / units.Mpc, units.littleh / units.Mpc)
 
         desc = ('Cosmological wavenumber of spatial modes probed perpendicular '
-                ' to the line of sight.')
+                ' to the line of sight. In python 2 this unit is always in 1/Mpc. '
+                'For python 3 users, it is possible to convert the littleh/Mpc '
+                'using the littleh_units boolean flag in update_cosmology.')
         self._k_perpendicular = UnitParameter('k_perpendicular',
                                               description=desc,
                                               expected_type=np.float,
@@ -240,7 +242,10 @@ class DelaySpectrum(UVBase):
                 'This value is awlays calculated, however it is not a realistic '
                 'probe of k_parallel over large bandwidths. This code '
                 'assumes k_tau >> k_perpendicular and as a results '
-                'k_tau  is interpreted as k_parallel.')
+                'k_tau  is interpreted as k_parallel. '
+                'In python 2 this unit is always in 1/Mpc. '
+                'For python 3 users, it is possible to convert the littleh/Mpc '
+                'using the littleh_units boolean flag in update_cosmology.')
         self._k_parallel = UnitParameter('k_parallel', description=desc,
                                          expected_type=np.float,
                                          form=('Nspws', 'Ndelays'),
@@ -256,7 +261,10 @@ class DelaySpectrum(UVBase):
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).'
                 'For uncalibrated data the cosmological power is not well defined '
                 'the power array instead represents the power in the delay domain '
-                'adn will have units (Hz^2)')
+                'adn will have units (Hz^2). '
+                'In python 2 this unit is always in mK^2 Mpc^3. '
+                'For python 3 users, it is possible to convert the mK^2 / (littleh/Mpc)^3 '
+                'using the littleh_units boolean flag in update_cosmology.')
         self._power_array = UnitParameter('power_array', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
@@ -273,7 +281,10 @@ class DelaySpectrum(UVBase):
         desc = ('The cross-multiplied simulated noise power spectrum estimates. '
                 'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).'
                 'For uncalibrated data the noise simulation is not well defined '
-                'but is still calculated and will have units (Jy Hz)^2.')
+                'but is still calculated and will have units (Jy Hz)^2. '
+                'In python 2 this unit is always in mK^2 Mpc^3. '
+                'For python 3 users, it is possible to convert the mK^2 / (littleh/Mpc)^3 '
+                'using the littleh_units boolean flag in update_cosmology.')
         self._noise_power = UnitParameter('noise_power', description=desc,
                                           expected_type=np.complex, required=False,
                                           form=('Nspws', 'Npols', 'Nbls', 'Nbls',
@@ -288,7 +299,10 @@ class DelaySpectrum(UVBase):
                                     (units.mK**2 * (units.Mpc / units.littleh)**3))
         desc = ('The predicted thermal variance of the input data averaged over '
                 'all input baselines.'
-                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3).')
+                'Units are converted to cosmological frame (mK^2/(hMpc^-1)^3). '
+                'In python 2 this unit is always in mK^2 Mpc^3. '
+                'For python 3 users, it is possible to convert the mK^2 / (littleh/Mpc)^3 '
+                'using the littleh_units boolean flag in update_cosmology.')
         self._thermal_power = UnitParameter('thermal_power', description=desc,
                                             expected_type=np.float, required=False,
                                             form=('Nspws', 'Npols', 'Nbls', 'Nbls',
@@ -836,11 +850,13 @@ class DelaySpectrum(UVBase):
         noise_power = self.calculate_noise_power()
         self.noise_array = utils.generate_noise(noise_power)
 
-    def update_cosmology(self, cosmology=None):
+    def update_cosmology(self, cosmology=None, littleh_units=False):
         """Update cosmological information with the assumed cosmology.
 
         Arguments:
             cosmo: input assumed cosmology. Must be an astropy cosmology object.
+            littleh_units: (Bool, default:False)
+                           automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
         """
         if cosmology is not None:
             if not isinstance(cosmology, reference_cosmology_object):
@@ -920,6 +936,21 @@ class DelaySpectrum(UVBase):
             self.thermal_conversion = thermal_conversion.to('mK^2 Mpc^3 /( K^2 sr^2 Hz^2)')
             self.thermal_power = self.thermal_power * self.thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
             self.thermal_power = self.thermal_power.to('mK^2 Mpc^3')
+
+        if six.PY3:
+            if littleh_units:
+                self.k_perpendicular = self.k_perpendicular.to('littleh/Mpc',
+                                                               units.with_H0(self.cosmology.H0))
+                self.k_parallel = self.k_parallel.to('littleh/Mpc',
+                                                     units.with_H0(self.cosmology.H0))
+                if self.power_array is not None:
+                    self.power_array = self.power_array.to('mK^2 Mpc^3/littleh^3',
+                                                           units.with_H0(self.cosmology.H0))
+                    self.noise_power = self.noise_power.to('mK^2 Mpc^3/littleh^3',
+                                                           units.with_H0(self.cosmology.H0))
+                if self.thermal_power is not None:
+                    self.thermal_power = self.thermal_power.to('mK^2 Mpc^3/littleh^3',
+                                                               units.with_H0(self.cosmology.H0))
 
     def add_uvbeam(self, uvb, no_read_trcvr=False):
         """Add the beam_area and beam_square_area integrals into memory.

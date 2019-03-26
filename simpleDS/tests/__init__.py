@@ -8,4 +8,15 @@ import os
 import warnings
 import sys
 import numpy as np
+import six
+from pyuvdata.tests import skip
+
 from simpleDS.data import DATA_PATH
+
+
+def skipIf_py2(test_func):
+    """Define a decorator to skip tests that require python 3 for astropy units."""
+    reason = 'Astropy.units.littleh is a python3 only unit. Skipping in python 2'
+    if six.PY2:
+        return skip(reason)(test_func)
+    return test_func
