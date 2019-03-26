@@ -92,6 +92,7 @@ def get_data_array(uv, reds, squeeze=True):
     Returns:
         data_array : (Nbls , Ntimes, Nfreqs) numpy array or
                      (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+
     """
     data_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     data_array = np.zeros(data_shape, dtype=np.complex)
@@ -125,6 +126,7 @@ def get_nsample_array(uv, reds, squeeze=True):
     Returns:
         nsample_array : (Nbls, Ntimes, Nfreqs) numpy array
                         (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+
     """
     nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     nsample_array = np.zeros(nsample_shape, dtype=np.float)
@@ -157,6 +159,7 @@ def get_flag_array(uv, reds, squeeze=True):
     Returns:
         flag_array : (Nbls, Ntimes, Nfreqs) numpy array
                      (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+
     """
     flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
     flag_array = np.zeros(flag_shape, dtype=np.bool)
@@ -190,6 +193,7 @@ def get_integration_time(uv, reds, squeeze=True):
 
     Returns:
         integration_time : (Nbls, Ntimes) numpy array
+
     """
     shape = (uv.Nbls, uv.Ntimes)
     integration_time = np.zeros(shape, dtype=np.float)
@@ -316,6 +320,7 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
 
     Returns:
         cross_array : N+1 Dimensional array
+
     """
     if isinstance(array_1, list):
         array_1 = np.asarray(array_1)
@@ -400,6 +405,7 @@ def generate_noise(noise_power):
     Returns:
         noise: Complex white noise drawn from a Gaussian distribution with
                width given by the value of the input noise_power array.
+
     """
     # divide by sqrt(2) to conserve total noise amplitude over real and imag
     noise = noise_power * (1 * np.random.normal(size=noise_power.shape)
@@ -532,6 +538,7 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
                give axis will have size np.shape(array)[axis]/2 if shape is even
                or (np.shape(array)[axis] + 1)/2 if shape is odd
         uncertainty: The folded uncertainties corresponding to the input array.
+
     """
     delays = copy.deepcopy(delays)
     array = copy.deepcopy(array)
