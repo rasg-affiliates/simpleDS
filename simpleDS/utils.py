@@ -13,6 +13,7 @@ from astropy import constants as const
 from astropy import units
 from pyuvdata import UVData, utils as uvutils
 from scipy.signal import windows
+from memory_profiler import profile
 
 
 def read_paper_miriad(filename, antpos_file=None, **kwargs):
@@ -77,7 +78,7 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
 
     return uv
 
-
+@profile
 def get_data_array(uv, reds, squeeze=True):
     """Remove data from pyuvdata object and store in numpy array.
 
@@ -112,6 +113,7 @@ def get_data_array(uv, reds, squeeze=True):
     return data_array
 
 
+@profile
 def get_nsample_array(uv, reds, squeeze=True):
     """Remove nsamples from pyuvdata object and store in numpy array.
 
@@ -145,6 +147,7 @@ def get_nsample_array(uv, reds, squeeze=True):
     return nsample_array
 
 
+@profile
 def get_flag_array(uv, reds, squeeze=True):
     """Remove nsamples from pyuvdata object and store in numpy array.
 
@@ -179,6 +182,7 @@ def get_flag_array(uv, reds, squeeze=True):
     return flag_array
 
 
+@profile
 def get_integration_time(uv, reds, squeeze=True):
     """Extract the integration_time array from pyuvdata objectself.
 
@@ -238,6 +242,7 @@ def noise_equivalent_bandwidth(window):
     return np.sum(window)**2 / (np.sum(window**2) * len(window))
 
 
+@profile
 def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
     """Combine the nsample arrays for use in cross-multiplication.
 
@@ -307,6 +312,7 @@ def remove_auto_correlations(data_array, axes=(0, 1)):
     return data_out
 
 
+@profile
 def cross_multiply_array(array_1, array_2=None, axis=0):
     """Cross multiply the arrays along the given axis.
 
@@ -389,6 +395,7 @@ def lst_align(uv1, uv2, ra_range, inplace=True, atol=1e-08, rtol=1e-05):
             uv2.select(times=new_times_2, inplace=inplace))
 
 
+@profile
 @units.quantity_input(freqs='frequency')
 def jy_to_mk(freqs):
     """Calculate the Jy/sr to mK conversion lambda^2/(2 * K_boltzman)."""
@@ -397,6 +404,7 @@ def jy_to_mk(freqs):
     return jy2t.to('mK*sr/Jy')
 
 
+@profile
 def generate_noise(noise_power):
     """Generate noise given an input array of noise power.
 
@@ -415,6 +423,7 @@ def generate_noise(noise_power):
     return noise
 
 
+@profile
 def normalized_fourier_transform(data_array, delta_x, axis=-1,
                                  taper=windows.blackmanharris, inverse=False):
     """Perform the Fourier transform over specified axis.
