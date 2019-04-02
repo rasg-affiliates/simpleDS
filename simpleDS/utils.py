@@ -346,9 +346,10 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
                          .format(a1=np.shape(array_1), a2=np.shape(array_2)))
 
     cross_array = (np.expand_dims(array_1, axis=axis).conj()
-                   * np.expand_dims(array_2, axis=axis + 1))
+                   * np.expand_dims(array_2, axis=axis + 1)
+                   * unit_1 * unit_2)
 
-    return cross_array * unit_1 * unit_2
+    return cross_array
 
 
 def lst_align(uv1, uv2, ra_range, inplace=True, atol=1e-08, rtol=1e-05):
