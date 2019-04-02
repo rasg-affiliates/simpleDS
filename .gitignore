@@ -72,3 +72,5 @@ docs/references/*.out
 .installed_kernels
 .inxi_info
 .running_kernel
+
+examples/\.ipynb_checkpoints/
