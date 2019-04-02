@@ -78,6 +78,7 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
 
     return uv
 
+
 @profile
 def get_data_array(uv, reds, squeeze=True):
     """Remove data from pyuvdata object and store in numpy array.
