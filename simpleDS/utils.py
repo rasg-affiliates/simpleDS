@@ -272,13 +272,14 @@ def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
                          .format(d1_s=nsample_1.shape,
                                  d2_s=nsample_2.shape))
 
-    samples_out = cross_multiply_array(array_1=nsample_1,
-                                       array_2=nsample_2,
-                                       axis=axis)
+    samples_out = np.sqrt(cross_multiply_array(array_1=nsample_1,
+                                               array_2=nsample_2,
+                                               axis=axis)
+                          )
 
     # The nsamples array is used to construct the thermal variance
     # Cross-correlation takes the geometric mean of thermal variance.
-    return np.sqrt(samples_out)
+    return samples_out
 
 
 def remove_auto_correlations(data_array, axes=(0, 1)):
