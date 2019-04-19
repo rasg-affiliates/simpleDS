@@ -126,7 +126,7 @@ class UnitParameter(uvp.UVParameter):
                     return False
                 else:
                     # astropy.units has a units.allclose but only for python 3
-                    # already konw the units are compatible so
+                    # already know the units are compatible so
                     # Convert other to self's units and compare values
                     other.value = other.value.to(self.value.unit)
 
