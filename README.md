@@ -1,7 +1,9 @@
 # Simple Delay Spectrum (SimpleDS)
 
 [![Build Status](https://travis-ci.org/RadioAstronomySoftwareGroup/simpleDS.svg?branch=master)](https://travis-ci.org/RadioAstronomySoftwareGroup/simpleDS)
+[![CircleCI](https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS.svg?style=svg)](https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS)
 [![Coverage Status](https://coveralls.io/repos/github/RadioAstronomySoftwareGroup/simpleDS/badge.svg?branch=master)](https://coveralls.io/github/RadioAstronomySoftwareGroup/simpleDS?branch=master)
+[![codecov](https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS/branch/master/graph/badge.svg)](https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS)
 
 SimpleDS is currently in a working *BETA* state.  All code will execute and tests pass, however there are still a number of bugs to fix and enhancements to make.
 
