@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+
+## [1.0.1] 19 April 2019
 ### Added
 - update_cosmology now recomputes cosmological conversions and re-normalizes power spectrum
 - thermal_conversion parameter to track the conversion of the thermal_power array to cosmological units
@@ -18,7 +21,7 @@ All notable changes to this project will be documented in this file.
 - definition of units for power_array and noise_power when data is uncalibrated
 - definition of units for unit_conversion and thermal_conversion when data is uncalibrated
 
-## [1.0.0]
+## [1.0.0] - 13 March 2019
 ### Added
 - DelaySpectrum Object for handing data, checking units, and performing Fourier Transform
 - Parameter Class to handle units and verify shape, type, etc of data in the DelaySpectrum Object, subclass of UVParameter.
@@ -41,7 +44,7 @@ All notable changes to this project will be documented in this file.
 - Unit normalization in cosmo.X2Y now includes 1/sr term
 - Broadcasting of computations along polarization axis
 
-## [v0.1.0] - 1/28/2019
+## [v0.1.0] -28 January 2019
 - Prototype release version
 ### Added
 - travis integration
