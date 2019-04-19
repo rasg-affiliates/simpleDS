@@ -1,7 +1,7 @@
 # Simple Delay Spectrum (SimpleDS)
 
-[![Build Status](https://travis-ci.org/mkolopanis/simpleDS.svg?branch=master)](https://travis-ci.org/mkolopanis/simpleDS)
-[![Coverage Status](https://coveralls.io/repos/github/mkolopanis/simpleDS/badge.svg?branch=master)](https://coveralls.io/github/mkolopanis/simpleDS?branch=master)
+[![Build Status](https://travis-ci.org/RadioAstronomySoftwareGroup/simpleDS.svg?branch=master)](https://travis-ci.org/RadioAstronomySoftwareGroup/simpleDS)
+[![Coverage Status](https://coveralls.io/repos/github/RadioAstronomySoftwareGroup/simpleDS/badge.svg?branch=master)](https://coveralls.io/github/RadioAstronomySoftwareGroup/simpleDS?branch=master)
 
 SimpleDS is currently in a working *BETA* state.  All code will execute and tests pass, however there are still a number of bugs to fix and enhancements to make.
 
@@ -47,7 +47,7 @@ For anaconda users, we suggest using conda to install astropy, numpy and scipy.
 
 ## Installing simpleDS
 Clone the repo using
-`git clone https://github.com/mkolopanis/simpleDS.git`
+`git clone https://github.com/RadioAstronomySoftwareGroup/simpleDS.git`
 
 Navigate into the directory and run `python setup.py install` or `pip install .`
 
