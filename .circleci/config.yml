@@ -1,0 +1,88 @@
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.2 # to get this to work, had to opt-in to using third party orbs in Organization Security settings.
+jobs:
+  linter:
+    parameters:
+      python_version:
+        type: string
+    docker:
+      - image: continuumio/miniconda:latest
+    environment:
+      PYTHON: << parameters.python_version >>
+      ENV_NAME: simpleds_linting
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
+      - run:
+          name: configure conda environment
+          command: ./ci/install-circle.sh
+      - run:
+          name: linting for PEP8 compliance
+          command: |
+            source activate ${ENV_NAME}
+            pycodestyle --ignore=E501,W503
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          paths:
+            - "/opt/conda/envs/${ENV_NAME}/"
+
+  simpleds:
+    parameters:
+      python_version:
+        type: string
+    docker:
+      - image: continuumio/miniconda:latest
+    environment:
+      PYTHON: << parameters.python_version >>
+      ENV_NAME: simpleds_tests
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+      - run:
+          name: configure conda environment
+          command: ./ci/install-circle.sh
+      - run:
+          name: install pyuvdata
+          command: |
+            source activate ${ENV_NAME}
+            pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
+      - run:
+          name: install
+          command: |
+            source activate ${ENV_NAME}
+            python setup.py build_ext --force --inplace
+      - run:
+          name: run simpleDS tests
+          command: |
+            source activate ${ENV_NAME}
+            mkdir test-reports
+            nosetests simpleds -v --with-xunit --xunit-file=test-reports/xunit.xml --with-coverage --cover-package=simpleds --cover-xml
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          paths:
+            - "/opt/conda/envs/${ENV_NAME}/"
+      - store_test_results:
+          path: test-reports
+      - store_artifacts:
+          path: test-reports
+      - codecov/upload:
+          file: ./coverage.xml
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - linter:
+          python_version: "3.6"
+      - simpleds:
+          name: simpleds_2.7
+          python_version: "2.7"
+      - simpleds:
+          name: simpleds_3.6
+          python_version: "3.6"
+      - simpleds:
+          name: simpleds_3.7
+          python_version: "3.7"
