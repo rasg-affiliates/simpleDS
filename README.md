@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.org/mkolopanis/simpleDS.svg?branch=master)](https://travis-ci.org/mkolopanis/simpleDS)
 [![Coverage Status](https://coveralls.io/repos/github/mkolopanis/simpleDS/badge.svg?branch=master)](https://coveralls.io/github/mkolopanis/simpleDS?branch=master)
 
+SimpleDS is currently in a working *BETA* state.  All code will execute and tests pass, however there are still a number of bugs to fix and enhancements to make.
+
 
 `simpleDS` is a python package used to calculate the Delay Power Spectrum
 of interferometric radio data. It performs the Fourier Transform of
