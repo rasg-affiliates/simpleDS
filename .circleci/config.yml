@@ -59,7 +59,7 @@ jobs:
           command: |
             source activate ${ENV_NAME}
             mkdir test-reports
-            nosetests simpleds -v --with-xunit --xunit-file=test-reports/xunit.xml --with-coverage --cover-package=simpleds --cover-xml
+            nosetests simpleDS -v --with-xunit --xunit-file=test-reports/xunit.xml --with-coverage --cover-package=simpleDS --cover-xml
       - save_cache:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
