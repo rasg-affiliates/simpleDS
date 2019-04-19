@@ -1,0 +1,6 @@
+name: simpleds_linting
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - pycodestyle
