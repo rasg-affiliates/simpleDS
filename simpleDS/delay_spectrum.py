@@ -552,7 +552,8 @@ class DelaySpectrum(UVBase):
             uv  : A UVData object or subclass of UVData to add to the existing
                   datasets
 
-            spectral_windows :
+            spectral_windows : tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
+                              spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
 
             tol : float
                   Tolerance in meters of the redundancy allowed for pyuvdata.get_baseline_redundancies calculation
