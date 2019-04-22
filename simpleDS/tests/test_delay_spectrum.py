@@ -1103,7 +1103,7 @@ def test_update_cosmology_littleh_units():
 @sdstest.skipIf_py2
 def test_update_cosmology_littleh_units_from_calc_delay_spectr():
     """Test the units can convert to 'littleh' units in python 3 passed through calculate_delay_spectrum."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     test_cosmo = Planck15
     uvd = UVData()
