@@ -40,7 +40,7 @@ setup_args = {
                          'astropy>2.0',
                          'scipy',
                          'pyuvdata>=1.0',
-                         'six'],
+                         'six>=1.10'],
     'test_suite': 'nose'
 }
 
