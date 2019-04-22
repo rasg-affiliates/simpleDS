@@ -855,7 +855,7 @@ class DelaySpectrum(UVBase):
         """Update cosmological information with the assumed cosmology.
 
         Arguments:
-            cosmo: input assumed cosmology. Must be an astropy cosmology object.
+            cosmology: input assumed cosmology. Must be an astropy cosmology object.
             littleh_units: (Bool, default:False)
                            automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
         """
@@ -1072,11 +1072,20 @@ class DelaySpectrum(UVBase):
         return noise_power.to('Jy')
 
     def calculate_delay_spectrum(self, run_check=True,
-                                 run_check_acceptability=True):
+                                 run_check_acceptability=True,
+                                 cosmology=None,
+                                 littleh_units=False):
         """Perform Delay tranform and cross multiplication of datas.
 
         Take the normalized Fourier transform of the data in objects and cross multiplies baselines.
         Also generates white noise given the frequency range and trcvr and calculates the expected noise power.
+
+        Arguments:
+            cosmology: Astropy.Cosmology subclass
+                   Default: None (uses cosmology object saved in self.cosmology)
+                   input assumed cosmology. Must be an astropy cosmology object. Setting this value will overwrite the cosmology set on the DelaySpectrum Object.
+            littleh_units: (Bool, default:False)
+                           automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
         """
         if self.Nuv == 0:
             raise ValueError("No data has be loaded. Add UVData objects before "
@@ -1097,7 +1106,7 @@ class DelaySpectrum(UVBase):
                                                           array_2=self.noise_array[:, 1],
                                                           axis=2)
         self.calculate_thermal_sensitivity()
-        self.update_cosmology()
+        self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
 
     def calculate_thermal_sensitivity(self):
         """Calculate the Thermal sensitivity for the power spectrum.

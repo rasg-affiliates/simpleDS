@@ -1098,3 +1098,24 @@ def test_update_cosmology_littleh_units():
     nt.assert_true(dspec_object.check())
     test_unit = (units.mK**2) / (units.littleh / units.Mpc)**3
     nt.assert_equal(dspec_object.power_array.unit, test_unit)
+
+
+@sdstest.skipIf_py2
+def test_update_cosmology_littleh_units_from_calc_delay_spectr():
+    """Test the units can convert to 'littleh' units in python 3 passed through calculate_delay_spectrum."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    test_cosmo = Planck15
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum(cosmology=test_cosmo, littleh_units=True)
+    nt.assert_true(dspec_object.check())
+
+    test_unit = (units.mK**2) / (units.littleh / units.Mpc)**3
+    nt.assert_equal(dspec_object.power_array.unit, test_unit)
+    nt.assert_equal(dspec_object.cosmology.name, 'Planck15')
