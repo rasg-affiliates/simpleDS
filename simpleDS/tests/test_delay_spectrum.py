@@ -126,7 +126,7 @@ class TestBasicFunctions(object):
     def setUp(self):
         """Initialize tests of basic methods."""
         self.uvdata_object = UVData()
-        self.testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+        self.testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
         self.uvdata_object.read(self.testfile)
         self.dspec_object = DelaySpectrum(uv=self.uvdata_object)
         self.dspec_object2 = copy.deepcopy(self.dspec_object)
@@ -290,7 +290,7 @@ class TestBasicFunctions(object):
 
 def test_adding_spectral_window_one_tuple():
     """Test spectral window can be added when only one tuple given."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -303,7 +303,7 @@ def test_adding_spectral_window_one_tuple():
 
 def test_adding_spectral_window_between_uvdata():
     """Test that adding a spectral window between uvdata objects is handled."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -315,7 +315,7 @@ def test_adding_spectral_window_between_uvdata():
 
 def test_adding_new_uvdata_with_different_freqs():
     """Test error is raised when trying to add a uvdata object with different freqs."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -327,7 +327,7 @@ def test_adding_new_uvdata_with_different_freqs():
 
 def test_adding_new_uvdata_with_different_lsts():
     """Test error is raised when trying to add a uvdata object with different LSTS."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -345,7 +345,7 @@ def test_adding_new_uvdata_with_different_lsts():
 
 def test_select_spectral_window_not_inplace():
     """Test it is possible to return a different object from select spectral window."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -356,7 +356,7 @@ def test_select_spectral_window_not_inplace():
 
 def test_loading_different_arrays():
     """Test error is raised trying to combine different arrays."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -369,7 +369,7 @@ def test_loading_different_arrays():
 
 def test_loading_uvb_object():
     """Test a uvb object can have the beam_area and beam_sq_area read."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -385,7 +385,7 @@ def test_loading_uvb_object():
 
 def test_loading_uvb_object_no_data():
     """Test error is raised if adding a UVBeam object but no data."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
 
     uvb = UVBeam()
@@ -395,7 +395,7 @@ def test_loading_uvb_object_no_data():
 
 def test_loading_uvb_object_with_data():
     """Test uvbeam can be added in init."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
 
     uv = UVData()
@@ -411,7 +411,7 @@ def test_loading_uvb_object_with_data():
 
 def test_loading_uvb_object_with_trcvr():
     """Test a uvb object with trcvr gets added properly."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -428,7 +428,7 @@ def test_loading_uvb_object_with_trcvr():
 
 def test_add_trcvr_scalar():
     """Test a scalar trcvr quantity is broadcast to the correct shape."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -440,7 +440,7 @@ def test_add_trcvr_scalar():
 
 def test_add_trcvr_bad_number_of_spectral_windows():
     """Test error is raised if the number of spectral windows do not match with input trcvr."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -451,7 +451,7 @@ def test_add_trcvr_bad_number_of_spectral_windows():
 
 def test_add_trcvr_bad_number_of_freqs():
     """Test error is raised if number of frequencies does not match input trcvr."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -462,7 +462,7 @@ def test_add_trcvr_bad_number_of_freqs():
 
 def test_add_trcvr_vector():
     """Test an arry of trcvr quantity."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -475,7 +475,7 @@ def test_add_trcvr_vector():
 
 def test_add_trcvr_init():
     """Test a scalar trcvr quantity is broadcast to the correct shape during init."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -497,7 +497,7 @@ def test_spectrum_on_no_data():
 
 def test_noise_shape():
     """Test the generate noise and calculate_noise_power produce correct shape."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -511,7 +511,7 @@ def test_noise_shape():
 
 def test_noise_shape():
     """Test the generate noise and calculate_noise_power produce correct units."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -525,7 +525,7 @@ def test_noise_shape():
 def test_noise_amplitude():
     """Test noise amplitude with a fixed seed."""
     np.random.seed(0)
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -553,7 +553,7 @@ def test_noise_amplitude():
 
 def test_delay_transform_units():
     """Test units after calling delay_transform are correct."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -567,7 +567,7 @@ def test_delay_transform_units():
 
 def test_warning_from_uncalibrated_data():
     """Test scaling warning is raised when delay transforming uncalibrated data."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -589,7 +589,7 @@ def test_warning_from_uncalibrated_data():
 
 def test_delay_transform_bad_data_type():
     """Test error is raised in delay_transform if data_type is bad."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -601,7 +601,7 @@ def test_delay_transform_bad_data_type():
 
 def test_delay_spectrum_power_units():
     """Test the units on the output power are correct."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -616,7 +616,7 @@ def test_delay_spectrum_power_units():
 
 def test_delay_spectrum_power_shape():
     """Test the shape of the output power is correct."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -633,7 +633,7 @@ def test_delay_spectrum_power_shape():
 
 def test_delay_spectrum_power_shape_two_uvdata_objects_read():
     """Test the shape of the output power is correct when two uvdata objects read."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -650,7 +650,7 @@ def test_delay_spectrum_power_shape_two_uvdata_objects_read():
 
 def test_delay_spectrum_power_shape_two_spectral_windows():
     """Test the shape of the output power when multiple spectral windows given."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -667,7 +667,7 @@ def test_delay_spectrum_power_shape_two_spectral_windows():
 
 def test_cosmological_units():
     """Test the units on cosmological parameters."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -929,7 +929,7 @@ def test_delay_spectrum_thermal_power_shape():
 
 def test_multiple_polarization_file():
     """Test the units on cosmological parameters."""
-    testfile = os.path.join(DATA_PATH, 'test_two_pol_array.uvh5')
+    testfile = os.path.join(DATA_PATH, 'test_two_pol_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_multiple_pol.beamfits')
     uvd = UVData()
     uvd.read(testfile)
@@ -945,7 +945,7 @@ def test_multiple_polarization_file():
 
 def test_update_cosmology_units_and_shapes():
     """Test the check function on DelaySpectrum after changing cosmologies."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     test_cosmo = Planck15
     uvd = UVData()
@@ -964,7 +964,7 @@ def test_update_cosmology_units_and_shapes():
 
 def test_update_cosmology_error_if_not_cosmology_object():
     """Test update cosmology function errors if new cosmology is not a Cosmology object."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     bad_input = TestClass()
 
@@ -1081,7 +1081,7 @@ def test_update_cosmology_unit_and_shape_uncalib():
 @sdstest.skipIf_py2
 def test_update_cosmology_littleh_units():
     """Test the units can convert to 'littleh' units in python 3."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvh5')
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     test_cosmo = Planck15
     uvd = UVData()
