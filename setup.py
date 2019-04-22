@@ -35,8 +35,12 @@ setup_args = {
     'scripts': glob.glob('scripts/*'),
     'version': version.version,
     'include_package_data': True,
-    'install_requires': ['numpy>1.10', 'astropy>1.2', 'scipy',
-                         'nose', 'pyuvdata', 'six', 'h5py'],
+    'setup_requires': ['numpy>=1.15', 'six>=1.10'],
+    'install_requires': ['numpy>1.15',
+                         'astropy>2.0',
+                         'scipy',
+                         'pyuvdata>=1.0',
+                         'six'],
     'test_suite': 'nose'
 }
 
