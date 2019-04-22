@@ -42,7 +42,7 @@ First install dependencies.
 * scipy
 * astropy >= 2.0
 * h5py (for uvh5 compatibility with pyuvdata)
-* six (for compatibility between python 2 and 3)
+* six >= 1.10 (for compatibility between python 2 and 3)
 * pyuvdata (conda install -c conda-forge pyuvdata, `pip install pyuvdata`, or use the development version  https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git)
 
 For anaconda users, we suggest using conda to install astropy, numpy and scipy.
