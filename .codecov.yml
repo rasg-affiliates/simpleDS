@@ -1,3 +1,4 @@
 codecov:
   ci:
-    - !travis-ci  # ignore CI builds by Travis
+    - travis-ci  # with travis-ci.com execution is faster, can keep
+    - circleci
