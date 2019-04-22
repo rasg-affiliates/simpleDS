@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Moved some mathematical operations out of return statements to save memory
 - Various typos
+- Propagated `littleh_units` keyword up to `calculate_delay_spectrum` function.
 - Docstring Formatting
 - Moved all cosmological calculations to update_cosmology function
 ### Fixed
