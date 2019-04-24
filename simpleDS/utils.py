@@ -469,12 +469,9 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
             )
         )
 
-    cross_array = (
-        np.expand_dims(array_1, axis=axis).conj()
-        * np.expand_dims(array_2, axis=axis + 1)
-        * unit_1
-        * unit_2
-    )
+    cross_array = (np.expand_dims(array_1, axis=axis).conj()
+                   * np.expand_dims(array_2, axis=axis + 1)
+                   << unit_1 * unit_2)
 
     return cross_array
 
@@ -815,7 +812,7 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
         else:
             weights = np.ones_like(array) * (1 + 1j)
 
-    if np.abs(delays).min() == 0:
+    if np.logical_and(np.abs(delays).min() == 0, delays.size % 2):
         split_index = np.argmin(np.abs(delays), axis=axis)
         split_inds = [split_index, split_index + 1]
 
@@ -863,11 +860,11 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
     _weights = np.stack([pos_weights, neg_weights], axis=0)
 
     if _array.unit is None:
-        _array = _array.value * array.unit
+        _array = _array.value << array.unit
     if _errors.unit is None:
-        _errors = _errors.value * uncertainty.unit
+        _errors = _errors.value << uncertainty.unit
     if _weights.unit is None:
-        _weights = _weights.value * weights.unit
+        _weights = _weights.value << weights.unit
 
     if not _array.imag.value.any():
         out_array, out_errors = weighted_average(
