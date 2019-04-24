@@ -452,7 +452,7 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
     if isinstance(array_2, list):
         array_2 = np.asarray(array_2)
 
-    unit_1, unit_2 = 1.0, 1.0
+    unit_1, unit_2 = 1, 1
     if isinstance(array_1, units.Quantity):
         unit_1 = array_1.unit
         array_1 = array_1.value
@@ -470,8 +470,9 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
         )
 
     cross_array = (np.expand_dims(array_1, axis=axis).conj()
-                   * np.expand_dims(array_2, axis=axis + 1)
-                   << unit_1 * unit_2)
+                   * np.expand_dims(array_2, axis=axis + 1))
+    if isinstance(unit_1, units.UnitBase) or isinstance(unit_2, units.UnitBase):
+        cross_array <<= unit_1 * unit_2
 
     return cross_array
 
@@ -562,8 +563,9 @@ def jy_to_mk(freqs):
         The conversion factor from Jy to mK * sr at the given frequencies.
 
     """
-    jy2t = units.sr * const.c.to("m/s") ** 2 / (2 * freqs.to("1/s") ** 2 * const.k_B)
-    return jy2t.to("mK*sr/Jy")
+    jy2t = units.sr * const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
+                                              * const.k_B)
+    return jy2t << units.Unit('mK*sr/Jy')
 
 
 def generate_noise(noise_power):
@@ -690,7 +692,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
     """
     if isinstance(array, units.Quantity):
         if isinstance(uncertainty, units.Quantity):
-            uncertainty = uncertainty.to(array.unit)
+            uncertainty = uncertainty << array.unit
         else:
             raise ValueError(
                 "Input array is a Quantity Object but "
