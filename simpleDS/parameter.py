@@ -17,9 +17,76 @@ from astropy.cosmology.core import Cosmology as reference_cosmology_object
 
 
 class UnitParameter(uvp.UVParameter):
-    """SubClass of UVParameters with astropy quantity compatibility.
+    r"""SubClass of UVParameters with astropy quantity compatibility.
 
     Adds checks for Astropy Quantity objects and equality between Quantites.
+
+
+    For a complete list of input parameters
+
+    Attributes
+    ----------
+    name : str
+        A string giving the name of the attribute. Used as the associated
+        property name in classes based on UVBase.
+
+    required : bool
+        A boolean indicating whether this is required metadata for
+        the class with this UVParameter as an attribute. Default is True.
+
+    value : str, astropy Quantity object, or scalar
+        The value of the data or metadata.
+
+    spoof_val : any but same kind as `value`
+        A fake value that can be assigned to a non-required
+        UVParameter if the metadata is required for a particular file-type.
+        This is not an attribute of required UVParameters.
+
+    form : str or tuple
+        Either 'str' or a tuple giving information about the expected
+        shape of the value. Elements of the tuple may be the name of other
+        UVParameters that indicate data shapes. \n
+        Examples:\n
+            'str': a string value\n
+            ('Nblts', 3): the value should be an array of shape: Nblts (another UVParameter name), 3
+
+    description : str
+        A string description of the data or metadata in the object.
+
+    expected_type : type
+        The type that the data or metadata should be.
+        Default is np.int or str if form is 'str'
+
+    expected_units : astropy.unit object
+        The expected units of the input astropy Quantity.
+
+    acceptable_vals : List, Optional.
+        List giving allowed values for elements of value.
+
+    acceptable_range : tuple, Optional.
+        Tuple giving a range of allowed magnitudes for elements of value.
+
+    tols: tuple of scalar and astropy Quantity or single astropy Quantity
+        Tolerances for testing the equality of UVParameters. Either a
+        single absolute value or a tuple of relative and absolute values to
+        be used by np.isclose()
+
+    value_not_quantity : Boolean, default False
+        Boolean flag used to specify that input value is not an astropy Quantity object,
+        but a UnitParameter is desired over a UVParameter.
+
+
+    Raises
+    ------
+    ValueError
+        If input value is a list of objects with different unit equivalencies.
+        If no expected unit is provided.
+        If tolerance is a Quantity, but be a single value.
+        If value is not a Quantity and value_not_quantity is False
+    UnitConversionError
+        If the value and expected units have different equivalencies.
+        If the value and absolute tolerance have different equivalencies.
+
     """
 
     def __init__(self, name, required=True, value=None, spoof_val=None,
@@ -27,14 +94,7 @@ class UnitParameter(uvp.UVParameter):
                  acceptable_vals=None, acceptable_range=None,
                  expected_units=None,
                  tols=(1e-05, 1e-08), value_not_quantity=False):
-        """Initialize the UVParameter.
-
-        Extra keywords:
-            value_not_quantity: (Boolean, default False)
-                                Boolean flag used to specify that input value
-                                is not an astropy Quantity object, but a
-                                UnitParameter is desired over a UVParameter.
-        """
+        """Initialize the UVParameter."""
         self.value_not_quantity = value_not_quantity
         self.expected_units = expected_units
         if isinstance(value, list) and isinstance(value[0], units.Quantity):
