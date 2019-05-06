@@ -1,7 +1,6 @@
-name: simpleds_linting
+name: simpleds_docstyle
 channels:
   - defaults
   - conda-forge
 dependencies:
-  - pycodestyle
   - pydocstyle

@@ -35,7 +35,7 @@ jobs:
       - image: continuumio/miniconda:latest
     environment:
       PYTHON: << parameters.python_version >>
-      ENV_NAME: simpleds_lintingdoc
+      ENV_NAME: simpleds_docstyle
     steps:
       - checkout
       - restore_cache:
