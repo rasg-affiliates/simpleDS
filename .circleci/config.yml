@@ -27,6 +27,31 @@ jobs:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
+  linterdoc:
+    parameters:
+      python_version:
+        type: string
+    docker:
+      - image: continuumio/miniconda:latest
+    environment:
+      PYTHON: << parameters.python_version >>
+      ENV_NAME: simpleds_lintingdoc
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
+      - run:
+          name: configure conda environment
+          command: ./ci/install-circle.sh
+      - run:
+          name: linting for PEP8 compliance
+          command: |
+            source activate ${ENV_NAME}
+            pydocstyle --convention=numpy simpleDS
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          paths:
+            - "/opt/conda/envs/${ENV_NAME}/"
 
   simpleds:
     parameters:
@@ -76,6 +101,8 @@ workflows:
   build_and_test:
     jobs:
       - linter:
+          python_version: "3.6"
+      - linterdoc:
           python_version: "3.6"
       - simpleds:
           name: simpleds_2.7
