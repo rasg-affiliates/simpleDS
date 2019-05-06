@@ -1085,6 +1085,7 @@ class DelaySpectrum(UVBase):
         Uses astropy quantities to properly normalize an FFT accounting for the Volume factor and units.
 
         Parameters
+        ----------
         inverse: bool, default False
                  perform the inverse Fourier Transform with np.fft.ifft
 
