@@ -27,7 +27,7 @@ jobs:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
-  linterdoc:
+  docstyle:
     parameters:
       python_version:
         type: string
@@ -98,11 +98,11 @@ jobs:
 
 workflows:
   version: 2
-  code_and_doc:
+  style_and_format:
     jobs:
       - linter:
           python_version: "3.6"
-      - linterdoc:
+      - docstyle:
           python_version: "3.6"
   build_and_test:
     jobs:

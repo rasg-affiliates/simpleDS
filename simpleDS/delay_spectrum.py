@@ -25,36 +25,41 @@ from .parameter import UnitParameter
 
 
 class DelaySpectrum(UVBase):
-    """A Delay Spectrum object to hold relevant data."""
+    """A Delay Spectrum object to hold relevant data.
+
+    If only one UVData Object is specified, data is multiplied by itself.
+
+    Parameters
+    ----------
+    uv1 : pyuvdata object, list of no more than 2 pyuvdata objects, optional
+         Objects to cross correlate. Assumes all baselines in UVData object will be
+         cross multiplied togeter, required to have only one reduntant group as
+         computed with pyuvdata redundancy functions.
+         input during initialization is optional, but must be set later with add_uvdata()
+    uvb : UVBeam object, optional
+        Containts relevent beam info. Currently assumes 1 beam object can describe all baselines
+        Must be power beam in healpix coordinates and peak normalized.
+         input during initialization is optional, but must be set later with add_uvbeam()
+    trcvr :  Astropy Quantity units of equivalent to Kelvin, optional
+        Receiver Temperature of antenna to calculate noise power
+         input during initialization is optional, but must be set later with add_trcvr()
+    taper : function or callable, optional
+        Spectral taper function used during frequency Fourier Transforms
+        Accepts scipy.signal.windows functions or any function
+        whose argument is the len(data) and returns a numpy array.
+        Default: scipy.signal.windows.blackmanharris but can be overwritten later set_taper()
+
+    Attributes
+    ----------
+    UnitParameter Objects
+        For a full list of all attributes, types, and expected forms please
+        consult the documentation at (~~~~~~).
+
+    """
 
     @units.quantity_input(trcvr=units.K)
     def __init__(self, uv=None, uvb=None, trcvr=None, taper=None):
-        """Initialize the Delay Spectrum Object.
-
-        If only one UVData Object is specified, data is multiplied by itself.
-
-        Arguments
-            uv1: (list, pyuvdata object)
-                 objects to cross correlate.
-                 Optional, can be added later
-                 Assumes all baselines in UVData object will be
-                 cross multiplied togeter, required to have only one reduntant group as computed with pyuvdata redundancy functions.
-            uvb: (UVBeam object)
-                 Containts relevent beam info.
-                 Currently assumes 1 beam object can describe all baselines
-                 Must be power beam in healpix coordinates and peak normalized
-                 Optional can be added later.
-            trcvr: (astropy Quantity)
-                   Receiver Temperature of antenna to calculate noise power
-                   Must be an astropy Quantity object with units of temperature.
-                   Optional can be added later.
-            taper: (fucntion, callable)
-                    Spectral taper function used during frequency Fourier Transforms
-                    Accepts scipy.signal.windows functions or any function
-                    whose argument is the len(data) and returns a numpy array.
-                    Default: scipy.signal.windows.blackmanharris
-                    Optional
-        """
+        """Initialize the object."""
         # standard angle tolerance: 10 mas in radians.
         # Should perhaps be decreased to 1 mas in the future
         radian_tol = 10 * 2 * np.pi * 1e-3 / (60.0 * 60.0 * 360.0) * units.rad
@@ -407,13 +412,19 @@ class DelaySpectrum(UVBase):
     def set_taper(self, taper=None):
         """Set spectral taper function used during Fourier Transform.
 
-        Raises:
-            ValueError:
-                Input spectral taper must be a function or callable whose arguments are the length of the band over which Fourier Transform is taken.
+        Parameters
+        ----------
+        taper : function or callable, Optional
+            Spectral taper function used during frequency Fourier Transforms
+            Accepts scipy.signal.windows functions or any function
+            whose argument is the len(data) and returns a numpy array.
+            Default: scipy.signal.windows.blackmanharris
 
-        Arguments:
-            taper: type callable;
-                   must be a function or callable whose arguments are a scalar N. This is interpreted as the length of the spectral window to be returned. Examples scipy.signal.windows.blackmanharris
+        Raises
+        ------
+        ValueError
+            If taper input is not callable.
+
 
         """
         if not callable(taper):
@@ -425,7 +436,14 @@ class DelaySpectrum(UVBase):
             self.taper = taper
 
     def set_delay(self):
-        """Set the data type to delay."""
+        """Set the data type to delay.
+
+        Raises
+        ------
+        UnitConversionError
+            if data is inconsistent with delay units.
+
+        """
         consistent_units = [units.Jy * units.Hz, units.K * units.sr * units.Hz,
                             units.dimensionless_unscaled * units.Hz]
         if not any([self.data_array.unit.is_equivalent(u) for u in consistent_units]):
@@ -436,7 +454,14 @@ class DelaySpectrum(UVBase):
             self.data_type = 'delay'
 
     def set_frequency(self):
-        """Set the data type to frequency."""
+        """Set the data type to frequency.
+
+        Raises
+        ------
+        UnitConversionError
+            if data is inconsistent with frequency units.
+
+        """
         consistent_units = [units.Jy, units.K * units.sr,
                             units.dimensionless_unscaled]
         if not any([self.data_array.unit.is_equivalent(u) for u in consistent_units]):
@@ -452,11 +477,18 @@ class DelaySpectrum(UVBase):
         Check that required parameters exist. Check that parameters have
         appropriate shapes and optionally that the values are acceptable.
 
-        Args:
-            check_extra: If true, check all parameters, otherwise only check
-                required parameters.
-            run_check_acceptability: Option to check if values in parameters
-                are acceptable. Default is True.
+        Parameters
+        ----------
+        check_extra : bool
+            If true, check all parameters, otherwise only check required parameters.
+        run_check_acceptability : bool
+            Option to check if values in parameters are acceptable.
+
+        Raises
+        ------
+        ValueError
+            If any parameter values are inconsistent with expected types, shapes, or ranges of values.
+
         """
         if self.data_type == 'delay':
             self.set_delay()
@@ -543,20 +575,23 @@ class DelaySpectrum(UVBase):
         Unloads the data, flags, and nsamples arrays from the input UVData
         object (or subclass) into local storage.
 
-        Raises :
-            ValueError:
-                        Input data object must be an instance or subclass of UVData
-                        A DelaySpectrum object can only perform a Fourier Transform along a single baseline vector. Downselect the input UVData object to only have one redundant baseline type.
+        Parameters
+        ----------
+        uv : UVdata object
+            A UVData object or subclass of UVData to add to the existing datasets
 
-        Arguments:
-            uv  : A UVData object or subclass of UVData to add to the existing
-                  datasets
+        spectral_windows : tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
+            spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
 
-            spectral_windows : tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
-                              spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
+        tol : float
+            Tolerance in meters of the redundancy allowed for pyuvdata.get_baseline_redundancies calculation
 
-            tol : float
-                  Tolerance in meters of the redundancy allowed for pyuvdata.get_baseline_redundancies calculation
+        Raises
+        ------
+        ValueError
+            Input data object must be an instance or subclass of UVData.
+            If input UVData object has more than 1 unique baseline type within tolerance.
+            Input UVData object has parameters inconsistent with any existing data
 
         """
         if not isinstance(uv, UVData):
@@ -726,21 +761,27 @@ class DelaySpectrum(UVBase):
     def select_spectral_windows(self, spectral_windows=None, freqs=None, inplace=True):
         """Select the spectral windows from loaded data.
 
-        Raises:
-            ValueError: Spectral window tuples must only have two elements (stard_index, end_index)
-                        Spectra windows must all have the same size
-        Arguments:
-            spectral_windows: tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
-                              spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
-            freqs: Quantity array of the shape (Nspws, Nfreqs)
-                   The actual frequency values to select from the held data set. Input frequencies must match exactly to some subset of frequencies stored in self.freq_array.
+        Parameters
+        ----------
+        spectral_windows: tuple of tuples, or tuple of indices, or list of lists, or list of indices; Default selection is (0, Nfreqs)
+            Spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
+        freqs : Quantity array of the shape (Nspws, Nfreqs) units equivalent to frequency, optional
+            The frequency values to select from the held data set. Input frequencies must match exactly to some subset of frequencies stored in self.freq_array.
 
-            inplace: Bool; Default True
-                     choose whether spectral window selection is done inplace on the object, or a new object is returned.
+        inplace : Bool; Default True
+                 choose whether spectral window selection is done inplace on the object, or a new object is returned.
 
-        Returns:
-            DelaySpectrum Object: Default None
-                        if inplace is False the returns new object with given spectral windows
+        Returns
+        -------
+        DelaySpectrum Object: Default None
+            If inplace is False the returns new object with given spectral windows
+
+        Raises
+        ------
+        ValueError
+            Spectral window tuples must only have two elements (stard_index, end_index)
+            Spectra windows must all have the same size
+            If given frequencies not present in frequency array.
 
         """
         if inplace:
@@ -829,9 +870,12 @@ class DelaySpectrum(UVBase):
         """Reshape and take spectral windows along the frequency axis.
 
         This take is only for arrays of shape like self.data_array
-        Arguments:
-                data: array of shape self.data_array to be selected
-                inds: flattened indices of frequency array to select
+        Parameters
+        ----------
+        data : self.data_array like
+            array of shape self.data_array to be selected
+        inds : array_like of ind
+            flattened indices of frequency array to select
         """
         data = np.transpose(data, [1, 2, 3, 4, 0, 5])
         # easily flatten the last two axes for spectral window selection.
@@ -854,10 +898,18 @@ class DelaySpectrum(UVBase):
     def update_cosmology(self, cosmology=None, littleh_units=False):
         """Update cosmological information with the assumed cosmology.
 
-        Arguments:
-            cosmology: input assumed cosmology. Must be an astropy cosmology object.
-            littleh_units: (Bool, default:False)
-                           automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
+        Parameters
+        ----------
+        cosmology : Astropy Cosmology Object, optional
+            input assumed cosmology. Must be an astropy cosmology object. Defualts to self.cosmology
+        littleh_units: Bool, default:False
+                       automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
+
+        Raises
+        ------
+        ValueError
+            If input cosomolgy is not an astropy cosmology object
+
         """
         if cosmology is not None:
             if not isinstance(cosmology, reference_cosmology_object):
@@ -957,14 +1009,18 @@ class DelaySpectrum(UVBase):
         """Add the beam_area and beam_square_area integrals into memory.
 
         Also adds receiver temperature information if set in UVBeam object.
-        Arguments:
-            uvb: UVBeam object with relevent beam info.
-                 Currently assumes 1 beam object can describe all baselines
-                 Must be a power beam in healpix coordinates and peak normalized
-            no_read_trcvr: (Bool, default False)
-                           Flag to Not read trcvr from UVBeam object even if set in UVBeam.
-                           This is useful if a trcvr wants to be manually set but
-                           a beam read from a file which also contains receiver temperature information.
+
+        Parameters
+        ----------
+        uvb : UVBeam object
+            Reads `beam_area` and `beam_sq_area` from input UVBeam object.
+            Currently assumes 1 beam object can describe all baselines
+            Must be a power beam in healpix coordinates and peak normalized
+        no_read_trcvr: (Bool, default False)
+                       Flag to Not read trcvr from UVBeam object even if set in UVBeam.
+                       This is useful if a trcvr wants to be manually set but
+                       a beam read from a file which also contains receiver temperature information.
+
         """
         for spw, freqs in enumerate(self.freq_array):
             _beam = uvb.select(frequencies=freqs.to('Hz').value, inplace=False)
@@ -979,10 +1035,17 @@ class DelaySpectrum(UVBase):
     def add_trcvr(self, trcvr):
         """Add the receiver temperature used to generate noise simulation.
 
-        Arguments:
-                trcvr: (astropy Quantity, units: Kelvin)
-                       (Nspws, Nfreqs) array of temperatures
-                       if a single temperature, it is assumed to be constant at all frequencies.
+        Parameters
+        ----------
+        trcvr: astropy Quantity, units: Kelvin
+               (Nspws, Nfreqs) array of temperatures
+               if a single temperature, it is assumed to be constant at all frequencies.
+
+        Raises
+        ------
+        ValueError
+            If input trcvr is not a single scalar but also not correctly shaped.
+
         """
         if trcvr.size == 1:
             self.trcvr = np.ones(shape=self._trcvr.expected_shape(self)) * trcvr
@@ -1021,9 +1084,10 @@ class DelaySpectrum(UVBase):
         Local wrapper for function normalized_fourier_transform.
         Uses astropy quantities to properly normalize an FFT accounting for the Volume factor and units.
 
-        Arguments:
-                inverse: (bool; default False)
-                         perform the inverse Fourier Transform with np.fft.ifft
+        Parameters
+        inverse: bool, default False
+                 perform the inverse Fourier Transform with np.fft.ifft
+
         """
         if inverse is True:
             delta_x = np.diff(self.delay_array)[0]
@@ -1080,12 +1144,20 @@ class DelaySpectrum(UVBase):
         Take the normalized Fourier transform of the data in objects and cross multiplies baselines.
         Also generates white noise given the frequency range and trcvr and calculates the expected noise power.
 
-        Arguments:
-            cosmology: Astropy.Cosmology subclass
-                   Default: None (uses cosmology object saved in self.cosmology)
-                   input assumed cosmology. Must be an astropy cosmology object. Setting this value will overwrite the cosmology set on the DelaySpectrum Object.
-            littleh_units: (Bool, default:False)
-                           automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
+        Parameters
+        ----------
+        cosmology: Astropy.Cosmology subclass
+            Default: None (uses cosmology object saved in self.cosmology)
+            Input assumed cosmology
+            Setting this value will overwrite the cosmology set on the DelaySpectrum Object.
+        littleh_units: Bool, default:False
+                       automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
+
+        Raises
+        ------
+        ValueError
+            If called before loading a uvdata object
+
         """
         if self.Nuv == 0:
             raise ValueError("No data has be loaded. Add UVData objects before "
