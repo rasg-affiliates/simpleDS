@@ -104,6 +104,7 @@ def get_data_array(uv, reds, squeeze=True):
 
     Uses UVData.get_data function to create a matrix of data of shape (Npols, Nbls, Ntimes, Nfreqs).
     Only valid to call on a set of redundant baselines with the same number of times.
+
     Parameters
     ----------
     uv : UVdata object, or subclass
@@ -373,7 +374,8 @@ def remove_auto_correlations(data_array, axes=(0, 1)):
     axes : tuple of int, length 2
         axes over which the diagonal will be removed.
 
-    Returns:
+    Returns
+    -------
     data_out : array with the same type as `data_array`.
         (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
         if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
