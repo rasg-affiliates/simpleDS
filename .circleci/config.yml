@@ -47,7 +47,7 @@ jobs:
           name: linting for PEP8 compliance
           command: |
             source activate ${ENV_NAME}
-            pydocstyle --convention=numpy simpleDS
+            pydocstyle simpleDS
       - save_cache:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
