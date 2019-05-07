@@ -39,7 +39,7 @@ setup_args = {
     'install_requires': ['numpy>1.15',
                          'astropy>2.0',
                          'scipy',
-                         'pyuvdata>=1.0',
+                         'pyuvdata>=1.3.8',
                          'six>=1.10'],
     'test_suite': 'nose'
 }
