@@ -18,14 +18,35 @@ from scipy.signal import windows
 def read_paper_miriad(filename, antpos_file=None, **kwargs):
     """Read PAPER miriad files and return pyuvdata object.
 
-    Arguments
-        filename: pyuvdata compatible PAPER file (Default miriad)
-        antpols_file: A file of antenna postions. Required to generate uvws.
-        kwargs: passed to:
-                    numpy.genfromtxt
-                    UVData.read
+    Uses a UVData object to read PAPER miriad files, caught known issues and
+    insert missing required attributes into the UVData object before returning to the user.
+
+    Parameters
+    ----------
+    filename : st
+        pyuvdata compatible PAPER miriad file
+    antpols_file : str
+        A file of antenna postions.
+        This is assumed to be a csv or other file readable by numpy.genfromtxt
+        Required to generate uvws.
+    kwargs : any
+        kwargs are passed to the following functions:
+            - numpy.genfromtxt
+            - UVData.read
+        Please consult the documentation for these functions for lists of keywords.
+
     Returns
-        uv: Correctly formatted pyuvdata object from input PAPER data
+    -------
+    uv : UVData object
+        Correctly formatted pyuvdata object from input PAPER data
+
+    Raises
+    ------
+    ValueError
+        If no `antpos_file` provided.
+    IOError
+        If `antpos_file` does not exist.
+
     """
     uv = UVData()
     # find keywords that pass to uv.read
@@ -81,17 +102,22 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
 def get_data_array(uv, reds, squeeze=True):
     """Remove data from pyuvdata object and store in numpy array.
 
-    Duplicates data in redundant group as an array for faster calculations.
-    Arguments:
-        uv : data object which can support uv.get_data(ant_1, ant_2, pol)
-        reds: list of all redundant baselines of interest as baseline numbers
-    keywords:
-        squeeze: set true to squeeze the polarization dimension.
-                 This has no effect for data with Npols > 1.
+    Uses UVData.get_data function to create a matrix of data of shape (Npols, Nbls, Ntimes, Nfreqs).
+    Only valid to call on a set of redundant baselines with the same number of times.
+    Parameters
+    ----------
+    uv : UVdata object, or subclass
+        Data object which can support uv.get_data(ant_1, ant_2, pol)
+    reds: list of ints
+        list of all redundant baselines of interest as baseline numbers.
+    squeeze : bool
+        set true to squeeze the polarization dimension.
+        This has no effect for data with Npols > 1.
 
-    Returns:
-        data_array : (Nbls , Ntimes, Nfreqs) numpy array or
-                     (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+    Returns
+    -------
+    data_array :complex arrary
+        (Nbls , Ntimes, Nfreqs) numpy array or (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
 
     """
     data_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
@@ -115,17 +141,23 @@ def get_data_array(uv, reds, squeeze=True):
 def get_nsample_array(uv, reds, squeeze=True):
     """Remove nsamples from pyuvdata object and store in numpy array.
 
-    Duplicates nsamples in redundant group as an array for faster calculations.
-    Arguments:
-        uv : data object which can support uv.get_nsamples(ant_1, ant_2, pol)
-        reds: list of all redundant baselines of interest as baseline numbers
-    keywords:
-        squeeze: set true to squeeze the polarization dimension.
-                 This has no effect for data with Npols > 1.
+    Uses UVData.get_nsamples function to create a matrix of data of shape (Npols, Nbls, Ntimes, Nfreqs).
+    Only valid to call on a set of redundant baselines with the same number of times.
 
-    Returns:
-        nsample_array : (Nbls, Ntimes, Nfreqs) numpy array
-                        (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+    Parameters
+    ----------
+    uv : UVdata object, or subclass
+        Data object which can support uv.get_data(ant_1, ant_2, pol)
+    reds: list of ints
+        list of all redundant baselines of interest as baseline numbers.
+    squeeze : bool
+        set true to squeeze the polarization dimension.
+        This has no effect for data with Npols > 1.
+
+    Returns
+    -------
+    nsample_array : float array
+        (Nbls, Ntimes, Nfreqs) numpy array or (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
 
     """
     nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
@@ -148,17 +180,23 @@ def get_nsample_array(uv, reds, squeeze=True):
 def get_flag_array(uv, reds, squeeze=True):
     """Remove nsamples from pyuvdata object and store in numpy array.
 
-    Duplicates nsamples in redundant group as an array for faster calculations.
-    Arguments:
-        uv : data object which can support uv.get_nsamples(ant_1, ant_2, pol)
-        reds: list of all redundant baselines of interest as baseline numbers
-    keywords:
-        squeeze: set true to squeeze the polarization dimension.
-                 This has no effect for data with Npols > 1.
+    Uses UVData.get_flags function to create a matrix of data of shape (Npols, Nbls, Ntimes, Nfreqs).
+    Only valid to call on a set of redundant baselines with the same number of times.
 
-    Returns:
-        flag_array : (Nbls, Ntimes, Nfreqs) numpy array
-                     (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
+    Parameters
+    ----------
+    uv : UVdata object, or subclass
+        Data object which can support uv.get_data(ant_1, ant_2, pol)
+    reds: list of ints
+        list of all redundant baselines of interest as baseline numbers.
+    squeeze : bool
+        set true to squeeze the polarization dimension.
+        This has no effect for data with Npols > 1.
+
+    Returns
+    -------
+    flag_array : bool array
+        (Nbls, Ntimes, Nfreqs) numpy array  (Npols, Nbls, Ntimes, Nfreqs) if squeeze == False
 
     """
     flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
@@ -182,17 +220,23 @@ def get_flag_array(uv, reds, squeeze=True):
 def get_integration_time(uv, reds, squeeze=True):
     """Extract the integration_time array from pyuvdata objectself.
 
-    Duplicates integration time for redundant group for faster calculations.
+    Extracts the integration time array from a UVdata object to create a matrix of shape (Npols, Nbls, Ntimes, Nfreqs).
+    Only valid to call on a set of redundant baselines with the same number of times.
 
-    Arguments:
-        uv: pyuvdata data object from which to get integration time array.
-        reds: list of all redundant baselines of interest as baseline numbers
-    keywords:
-        squeeze: set true to squeeze the polarization dimension.
-                 This has no effect for data with Npols > 1.
+    Parameters
+    ----------
+    uv : UVdata object, or subclass
+        Data object which can support uv.get_data(ant_1, ant_2, pol)
+    reds: list of ints
+        list of all redundant baselines of interest as baseline numbers.
+    squeeze : bool
+        set true to squeeze the polarization dimension.
+        This has no effect for data with Npols > 1.
 
-    Returns:
-        integration_time : (Nbls, Ntimes) numpy array
+    Returns
+    -------
+    integration_time : float array
+        (Nbls, Ntimes) numpy array of integration times.
 
     """
     shape = (uv.Nbls, uv.Ntimes)
@@ -213,16 +257,31 @@ def get_integration_time(uv, reds, squeeze=True):
 def bootstrap_array(array, nboot=100, axis=0):
     """Bootstrap resample the input array along the given axis.
 
-    Arguments:
-        array: N-dimensional array to bootstrap resample.
-        nboot: Number of resamples to draw.
-        axis: Axis along which resampling is performed
-    Returns:
-        array: The resampled array, if input is N-D output is N+1-D,
-               extra dimension is added imediately suceeding the sampled axis.
+    Randomly sample, with replacement along the given axis `nboot` times.
+    Output array will always have N+1 dimensions with the extra axis immediately following the bootstrapped axis.
+
+    Parameters
+    ----------
+    array : numpy array
+        N-dimensional array to bootstrap resample.
+    nboot : int
+        Number of resamples to draw.
+    axis : int
+        Axis along which resampling is performed
+
+    Returns
+    -------
+    array : numpy array
+        The resampled array, if input is N-D output is N+1-D, extra dimension is added imediately suceeding the sampled axis.
+
+    Raises
+    ------
+    ValueError
+        If `axis` parameter is greater than the dimensions of the input array.
+
     """
     if axis >= len(np.shape(array)):
-        raise ValueError("Specified axis must be shorter than the lenght "
+        raise ValueError("Specified axis must be shorter than the length "
                          "of input array.\n"
                          "axis value was {0} but array has {1} dimensions"
                          .format(axis, len(np.shape(array))))
@@ -234,7 +293,20 @@ def bootstrap_array(array, nboot=100, axis=0):
 
 
 def noise_equivalent_bandwidth(window):
-    """Calculate the relative equivalent noise bandwidth of window function."""
+    """Calculate the relative equivalent noise bandwidth of window function.
+
+    Approximates the relative Noise Equivalent Bandwidth of a spectral taper function.
+
+    Parameters
+    ----------
+    window : array_like
+        A 1-Dimenaional array like.
+
+    Returns
+    -------
+    float
+
+    """
     return np.sum(window)**2 / (np.sum(window**2) * len(window))
 
 
@@ -246,15 +318,27 @@ def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
     The geometric mean is taken between nsamples_1 and nsamples_2 because
     nsmaples array is used to compute thermal variance in the delay spectrum.
 
-    Arguments:
-        nsample_1 : (Nbls, Ntimes, Nfreqs) array from get_nsamples_array
-                    can also have shape (Npols, Nbls, Ntimes, Nfreqs)
-        nsample_2 : same type as nsample_1 if take cross-multiplication
-                       Defaults to copying nsample_1 for auto-correlation
-    Returns:
-        samples_out: (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of
-                     the input sample arrays.
-                     Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+    Parameters
+    ----------
+    nsample_1 : array of float
+        (Nbls, Ntimes, Nfreqs) array from get_nsamples_array can also have shape (Npols, Nbls, Ntimes, Nfreqs)
+    nsample_2 : array of float, optional
+        Same type as nsample_1 if take cross-multiplication
+        Defaults to copying nsample_1 for auto-correlation
+    axis : int
+        The axis over which the cross multiplication should occur.
+
+    Returns
+    -------
+    samples_out : array of float
+        (Nbls, Nbls, Nfreqs, Ntimes) array of geometric mean of the input sample arrays.
+        Can also have shape (Npols, Nbls, Nbls, Ntimes, Nfreqs)
+
+    Raises
+    ------
+    ValueError
+        If both input arrays have different shapes.
+
     """
     if nsample_2 is None:
         nsample_2 = nsample_1.copy()
@@ -279,12 +363,28 @@ def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
 def remove_auto_correlations(data_array, axes=(0, 1)):
     """Remove the auto-corrlation term from input array.
 
-    Argument:
-        data_array : (Nbls, Nbls, Ntimes, Nfreqs)
-                     Removes same baseline diagonal along the first 2 diemsions
+    Takes an N x N array, removes the diagonal components, and returns a flattened N(N-1) dimenion in place of the array.
+    If uses on a M dimensional array, returns an M-1 array.
+
+    Parameters
+    ----------
+    data_array : array
+        Array shaped like (Nbls, Nbls, Ntimes, Nfreqs). Removes same baseline diagonal along the specifed axes.
+    axes : tuple of int, length 2
+        axes over which the diagonal will be removed.
+
     Returns:
-        data_out : (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
-                   if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
+    data_out : array with the same type as `data_array`.
+        (Nbls * (Nbls-1), Ntimes, Nfreqs) array.
+        if input has pols: (Npols, Nbls * (Nbls -1), Ntimes, Nfreqs)
+
+    Raises
+    ------
+    ValueError
+        If axes is not a length 2 tuple.
+        If axes are not adjecent (e.g. axes=(2,7)).
+        If axes do not have the same shape.
+
     """
     if not np.shape(axes)[0] == 2:
         raise ValueError("Shape must be a length 2 tuple/array/list of "
@@ -312,15 +412,27 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
     """Cross multiply the arrays along the given axis.
 
     Cross multiplies along axis and computes array_1.conj() * array_2
-    if axis has length M then a new axis of size M will be inserted
-    directly succeeding the original.
-    Arguments:
-        array_1: N-dimensional numpy array
-        array_2: N-dimenional array (copy of array_1 if None)
-        axis: Axis along which to cross multiply
+    if axis has length M then a new axis of size M will be inserted directly succeeding the original.
 
-    Returns:
-        cross_array : N+1 Dimensional array
+    Parameters
+    ----------
+    array_1 : array_like
+        N-dimensional array_like
+    array_2 : array_like, optional
+        N-dimenional array.
+        Defaults to copy of array_1
+    axis : int
+        Axis along which to cross multiply
+
+    Returns
+    -------
+    cross_array : array_like
+        N+1 Dimensional array
+
+    Raises
+    ------
+    ValueError
+        If input arrays have different shapes.
 
     """
     if isinstance(array_1, list):
@@ -354,7 +466,38 @@ def cross_multiply_array(array_1, array_2=None, axis=0):
 
 
 def lst_align(uv1, uv2, ra_range, inplace=True, atol=1e-08, rtol=1e-05):
-    """Align the LST values of two pyuvdata objects within the given range."""
+    """Align the LST values of two pyuvdata objects within the given range.
+
+    Attempts to crudely align input UVData objects in LST by finding indices
+    where the lsts fall within the input range.
+
+    Parameters
+    ----------
+    uv1 : UVData object or subclass
+        First object where data is desired to lie within the `ra_range`.
+        Must have a time_array parameter to find lsts.
+    uv2 : UVData object or subclass
+        Must have the same properties as `uv1`
+    ra_range : length 2 list of float
+        The inclusive start and stop times in hours for the LSTs to align.
+    inplace : bool
+        If true performs UVData.select on `uv1` and `uv2` otherwise returns new objects.
+    atol : float
+        Absolute tolerance with which the integrations time should agree
+    rtol : float
+        Relative tolerance with which the integrations time should agree
+
+    Returns
+    -------
+    (uv1, uv2) : tuple of UVData objects
+        only returns when `inplace` is False.
+
+    Raises
+    ------
+    ValueError
+        if `uv1` and `uv2` have different integration times, or time cadences.
+
+    """
     delta_t_1 = uv1._calc_single_integration_time()
     delta_t_2 = uv2._calc_single_integration_time()
     if not np.isclose(delta_t_1, delta_t_2, rtol=rtol, atol=atol):
@@ -392,7 +535,19 @@ def lst_align(uv1, uv2, ra_range, inplace=True, atol=1e-08, rtol=1e-05):
 
 @units.quantity_input(freqs='frequency')
 def jy_to_mk(freqs):
-    """Calculate the Jy/sr to mK conversion lambda^2/(2 * K_boltzman)."""
+    """Calculate the Jy/sr to mK conversion lambda^2/(2 * K_boltzman).
+
+    Parameters
+    ----------
+    freqs : Astropy Quantity with units equivalent to frequency
+        frequencies where the conversion should be calculated.
+
+    Returns
+    -------
+    Astropy Quantity
+        The conversion factor from Jy to mK * sr at the given frequencies.
+
+    """
     jy2t = units.sr * const.c.to('m/s')**2 / (2 * freqs.to('1/s')**2
                                               * const.k_B)
     return jy2t.to('mK*sr/Jy')
@@ -401,12 +556,15 @@ def jy_to_mk(freqs):
 def generate_noise(noise_power):
     """Generate noise given an input array of noise power.
 
-    Argument:
-        noise_power: N-dimensional array of noise power to generate white
-                     noise.
-    Returns:
-        noise: Complex white noise drawn from a Gaussian distribution with
-               width given by the value of the input noise_power array.
+    Parameters
+    ----------
+    noise_power : array_like of float
+        N-dimensional array of noise power to generate white noise.
+
+    Returns
+    -------
+    noise : array_like of complex
+        Complex white noise drawn from a Gaussian distribution with width given by the value of the input noise_power array.
 
     """
     # divide by sqrt(2) to conserve total noise amplitude over real and imag
@@ -423,17 +581,30 @@ def normalized_fourier_transform(data_array, delta_x, axis=-1,
     Perform the FFT over frequency using the specified taper function
     and normalizes by delta_x (the discrete of sampling rate along the axis).
 
-    Arguments:
-        data_array : (N-dimenaional) array of data to Fourier Transform
-        delta_x: The difference between frequency channels in the data.
-                 This is used to properly normalize the Fourier Transform.
-                 Must be an astropy Quantity object
-        taper : Window function used in delay transform.
-                 Default is scipy.signal.windows.blackmanharris
-        inverse: (bool; Default False) Perform the inverse Fourier Transform
-    Returns:
-        fourier_arry: (N-Dimenaional) array of the Fourier transform along
-                       specified axis, and normalized by the provided delta_x
+    Parameters
+    ----------
+    data_array : array_like
+        N-dimenaional array of data to Fourier Transform
+    delta_x : Astropy Quantity
+        The difference between channels in the data over the axis of transformation.
+        This is used to properly normalize the Fourier Transform.
+    taper : callable
+        Spectral taper function used in Fourier transform.
+        Default is scipy.signal.windows.blackmanharris
+    inverse: (bool; Default False)
+        Perform the inverse Fourier Transform with np.fft.ifft
+
+    Returns
+    -------
+    fourier_arry : array_like complex
+        N-Dimenaional array of the Fourier transform along
+        specified axis, and normalized by the `provided delta_x`.
+
+    Raises
+    ------
+    ValueError
+        If `delta_x` is not a Quantity object.
+
     """
     if isinstance(data_array, units.Quantity):
         unit = data_array.unit
@@ -470,22 +641,40 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
 
     Performs weighted average of input array, and propagates the weighted average into the uncertainty.
 
-    Arguments:
-        array: (N-dimensional) array over which to average an axis.
-        uncertainty: (N-dimensional) array of uncertainties associated with each point in input array
-        weights: (N-dimenional or 1-Dimenaional, Default None) array of weights to apply to each data point.
-                  If weights are one dimensional must be of length N and assumped to be the same for each row M.
-                  if weights is None, uses inverse variance weighting
-        axis: (integer, Default -1) The axis over which the average is taken.
-    Retruns:
-        array: (MxN-1 dimenionals) array averaged array with given weights
-        uncertainty: (MxN-1 dimensional) propagated array array for given weights
+    Parameters
+    ----------
+    array : array_like
+        N-dimensional array over which to average an axis.
+    uncertainty : array_like
+        N-dimensional array of uncertainties associated with each point in input `array`.
+    weights : array_like, Optional
+        N-dimenional or 1-Dimenaiona array of weights to apply to each data point.
+        If weights are one dimensional must be of length N and assumped to be the same for each row M.
+        if weights is None, uses inverse variance weighting
+    axis : int
+        The axis over which the average is taken.
+
+    Retruns
+    -------
+    array : array_like
+        MxN-1 dimenionals array averaged array with given weights.
+    uncertainty : array_like
+        MxN-1 dimensional propagated uncertainty array for given weights.
+
+    Raises
+    ------
+    ValueError
+        If either one of the `array` or `uncertainty` is an astropy Quantity object but the other is not.
+        If `array` and `uncertainty` have different shapes.
+        If `weights` are 1-Dimensional but length is not the same as the lenght of `array` along the given `axis`.
+        If `weights` are N-Dimensional but shaped differs from `array`.
+
     """
     if isinstance(array, units.Quantity):
         if isinstance(uncertainty, units.Quantity):
             uncertainty = uncertainty.to(array.unit)
         else:
-            raise ValueError("Input array is a Quantity Objcet but "
+            raise ValueError("Input array is a Quantity Object but "
                              "uncertainty is not. Either both arrays must be "
                              "Quantity objects or neither must be.")
     elif isinstance(uncertainty, units.Quantity):
@@ -526,20 +715,40 @@ else:
 def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
     """Fold input array over the delay axis.
 
-    Arguments
-        delays: A 1-Dimensional numpy array of interferometric delays.
-        array: An N-Dimensional numpy array or nested lists.
-        uncertainty: An N-Dimensional numpy array or nested lists of uncertainty values for input array
-        weights: Weights to use while averaging the input array.
-                 Must have same shape as input array.
-                 Default: np.ones_like(array)
-        axis: The axis over which the input array is to be folded.
-              Must have the same shape as the size of input delays.
+    Averages input `array` along the given `axis` by splitting the `delay` array around the value 0 and
+    averaging values in `array` correspoding to the same `delay` magnitutde.
+
+
+    Parameters
+    ----------
+    delays : Astropy Quantity units equivalent to time.
+        A 1-Dimensional numpy array of interferometric delays.
+    array : Astropy Quantity units equivalent to time, or power.
+        An N-Dimensional Quantity to average across delay magnitudes.
+    uncertainty : Astropy Quantity units equivalent to `array`
+        An N-Dimensional Quantity of uncertainty values for input `array`
+    weights : array_like
+        Weights to use while averaging the input `array`. Must have same shape as input array.
+        Default: np.ones_like(array)
+    axis : int
+        The axis over which the input array is to be folded.
+        Must have the same shape as the size of input delays.
+
     Returns
-        array: The N-Dimensional input array folded over the axis specified
-               give axis will have size np.shape(array)[axis]/2 if shape is even
-               or (np.shape(array)[axis] + 1)/2 if shape is odd
-        uncertainty: The folded uncertainties corresponding to the input array.
+    -------
+    array : Astropy Quantity with units equivalent to input `array`
+        The N-Dimensional input array folded over the axis specified
+        give axis will have size np.shape(array)[axis]/2 if shape is even
+        or (np.shape(array)[axis] + 1)/2 if shape is odd
+    uncertainty : Astropy Quantity with units equivalent to input `uncertainty`.
+        The folded uncertainties corresponding to the input array.
+
+    Raises
+    ------
+    ValueError
+        If shape of the specified axis is not equal to the length of the `delay` array.
+        If input `delays` either have no 0 bin or evenly spaced around zero.
+        If `uncertainty` is not the same shape as `array`.
 
     """
     delays = copy.deepcopy(delays)
