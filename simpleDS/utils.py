@@ -656,7 +656,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
     axis : int
         The axis over which the average is taken.
 
-    Retruns
+    Returns
     -------
     array : array_like
         MxN-1 dimenionals array averaged array with given weights.
