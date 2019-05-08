@@ -10,6 +10,7 @@ from astropy.time import Time
 
 
 def write_dataparams_rst(write_file=None):
+    """Write a parameter rst on the fly."""
     dspec = DelaySpectrum()
     out = 'SimpleDS Parameters\n==========================\n'
     out += ("These are the standard attributes of DelaySpectrum objects.\n\nUnder the hood "
