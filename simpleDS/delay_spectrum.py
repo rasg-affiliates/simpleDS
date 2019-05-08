@@ -39,10 +39,10 @@ class DelaySpectrum(UVBase):
     uvb : UVBeam object, optional
         Containts relevent beam info. Currently assumes 1 beam object can describe all baselines
         Must be power beam in healpix coordinates and peak normalized.
-         input during initialization is optional, but must be set later with add_uvbeam()
-    trcvr :  Astropy Quantity units of equivalent to Kelvin, optional
+        input during initialization is optional, but must be set later with add_uvbeam()
+    trcvr :  Astropy Quantity, units: Kelvin, optional
         Receiver Temperature of antenna to calculate noise power
-         input during initialization is optional, but must be set later with add_trcvr()
+        input during initialization is optional, but must be set later with add_trcvr()
     taper : function or callable, optional
         Spectral taper function used during frequency Fourier Transforms
         Accepts scipy.signal.windows functions or any function
@@ -53,7 +53,7 @@ class DelaySpectrum(UVBase):
     ----------
     UnitParameter Objects
         For a full list of all attributes, types, and expected forms please
-        consult the documentation at (~~~~~~).
+        consult the documentation at (http://simpleds.readthedocs.io/en/latest/dspec_parameters.html).
 
     """
 
@@ -774,7 +774,7 @@ class DelaySpectrum(UVBase):
         Returns
         -------
         DelaySpectrum Object: Default None
-            If inplace is False the returns new object with given spectral windows
+            If inplace is False then returns new object with given spectral windows
 
         Raises
         ------
@@ -1188,11 +1188,16 @@ class DelaySpectrum(UVBase):
             Tsys**2/(inttime * Nbls * Npols * sqrt(N_lstbins * 2))
 
         Divide by the following factors:
-            Nbls: baselines should coherently add together
-            Npols: 1 if in linear polarization
-                   2 if a pseudo-stokes visbility
-            sqrt(2): noise is split between real and imaginary
-            sqrt(lst_bins): noise power spectrum averages incoherently over time
+            Nbls:
+                baselines should coherently add together.
+            Npols:
+                number of linear polarizations combined (2 if psuedo-Stokes).
+            sqrt(2):
+                noise is split between real and imaginary.
+            sqrt(lst_bins):
+                noise power spectrum averages incoherently over time.
+
+
         """
         if self.Nuv == 1:
             thermal_noise_samples = utils.combine_nsamples(self.nsample_array[:, 0],
