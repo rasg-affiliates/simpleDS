@@ -1,0 +1,11 @@
+# Don't build any extra formats
+formats:
+    - none
+conda:
+    file: ci/rtd_env.yml
+build:
+    image: latest
+python:
+   version: 3.6
+python:
+   setup_py_install: true
