@@ -53,6 +53,7 @@ def write_index_rst(readme_file=None, write_file=None):
             '   dspec_parameters\n'
             '   DelaySpectrum\n'
             '   cosmo\n'
+            '   utils\n'
             '   tutorial\n'
             )
 
