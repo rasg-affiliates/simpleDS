@@ -112,6 +112,11 @@ jobs:
             name: configure conda environment
             command: ./ci/install-circle.sh
         - run:
+            name: install pyuvdata
+            command: |
+              source activate ${ENV_NAME}
+              pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
+        - run:
             name: install
             command: |
               source activate ${ENV_NAME}
