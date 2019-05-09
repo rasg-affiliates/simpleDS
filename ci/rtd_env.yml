@@ -8,3 +8,4 @@ dependencies:
   - six
   - conda-forge::pypandoc
   - conda-forge::pyuvdata
+  - nbsphinx
