@@ -184,5 +184,6 @@ workflows:
           python_version: "3.7"
       - tutorial_notebook:
           name: tutorial
+          python_version: "3.6"
           requires:
               - simpleds_3.6
