@@ -50,7 +50,7 @@ def write_index_rst(readme_file=None, write_file=None):
     out += ('\n\nFurther Documentation\n====================================\n'
             '.. toctree::\n'
             '   :maxdepth: 2\n\n'
-            '   index\n'
+            # '   index\n'
             '   dspec_parameters\n'
             '   DelaySpectrum\n'
             '   cosmo\n'
