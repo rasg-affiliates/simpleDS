@@ -201,4 +201,6 @@ workflows:
           name: tutorial
           python_version: "3.6"
           requires:
+              - simpleds_2.7
               - simpleds_3.6
+              - simpleds_3.7
