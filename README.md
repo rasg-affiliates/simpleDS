@@ -56,3 +56,14 @@ Navigate into the directory and run `python setup.py install` or `pip install .`
 ## Running Tests
 Requires installation of `nose` package.
 From the source `simpleDS` directory run: `nosetests simpleDS`.
+
+
+# Versioning
+We use a `generation.major.minor` version number format.
+- The`generation` number for very significant improvements, major rewrites, and API breaking changes.
+- The `major` number to indicate substantial package changes.
+- The `minor` number to release smaller incremental updates which usually do not include breaking API changes.
+We do our best to provide a significant period of deprecation warnings for all breaking changes to the API. We track all changes in our [changelog](https://github.com/RadioAstronomySoftwareGroup/simpleDS/blob/master/CHANGELOG.md).
+
+# Documentation
+A tutorial with example usage is hosted on [ReadTheDocs](https://simpleds.readthedocs.io).
