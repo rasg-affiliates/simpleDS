@@ -18,15 +18,11 @@ from scipy import integrate
 from astropy import constants as const
 from astropy import units
 from astropy.units import Quantity
-from astropy.cosmology import WMAP9
+from astropy.cosmology import Planck15
 from simpleDS.data import DATA_PATH
 from simpleDS import cosmo
 # the emission frequency of 21m photons
 f21 = 1420405751.7667 * units.Hz
-
-# Using WMAP 9-year cosmology as the default
-# move in the the little-h unit frame by setting H0=100
-little_h_cosmo = WMAP9.clone(name='WMAP9 h-units', H0=100)
 
 
 def test_calc_z_freq_unitless():
@@ -76,7 +72,8 @@ def test_u2kperp_val():
     test_z = 7.6363125
     test_u = 10
     test_kperp = cosmo.u2kperp(test_u, test_z)
-    nt.assert_true(np.isclose(.01, test_kperp.value))
+    test_val = 2 * np.pi * test_u / Planck15.comoving_transverse_distance(test_z)
+    nt.assert_true(np.isclose(test_val.value, test_kperp.value))
 
 
 def test_kperp2u_error():
@@ -98,6 +95,7 @@ def test_kperp2u_unit():
     test_kperp = .01 * 1. / units.Mpc
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
+    test_val = test_kperp.value * Planck15.comoving_transverse_distance(test_z) / (2 * np.pi)
     nt.assert_equal(test_u.unit.bases, [])
 
 
@@ -106,7 +104,8 @@ def test_kperp2u_value():
     test_kperp = .01 * 1. / units.Mpc
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
-    nt.assert_true(np.isclose(10, test_u.value))
+    test_val = test_kperp.value * Planck15.comoving_transverse_distance(test_z) / (2 * np.pi)
+    nt.assert_true(np.isclose(test_val.value, test_u.value))
 
 
 def test_kperp2u2kperp_equal():
@@ -137,7 +136,9 @@ def test_eta2kparr_val():
     test_eta = 200 * 1e-9 * units.s
     test_z = 9.19508
     test_kparr = cosmo.eta2kparr(test_eta, test_z)
-    nt.assert_true(np.isclose(.1, test_kparr.value))
+    test_val = (test_eta * (2 * np.pi * Planck15.H0 * f21 * Planck15.efunc(test_z))
+                / (const.c * (1 + test_z)**2)).to('1/Mpc')
+    nt.assert_true(np.isclose(test_val.value, test_kparr.value))
 
 
 def test_eta2kparr_unit():
@@ -167,7 +168,9 @@ def test_kparr2eta_val():
     test_kparr = .1 / units.Mpc
     test_z = 9.19508
     test_eta = cosmo.kparr2eta(test_kparr, test_z)
-    nt.assert_true(np.isclose(200, test_eta.value * 1e9))
+    test_val = (test_kparr * const.c * (1 + test_z)**2
+                / (2 * np.pi * Planck15.H0 * f21 * Planck15.efunc(test_z))).to('s')
+    nt.assert_true(np.isclose(test_val.value, test_eta.value))
 
 
 def test_kparr2eta_unit():
