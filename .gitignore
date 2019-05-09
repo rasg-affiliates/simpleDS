@@ -74,3 +74,5 @@ docs/references/*.out
 .running_kernel
 
 examples/\.ipynb_checkpoints/
+
+docs/examples/\.ipynb_checkpoints/
