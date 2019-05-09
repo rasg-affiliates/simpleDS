@@ -185,4 +185,4 @@ workflows:
       - tutorial_notebook:
           name: tutorial
           requires:
-            - "simplesds_3.6"
+              - simpleds_3.6
