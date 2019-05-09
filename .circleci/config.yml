@@ -138,7 +138,7 @@ jobs:
       - image: continuumio/miniconda:latest
     environment:
       PYTHON: << parameters.python_version >>
-      ENV_NAME: simpleds_tests
+      ENV_NAME: simpleds_tutorial
     steps:
       - checkout
       - restore_cache:
