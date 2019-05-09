@@ -156,6 +156,7 @@ jobs:
           command: |
             source activate ${ENV_NAME}
             python setup.py build_ext --force --inplace
+            python setup.py install
       - run:
           name: run tutorial notebook
           command: |
