@@ -44,6 +44,7 @@ def write_index_rst(readme_file=None, write_file=None):
     end_text = '`nosetests simpleDS`'
     regex = re.compile(end_text.replace(' ', r'\s+'))
     loc = re.search(regex, readme_text).start()
+    tutorial_notebook_file = os.path.join(os.path.abspath('../examples'), 'simpleds_tutorial.ipynb')
 
     out += readme_text[0:loc] + end_text + '.'
     out += ('\n\nFurther Documentation\n====================================\n'
@@ -54,7 +55,7 @@ def write_index_rst(readme_file=None, write_file=None):
             '   DelaySpectrum\n'
             '   cosmo\n'
             '   utils\n'
-            '   tutorial\n'
+            '   examples/simpleDS_tutorial\n'
             )
 
     out.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\xa0", " ")
