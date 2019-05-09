@@ -12,3 +12,5 @@ dependencies:
   - scipy
   - six
   - coveralls
+  - nbval
+  - matplotlib

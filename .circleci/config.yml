@@ -142,7 +142,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tutorial.yml" }}
       - run:
           name: configure conda environment
           command: ./ci/install-circle.sh
@@ -162,6 +162,10 @@ jobs:
           command: |
             source activate ${ENV_NAME}
             python -m pytest --nbval --current-env docs/examples/simpleDS_tutorial.ipynb
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tutorial.yml" }}
+          paths:
+            - "/opt/conda/envs/${ENV_NAME}/"
 workflows:
   version: 2
   style_and_format:
