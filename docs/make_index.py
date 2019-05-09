@@ -41,12 +41,12 @@ def write_index_rst(readme_file=None, write_file=None):
 
     readme_text = title_badge_text + readme_text[start_desc:]
 
-    end_text = '`nosetests simpleDS`'
+    end_text = '# Documentation'
     regex = re.compile(end_text.replace(' ', r'\s+'))
     loc = re.search(regex, readme_text).start()
     tutorial_notebook_file = os.path.join(os.path.abspath('../examples'), 'simpleds_tutorial.ipynb')
 
-    out += readme_text[0:loc] + end_text + '.'
+    out += readme_text[0:loc]
     out += ('\n\nFurther Documentation\n====================================\n'
             '.. toctree::\n'
             '   :maxdepth: 2\n\n'
