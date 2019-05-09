@@ -41,7 +41,7 @@ def write_index_rst(readme_file=None, write_file=None):
 
     readme_text = title_badge_text + readme_text[start_desc:]
 
-    end_text = '# Documentation'
+    end_text = 'Documentation'
     regex = re.compile(end_text.replace(' ', r'\s+'))
     loc = re.search(regex, readme_text).start()
     tutorial_notebook_file = os.path.join(os.path.abspath('../examples'), 'simpleds_tutorial.ipynb')
