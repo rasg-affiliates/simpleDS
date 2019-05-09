@@ -160,8 +160,7 @@ jobs:
           name: run tutorial notebook
           command: |
             source activate ${ENV_NAME}
-            python -m ipykernel install --user --name ${ENV_NAME} --display-name py3
-            python -m pytest --nbval docs/examples/simpleDS_tutorial.ipynb
+            python -m pytest --nbval --current-env docs/examples/simpleDS_tutorial.ipynb
 workflows:
   version: 2
   style_and_format:
