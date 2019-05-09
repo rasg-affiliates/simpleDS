@@ -3,10 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- ReadTheDocs support for simpleDS Documentation
+- Versioning definition.
 ### Changed
 - specifies minimum dependency for pyuvdata >= 1.3.8
+- Tutorial notebook moved to ReadTheDocs and added more commentary.
 - file compatibility to use uvfits not uvh5 since uvh5 is optional dependency.
 ### Fixed
+- various typos.
 
 ## [1.0.1] 19 April 2019
 ### Added
