@@ -13,3 +13,4 @@ dependencies:
   - six
   - coveralls
   - nbval
+  - ipykernel

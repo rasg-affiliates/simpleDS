@@ -24,7 +24,7 @@ jobs:
             source activate ${ENV_NAME}
             pycodestyle simpleDS
       - save_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
   docstyle:
@@ -39,7 +39,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_docstyle.yml" }}
       - run:
           name: configure conda environment
           command: ./ci/install-circle.sh
@@ -49,7 +49,7 @@ jobs:
             source activate ${ENV_NAME}
             pydocstyle simpleDS
       - save_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_docstyle.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
 
@@ -157,10 +157,11 @@ jobs:
             source activate ${ENV_NAME}
             python setup.py build_ext --force --inplace
       - run:
-          name: run simpleDS tests
+          name: run tutorial notebook
           command: |
             source activate ${ENV_NAME}
-             python -m pytest --nbval docs/examples/simpleDS_tutorial.ipynb
+            python -m ipykernel install --user --name ${ENV_NAME} --display-name py3
+            python -m pytest --nbval docs/examples/simpleDS_tutorial.ipynb
 workflows:
   version: 2
   style_and_format:
