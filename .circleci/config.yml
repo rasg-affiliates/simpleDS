@@ -174,29 +174,30 @@ workflows:
           python_version: "3.6"
       - docstyle:
           python_version: "3.6"
-      - doctest:
-          python_version: "3.6"
       - simpleds:
           name: simpleds_2.7
           python_version: "2.7"
           requires:
-            - doctest
             - linter
             - docstyle
       - simpleds:
           name: simpleds_3.6
           python_version: "3.6"
           requires:
-            - doctest
             - linter
             - docstyle
       - simpleds:
           name: simpleds_3.7
           python_version: "3.7"
           requires:
-            - doctest
             - linter
             - docstyle
+      - doctest:
+          python_version: "3.6"
+          requires:
+              - simpleds_2.7
+              - simpleds_3.6
+              - simpleds_3.7
       - tutorial_notebook:
           name: tutorial
           python_version: "3.6"
