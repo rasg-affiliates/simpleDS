@@ -13,15 +13,14 @@ import numpy as np
 from astropy import constants as const
 from astropy import units
 from astropy.units import Quantity
-from astropy.cosmology import WMAP9, default_cosmology
+from astropy.cosmology import Planck15, default_cosmology
 
 # the emission frequency of 21m photons in the Hydrogen's rest frame
 f21 = 1420405751.7667 * units.Hz
 
 # Using WMAP 9-year cosmology as the default
 # move in the the little-h unit frame by setting H0=100
-little_h_cosmo = WMAP9.clone(name='h-units', H0=100)
-default_cosmology.set(little_h_cosmo)
+default_cosmology.set(Planck15)
 
 
 @units.quantity_input(freq='frequency')
