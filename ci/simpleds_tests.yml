@@ -12,3 +12,4 @@ dependencies:
   - scipy
   - six
   - coveralls
+  - nbval

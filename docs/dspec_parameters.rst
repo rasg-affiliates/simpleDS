@@ -118,4 +118,4 @@ These parameters are not required to prepare a DelaySpectrum object for power sp
 **unit_conversion**
      The cosmological unit conversion factor applied to the data. Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.Depending on units of input visibilities it may take units of mK^2/(h/Mpc)^3 / (K * sr * Hz)^2 or mK^2/[h/Mpc]^3 / (Jy * Hz)^2
 
-last updated: 2019-05-08
+last updated: 2019-05-09
