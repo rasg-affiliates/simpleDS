@@ -168,25 +168,35 @@ jobs:
             - "/opt/conda/envs/${ENV_NAME}/"
 workflows:
   version: 2
-  style_and_format:
+  build_and_test:
     jobs:
       - linter:
           python_version: "3.6"
       - docstyle:
           python_version: "3.6"
-  build_and_test:
-    jobs:
       - doctest:
           python_version: "3.6"
       - simpleds:
           name: simpleds_2.7
           python_version: "2.7"
+          requires:
+            - doctest
+            - linter
+            - docstyle
       - simpleds:
           name: simpleds_3.6
           python_version: "3.6"
+          requires:
+            - doctest
+            - linter
+            - docstyle
       - simpleds:
           name: simpleds_3.7
           python_version: "3.7"
+          requires:
+            - doctest
+            - linter
+            - docstyle
       - tutorial_notebook:
           name: tutorial
           python_version: "3.6"
