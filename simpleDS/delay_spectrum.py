@@ -10,7 +10,6 @@ import copy
 import six
 
 import numpy as np
-import collections
 import warnings
 from pyuvdata import UVData, UVBase, utils as uvutils
 import astropy.units as units
@@ -22,6 +21,11 @@ from scipy.signal import windows
 import scipy.integrate as integrate
 from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
+
+if six.PY3:
+    from collections.abc import Callable
+else:
+    from collections import Callable
 
 
 class DelaySpectrum(UVBase):
@@ -43,7 +47,7 @@ class DelaySpectrum(UVBase):
     trcvr :  Astropy Quantity, units: Kelvin, optional
         Receiver Temperature of antenna to calculate noise power
         input during initialization is optional, but must be set later with add_trcvr()
-    taper : function or callable, optional
+    taper : function or Callable, optional
         Spectral taper function used during frequency Fourier Transforms
         Accepts scipy.signal.windows functions or any function
         whose argument is the len(data) and returns a numpy array.
@@ -380,7 +384,7 @@ class DelaySpectrum(UVBase):
 
         desc = ('Spectral taper function used during Fourier Transform. Functions like scipy.signal.windows.blackmanharris')
         self._taper = UnitParameter('taper', description=desc,
-                                    form=(), expected_type=collections.Callable,
+                                    form=(), expected_type=Callable,
                                     value=windows.blackmanharris,
                                     value_not_quantity=True)
 
@@ -414,7 +418,7 @@ class DelaySpectrum(UVBase):
 
         Parameters
         ----------
-        taper : function or callable, Optional
+        taper : function or Callable, Optional
             Spectral taper function used during frequency Fourier Transforms
             Accepts scipy.signal.windows functions or any function
             whose argument is the len(data) and returns a numpy array.
