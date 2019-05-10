@@ -10,4 +10,6 @@ cd $DIR/..
 python setup.py develop
 
 cd simpleDS/tests
-nosetests  --nologcapture --cover-inclusive --with-coverage --cover-erase --cover-package=simpleDS --cover-html "$@"
+python -m pytest --cov=simpleDS --cov-config=../../.coveragerc\
+       --cov-report term --cov-report html:cover \
+       "$@"
