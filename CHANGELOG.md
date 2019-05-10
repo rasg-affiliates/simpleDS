@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - specifies minimum dependency for pyuvdata >= 1.3.8
 - Tutorial notebook moved to ReadTheDocs and added more commentary.
 - file compatibility to use uvfits not uvh5 since uvh5 is optional dependency.
+- test package changed from nose to pytest
 ### Fixed
 - various typos.
 
