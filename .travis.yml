@@ -39,7 +39,7 @@ install:
 
   # install dependencies
 
-  - conda install numpy scipy nose pip coverage astropy six coveralls coverage pycodestyle h5py codecov
+  - conda install numpy scipy pytest-cov pip coverage astropy six coveralls coverage pycodestyle h5py codecov
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - conda list
   - python --version
@@ -51,7 +51,7 @@ install:
 
 script:
   - python setup.py build_ext --force --inplace
-    python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml -v simpleDS
+  - python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml -v simpleDS
   - pycodestyle --ignore=E501,W503 simpleDS
 
 after_success:
