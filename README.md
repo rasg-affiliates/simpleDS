@@ -54,8 +54,8 @@ Clone the repo using
 Navigate into the directory and run `python setup.py install` or `pip install .`
 
 ## Running Tests
-Requires installation of `nose` package.
-From the source `simpleDS` directory run: `nosetests simpleDS`.
+We use `pytest` to execute the tests for this pacakge.
+From the source `simpleDS` directory run: `python -m pytest`, or use the `test_coverage.sh` script in the `scripts` directory.
 
 
 # Versioning
