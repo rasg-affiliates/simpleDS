@@ -8,7 +8,7 @@ import os
 import sys
 import numpy as np
 import copy
-import nose.tools as nt
+import pytest
 import unittest
 
 from pyuvdata import UVBeam, UVData
@@ -25,7 +25,7 @@ from pyuvdata.data import DATA_PATH as UVDATA_PATH
 import simpleDS.tests as sdstest
 
 
-class TestClass(object):
+class DummyClass(object):
     """A Dummy object for comparison."""
 
     def __init__(self):
@@ -33,7 +33,7 @@ class TestClass(object):
         pass
 
 
-class TestDelaySpectrumInit(object):
+class TestDelaySpectrumInit(unittest.TestCase):
     """A test class to check DelaySpectrum objects."""
 
     def setUp(self):
@@ -73,8 +73,8 @@ class TestDelaySpectrumInit(object):
         for prop in self.dspec_object.required():
             required.append(prop)
         for a in self.required_parameters:
-            nt.assert_true(a in required, msg='expected attribute ' + a
-                           + ' not returned in required iterator')
+            assert a in required, ('expected attribute ' + a
+                                   + ' not returned in required iterator')
 
     def test_properties(self):
         """Test that properties can be get and set properly."""
@@ -85,7 +85,7 @@ class TestDelaySpectrumInit(object):
             setattr(self.dspec_object, k, rand_num)
             this_param = getattr(self.dspec_object, v)
             try:
-                nt.assert_equal(rand_num, this_param.value)
+                assert rand_num == this_param.value
             except(AssertionError):
                 print('setting {prop_name} to a random number failed'.format(prop_name=k))
                 raise(AssertionError)
@@ -93,7 +93,7 @@ class TestDelaySpectrumInit(object):
 
 def test_errors_when_taper_not_function():
     """Test that init errors if taper not a function."""
-    nt.assert_raises(ValueError, DelaySpectrum, taper='test')
+    pytest.raises(ValueError, DelaySpectrum, taper='test')
 
 
 def test_error_for_multiple_baselines():
@@ -104,23 +104,23 @@ def test_error_for_multiple_baselines():
     uvd.uvw_array = np.array([[0, 1, 0], [1, 0, 0]])
     # uvd.read(testfile)
     # uvd.unphase_to_drift(use_ant_pos=True)
-    nt.assert_raises(ValueError, DelaySpectrum, uv=uvd)
+    pytest.raises(ValueError, DelaySpectrum, uv=uvd)
 
 
 def test_error_if_uv_not_uvdata():
     """Test error is raised when input uv is not a UVData object."""
-    bad_input = TestClass()
-    nt.assert_raises(ValueError, DelaySpectrum, uv=bad_input)
+    bad_input = DummyClass()
+    pytest.raises(ValueError, DelaySpectrum, uv=bad_input)
 
 
 def test_custom_taper():
     """Test setting custom taper."""
     test_win = windows.blackman
     dspec = DelaySpectrum(taper=test_win)
-    nt.assert_equal(test_win, dspec.taper)
+    assert test_win == dspec.taper
 
 
-class TestBasicFunctions(object):
+class TestBasicFunctions(unittest.TestCase):
     """Test basic equality functions."""
 
     def setUp(self):
@@ -139,142 +139,142 @@ class TestBasicFunctions(object):
 
     def test_equality(self):
         """Basic equality test."""
-        nt.assert_equal(self.dspec_object, self.dspec_object2)
+        assert self.dspec_object == self.dspec_object2
 
     def test_check(self):
         """Test that check function operates as expected."""
-        nt.assert_true(self.dspec_object.check())
+        assert self.dspec_object.check()
 
         # test that it fails if we change values
         self.dspec_object.Ntimes += 1
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Ntimes -= 1
 
         self.dspec_object.Nbls += 1
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nbls -= 1
 
         self.dspec_object.Nfreqs += 1
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nfreqs -= 1
 
         self.dspec_object.Npols += 1
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Npols -= 1
 
         self.dspec_object.Ndelays += 1
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Ndelays -= 1
 
         self.dspec_object.Ndelays = np.float(self.dspec_object.Ndelays)
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Ndelays = np.int(self.dspec_object.Ndelays)
 
         self.dspec_object.polarization_array = self.dspec_object.polarization_array.astype(np.float)
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.polarization_array = self.dspec_object.polarization_array.astype(np.int)
 
         Nfreqs = copy.deepcopy(self.dspec_object.Nfreqs)
         self.dspec_object.Nfreqs = None
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nfreqs = Nfreqs
 
         self.dspec_object.vis_units = 2
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.vis_units = 'Jy'
 
         self.dspec_object.Nfreqs = (2, 1, 2)
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nfreqs = Nfreqs
 
         self.dspec_object.Nfreqs = np.complex(2)
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nfreqs = Nfreqs
 
         freq_back = copy.deepcopy(self.dspec_object.freq_array)
         self.dspec_object.freq_array = np.arange(self.dspec_object.Nfreqs).reshape(1, Nfreqs).tolist()
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.freq_array = freq_back
 
         freq_back = copy.deepcopy(self.dspec_object.freq_array)
         self.dspec_object.freq_array = freq_back.value.copy() * units.m
-        nt.assert_raises(units.UnitConversionError, self.dspec_object.check)
+        pytest.raises(units.UnitConversionError, self.dspec_object.check)
         self.dspec_object.freq_array = freq_back
 
         self.dspec_object.freq_array = freq_back.value.astype(np.complex) * freq_back.unit
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.freq_array = freq_back
 
         integration_time_back = copy.deepcopy(self.dspec_object.integration_time)
         self.dspec_object.integration_time = integration_time_back.astype(complex)
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.integration_time = integration_time_back
 
         Nuv = self.dspec_object.Nuv
         self.dspec_object.Nuv = 10
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nuv = Nuv
 
         self.dspec_object.data_type = 'delay'
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.data_type = 'frequency'
 
         self.dspec_object.data_array = self.dspec_object.data_array * units.Hz
-        nt.assert_raises(ValueError, self.dspec_object.check)
+        pytest.raises(ValueError, self.dspec_object.check)
 
         self.dspec_object.data_type = 'delay'
-        nt.assert_true(self.dspec_object.check())
+        assert self.dspec_object.check()
         self.dspec_object.data_type = 'frequency'
         self.dspec_object.data_array = self.dspec_object.data_array.value * units.Jy
-        nt.assert_true(self.dspec_object.check())
+        assert self.dspec_object.check()
 
     def test_add_wrong_units(self):
         """Test error is raised when adding a uvdata_object with the wrong units."""
         uvd = UVData()
         uvd.read(self.testfile)
         uvd.vis_units = 'K str'
-        nt.assert_raises(units.UnitConversionError, self.dspec_object.add_uvdata, uvd)
+        pytest.raises(units.UnitConversionError, self.dspec_object.add_uvdata, uvd)
         uvd.vis_units = 'uncalib'
         warn_message = ['Data is uncalibrated. Unable to covert '
                         'noise array to unicalibrated units.']
 
-        nt.assert_raises(units.UnitConversionError, uvtest.checkWarnings,
-                         self.dspec_object.add_uvdata, func_args=[uvd],
-                         category=UserWarning,
-                         nwarnings=len(warn_message),
-                         message=warn_message)
+        pytest.raises(units.UnitConversionError, uvtest.checkWarnings,
+                      self.dspec_object.add_uvdata, func_args=[uvd],
+                      category=UserWarning,
+                      nwarnings=len(warn_message),
+                      message=warn_message)
 
     def test_add_too_many_UVData(self):
         """Test error is raised when adding too many UVData objects."""
         uvd = UVData()
         uvd.read(self.testfile)
         self.dspec_object.Nuv = 2
-        nt.assert_raises(ValueError, self.dspec_object.add_uvdata, uvd)
+        pytest.raises(ValueError, self.dspec_object.add_uvdata, uvd)
 
     def test_incompatible_parameters(self):
         """Test UVData objects with incompatible paramters are rejected."""
         uvd = UVData()
         uvd.read(self.testfile)
         uvd.select(freq_chans=np.arange(12))
-        nt.assert_raises(ValueError, self.dspec_object.add_uvdata, uvd)
+        pytest.raises(ValueError, self.dspec_object.add_uvdata, uvd)
 
     def test_adding_spectral_windows_different_tuple_shape(self):
         """Test error is raised if spectral windows have different shape input."""
-        nt.assert_raises(ValueError, self.dspec_object.select_spectral_windows,
-                         spectral_windows=((2, 3), (1, 2, 4)))
+        pytest.raises(ValueError, self.dspec_object.select_spectral_windows,
+                      spectral_windows=((2, 3), (1, 2, 4)))
 
     def test_adding_spectral_windows_different_lengths(self):
         """Test error is raised if spectral windows have different shape input."""
-        nt.assert_raises(ValueError, self.dspec_object.select_spectral_windows,
-                         spectral_windows=((2, 3), (2, 6)))
+        pytest.raises(ValueError, self.dspec_object.select_spectral_windows,
+                      spectral_windows=((2, 3), (2, 6)))
 
     def test_adding_multiple_spectral_windows(self):
         """Test multiple spectral windows are added correctly."""
         self.dspec_object.select_spectral_windows([(3, 5), (7, 9)])
         expected_shape = (2, 1, self.dspec_object.Npols, self.dspec_object.Nbls,
                           self.dspec_object.Ntimes, 3)
-        nt.assert_equal(expected_shape, self.dspec_object.data_array.shape)
-        nt.assert_true(self.dspec_object.check())
+        assert expected_shape == self.dspec_object.data_array.shape
+        assert self.dspec_object.check()
 
     def test_add_second_uvdata_object(self):
         """Test a second UVdata object can be added correctly."""
@@ -283,9 +283,9 @@ class TestBasicFunctions(object):
         # multiply by a scalar here to track if it gets set in the correct slot
         uvd.data_array *= np.sqrt(2)
         self.dspec_object.add_uvdata(uvd)
-        nt.assert_equal(self.dspec_object.Nuv, 2)
-        nt.assert_true(np.allclose(self.dspec_object.data_array[:, 0].value,
-                                   self.dspec_object.data_array[:, 1].value / np.sqrt(2)))
+        assert self.dspec_object.Nuv == 2
+        assert (np.allclose(self.dspec_object.data_array[:, 0].value,
+                            self.dspec_object.data_array[:, 1].value / np.sqrt(2)))
 
 
 def test_adding_spectral_window_one_tuple():
@@ -295,10 +295,10 @@ def test_adding_spectral_window_one_tuple():
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
     dspec_object.select_spectral_windows(spectral_windows=(3, 12))
-    nt.assert_equal(dspec_object.Nfreqs, 10)
-    nt.assert_equal(dspec_object.Ndelays, 10)
-    nt.assert_true(np.allclose(dspec_object.freq_array.to('Hz').value,
-                               uvd.freq_array[:, 3:13]))
+    assert dspec_object.Nfreqs == 10
+    assert dspec_object.Ndelays == 10
+    assert (np.allclose(dspec_object.freq_array.to('Hz').value,
+                        uvd.freq_array[:, 3:13]))
 
 
 def test_adding_spectral_window_between_uvdata():
@@ -310,7 +310,7 @@ def test_adding_spectral_window_between_uvdata():
     dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
     uvd1 = copy.deepcopy(uvd)
     dspec_object.add_uvdata(uvd1)
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
 
 def test_adding_new_uvdata_with_different_freqs():
@@ -322,7 +322,7 @@ def test_adding_new_uvdata_with_different_freqs():
     dspec_object.select_spectral_windows(spectral_windows=[(3, 12)])
     uvd1 = copy.deepcopy(uvd)
     uvd1.freq_array *= 11.1
-    nt.assert_raises(ValueError, dspec_object.add_uvdata, uvd1)
+    pytest.raises(ValueError, dspec_object.add_uvdata, uvd1)
 
 
 def test_adding_new_uvdata_with_different_lsts():
@@ -351,7 +351,7 @@ def test_select_spectral_window_not_inplace():
     dspec_object = DelaySpectrum(uv=uvd)
     new_dspec = dspec_object.select_spectral_windows(spectral_windows=[(3, 12)],
                                                      inplace=False)
-    nt.assert_not_equal(dspec_object, new_dspec)
+    assert dspec_object != new_dspec
 
 
 def test_loading_different_arrays():
@@ -364,7 +364,7 @@ def test_loading_different_arrays():
     ants = [uvd.baseline_to_antnums(bl) for bl in bls]
     ants = [(a1, a2) for a1, a2 in ants]
     uvd.select(bls=ants)
-    nt.assert_raises(ValueError, dspec_object.add_uvdata, uvd)
+    pytest.raises(ValueError, dspec_object.add_uvdata, uvd)
 
 
 def test_loading_uvb_object():
@@ -379,8 +379,8 @@ def test_loading_uvb_object():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     uvb.select(frequencies=uvd.freq_array[0])
-    nt.assert_true(np.allclose(uvb.get_beam_area(pol='pI'),
-                               dspec_object.beam_area.to('sr').value))
+    assert np.allclose(uvb.get_beam_area(pol='pI'),
+                       dspec_object.beam_area.to('sr').value)
 
 
 def test_loading_uvb_object_no_data():
@@ -390,7 +390,7 @@ def test_loading_uvb_object_no_data():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    nt.assert_raises(ValueError, DelaySpectrum, uvb=uvb)
+    pytest.raises(ValueError, DelaySpectrum, uvb=uvb)
 
 
 def test_loading_uvb_object_with_data():
@@ -404,9 +404,9 @@ def test_loading_uvb_object_with_data():
     uvb.read_beamfits(test_uvb_file)
     dspec_object = DelaySpectrum(uv=uv, uvb=uvb)
 
-    nt.assert_true(dspec_object.check())
-    nt.assert_true(np.allclose(uvb.get_beam_area(pol='pI'),
-                               dspec_object.beam_area.to('sr').value))
+    assert dspec_object.check()
+    assert np.allclose(uvb.get_beam_area(pol='pI'),
+                       dspec_object.beam_area.to('sr').value)
 
 
 def test_loading_uvb_object_with_trcvr():
@@ -422,8 +422,8 @@ def test_loading_uvb_object_with_trcvr():
     uvb.receiver_temperature_array = np.ones((1, uvb.Nfreqs)) * 144
     dspec_object.add_uvbeam(uvb=uvb)
     uvb.select(frequencies=uvd.freq_array[0])
-    nt.assert_true(np.allclose(uvb.receiver_temperature_array[0],
-                               dspec_object.trcvr.to('K')[0].value))
+    assert np.allclose(uvb.receiver_temperature_array[0],
+                       dspec_object.trcvr.to('K')[0].value)
 
 
 def test_add_trcvr_scalar():
@@ -435,7 +435,7 @@ def test_add_trcvr_scalar():
     dspec_object = DelaySpectrum(uv=uvd)
     dspec_object.add_trcvr(9 * units.K)
     expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
-    nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+    assert expected_shape == dspec_object.trcvr.shape
 
 
 def test_add_trcvr_bad_number_of_spectral_windows():
@@ -446,7 +446,7 @@ def test_add_trcvr_bad_number_of_spectral_windows():
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
     bad_temp = np.ones((4, 21)) * units.K
-    nt.assert_raises(ValueError, dspec_object.add_trcvr, bad_temp)
+    pytest.raises(ValueError, dspec_object.add_trcvr, bad_temp)
 
 
 def test_add_trcvr_bad_number_of_freqs():
@@ -457,7 +457,7 @@ def test_add_trcvr_bad_number_of_freqs():
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
     bad_temp = np.ones((1, 51)) * units.K
-    nt.assert_raises(ValueError, dspec_object.add_trcvr, bad_temp)
+    pytest.raises(ValueError, dspec_object.add_trcvr, bad_temp)
 
 
 def test_add_trcvr_vector():
@@ -470,7 +470,7 @@ def test_add_trcvr_vector():
     good_temp = np.ones((1, 21)) * 9 * units.K
     dspec_object.add_trcvr(good_temp)
     expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
-    nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+    assert expected_shape == dspec_object.trcvr.shape
 
 
 def test_add_trcvr_init():
@@ -481,18 +481,18 @@ def test_add_trcvr_init():
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd, trcvr=9 * units.K)
     expected_shape = (dspec_object.Nspws, dspec_object.Nfreqs)
-    nt.assert_equal(expected_shape, dspec_object.trcvr.shape)
+    assert expected_shape == dspec_object.trcvr.shape
 
 
 def test_add_trcvr_init_error():
     """Test error is raised if trcvr is the only input to init."""
-    nt.assert_raises(ValueError, DelaySpectrum, trcvr=9 * units.K)
+    pytest.raises(ValueError, DelaySpectrum, trcvr=9 * units.K)
 
 
 def test_spectrum_on_no_data():
     """Test error is raised if spectrum attempted to be taken with no data."""
     dspec_object = DelaySpectrum()
-    nt.assert_raises(ValueError, dspec_object.calculate_delay_spectrum)
+    pytest.raises(ValueError, dspec_object.calculate_delay_spectrum)
 
 
 def test_noise_shape():
@@ -505,8 +505,8 @@ def test_noise_shape():
     dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
     dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
     dspec_object.generate_noise()
-    nt.assert_equal(dspec_object._noise_array.expected_shape(dspec_object),
-                    dspec_object.noise_array.shape)
+    assert (dspec_object._noise_array.expected_shape(dspec_object)
+            == dspec_object.noise_array.shape)
 
 
 def test_noise_shape():
@@ -519,7 +519,7 @@ def test_noise_shape():
     dspec_object.trcvr = np.zeros_like(dspec_object.trcvr)
     dspec_object.beam_area = np.ones_like(dspec_object.beam_area)
     dspec_object.generate_noise()
-    nt.assert_equal(dspec_object.noise_array.unit, units.Jy)
+    assert dspec_object.noise_array.unit == units.Jy
 
 
 def test_noise_amplitude():
@@ -548,7 +548,7 @@ def test_noise_amplitude():
                        1.09642801, 1.01100747, 1.0201933, 1.05762868, 0.95156612,
                        1.00190002, 1.00046522, 1.02796162, 1.04277506, 0.98373618,
                        1.01235802]])
-    nt.assert_true(np.allclose(ratio, (test_var / var).value))
+    assert np.allclose(ratio, (test_var / var).value)
 
 
 def test_delay_transform_units():
@@ -560,9 +560,9 @@ def test_delay_transform_units():
     dspec_object = DelaySpectrum(uv=uvd)
 
     dspec_object.delay_transform()
-    nt.assert_true(dspec_object.data_array.unit.is_equivalent(units.Jy * units.Hz))
+    assert dspec_object.data_array.unit.is_equivalent(units.Jy * units.Hz)
     dspec_object.delay_transform()
-    nt.assert_true(dspec_object.data_array.unit.is_equivalent(units.Jy))
+    assert dspec_object.data_array.unit.is_equivalent(units.Jy)
 
 
 def test_warning_from_uncalibrated_data():
@@ -596,7 +596,7 @@ def test_delay_transform_bad_data_type():
 
     dspec_object = DelaySpectrum(uvd)
     dspec_object.data_type = 'test'
-    nt.assert_raises(ValueError, dspec_object.delay_transform)
+    pytest.raises(ValueError, dspec_object.delay_transform)
 
 
 def test_delay_spectrum_power_units():
@@ -611,7 +611,7 @@ def test_delay_spectrum_power_units():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
-    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit))
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit)
 
 
 def test_delay_spectrum_power_shape():
@@ -628,7 +628,7 @@ def test_delay_spectrum_power_shape():
     dspec_object.calculate_delay_spectrum()
     power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
                    dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
-    nt.assert_equal(power_shape, dspec_object.power_array.shape)
+    assert power_shape == dspec_object.power_array.shape
 
 
 def test_delay_spectrum_power_shape_two_uvdata_objects_read():
@@ -645,7 +645,7 @@ def test_delay_spectrum_power_shape_two_uvdata_objects_read():
     dspec_object.calculate_delay_spectrum()
     power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
                    dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
-    nt.assert_equal(power_shape, dspec_object.power_array.shape)
+    assert power_shape == dspec_object.power_array.shape
 
 
 def test_delay_spectrum_power_shape_two_spectral_windows():
@@ -662,7 +662,7 @@ def test_delay_spectrum_power_shape_two_spectral_windows():
     dspec_object.calculate_delay_spectrum()
     power_shape = (dspec_object.Nspws, dspec_object.Npols, dspec_object.Nbls,
                    dspec_object.Nbls, dspec_object.Ntimes, dspec_object.Ndelays)
-    nt.assert_equal(power_shape, dspec_object.power_array.shape)
+    assert power_shape == dspec_object.power_array.shape
 
 
 def test_cosmological_units():
@@ -676,8 +676,8 @@ def test_cosmological_units():
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
-    nt.assert_true(dspec_object.k_perpendicular.unit.is_equivalent(1. / units.Mpc))
-    nt.assert_true(dspec_object.k_parallel.unit.is_equivalent(1. / units.Mpc))
+    assert dspec_object.k_perpendicular.unit.is_equivalent(1. / units.Mpc)
+    assert dspec_object.k_parallel.unit.is_equivalent(1. / units.Mpc)
 
 
 def test_delay_spectrum_power_units_input_kelvin_str():
@@ -714,7 +714,7 @@ def test_delay_spectrum_power_units_input_kelvin_str():
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
 
-    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit))
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit)
 
 
 def test_delay_spectrum_power_units_input_uncalib():
@@ -765,7 +765,7 @@ def test_delay_spectrum_power_units_input_uncalib():
                          nwarnings=len(warn_message),
                          category=UserWarning)
 
-    nt.assert_true((units.Hz**2).is_equivalent(dspec_object.power_array.unit))
+    assert (units.Hz**2).is_equivalent(dspec_object.power_array.unit)
 
 
 def test_delay_spectrum_noise_power_units():
@@ -818,7 +818,7 @@ def test_delay_spectrum_noise_power_units():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.noise_power.unit))
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.noise_power.unit)
 
 
 def test_delay_spectrum_thermal_power_units():
@@ -871,7 +871,7 @@ def test_delay_spectrum_thermal_power_units():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    nt.assert_true((units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.thermal_power.unit))
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.thermal_power.unit)
 
 
 def test_delay_spectrum_thermal_power_shape():
@@ -924,7 +924,7 @@ def test_delay_spectrum_thermal_power_shape():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    nt.assert_equal(dspec_object._thermal_power.expected_shape(dspec_object), dspec_object.thermal_power.shape)
+    assert dspec_object._thermal_power.expected_shape(dspec_object) == dspec_object.thermal_power.shape
 
 
 def test_multiple_polarization_file():
@@ -938,9 +938,9 @@ def test_multiple_polarization_file():
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
     dspec_object.calculate_delay_spectrum()
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
 
 def test_update_cosmology_units_and_shapes():
@@ -956,17 +956,18 @@ def test_update_cosmology_units_and_shapes():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
-    nt.assert_true(dspec_object.check())
+
+    assert dspec_object.check()
 
     dspec_object.update_cosmology(cosmology=test_cosmo)
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
 
 def test_update_cosmology_error_if_not_cosmology_object():
     """Test update cosmology function errors if new cosmology is not a Cosmology object."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
-    bad_input = TestClass()
+    bad_input = DummyClass()
 
     uvd = UVData()
     uvd.read(testfile)
@@ -976,9 +977,9 @@ def test_update_cosmology_error_if_not_cosmology_object():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
-    nt.assert_raises(ValueError, dspec_object.update_cosmology, cosmology=bad_input)
+    pytest.raises(ValueError, dspec_object.update_cosmology, cosmology=bad_input)
 
 
 def test_update_cosmology_unit_and_shape_kelvin_sr():
@@ -1016,10 +1017,10 @@ def test_update_cosmology_unit_and_shape_kelvin_sr():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
     dspec_object.update_cosmology(cosmology=test_cosmo)
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
 
 def test_update_cosmology_unit_and_shape_uncalib():
@@ -1071,11 +1072,11 @@ def test_update_cosmology_unit_and_shape_uncalib():
                          message=warn_message,
                          nwarnings=len(warn_message),
                          category=UserWarning)
-    print('Data units:', dspec_object.data_array.unit)
-    nt.assert_true(dspec_object.check())
+
+    assert dspec_object.check()
 
     dspec_object.update_cosmology(cosmology=test_cosmo)
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
 
 @sdstest.skipIf_py2
@@ -1092,12 +1093,13 @@ def test_update_cosmology_littleh_units():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum()
-    nt.assert_true(dspec_object.check())
+    assert dspec_object.check()
 
     dspec_object.update_cosmology(cosmology=test_cosmo, littleh_units=True)
-    nt.assert_true(dspec_object.check())
+
+    assert dspec_object.check()
     test_unit = (units.mK**2) / (units.littleh / units.Mpc)**3
-    nt.assert_equal(dspec_object.power_array.unit, test_unit)
+    assert dspec_object.power_array.unit, test_unit
 
 
 @sdstest.skipIf_py2
@@ -1114,8 +1116,9 @@ def test_update_cosmology_littleh_units_from_calc_delay_spectr():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb)
     dspec_object.calculate_delay_spectrum(cosmology=test_cosmo, littleh_units=True)
-    nt.assert_true(dspec_object.check())
+
+    assert dspec_object.check()
 
     test_unit = (units.mK**2) / (units.littleh / units.Mpc)**3
-    nt.assert_equal(dspec_object.power_array.unit, test_unit)
-    nt.assert_equal(dspec_object.cosmology.name, 'Planck15')
+    assert dspec_object.power_array.unit == test_unit
+    assert dspec_object.cosmology.name == 'Planck15'
