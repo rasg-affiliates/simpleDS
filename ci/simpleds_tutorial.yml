@@ -5,7 +5,6 @@ channels:
 dependencies:
   - astropy
   - h5py
-  - healpy
   - numpy
   - pip
   - scipy
