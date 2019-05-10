@@ -39,7 +39,7 @@ install:
 
   # install dependencies
 
-  - conda install numpy scipy pytest-cov pip coverage astropy six coveralls coverage pycodestyle h5py codecov
+  - conda install numpy scipy pytest-cov pip coverage astropy six coveralls coverage pycodestyle codecov
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - conda list
   - python --version
