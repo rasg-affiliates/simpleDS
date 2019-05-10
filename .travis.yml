@@ -51,7 +51,7 @@ install:
 
 script:
   - python setup.py build_ext --force --inplace
-  - nosetests simpleDS --nologcapture --with-coverage --cover-package=simpleDS
+    python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml -v simpleDS
   - pycodestyle --ignore=E501,W503 simpleDS
 
 after_success:
