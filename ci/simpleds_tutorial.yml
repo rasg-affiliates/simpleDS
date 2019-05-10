@@ -6,7 +6,6 @@ dependencies:
   - astropy
   - h5py
   - healpy
-  - nose
   - numpy
   - pip
   - scipy
