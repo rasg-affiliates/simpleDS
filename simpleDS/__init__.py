@@ -1,5 +1,5 @@
 # -*- mode: python; coding: utf-8 -*
-# Copyright (c) 2018 Matthew Kolopanis
+# Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Init file for simpleDS."""
 
