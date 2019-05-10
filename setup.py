@@ -41,7 +41,7 @@ setup_args = {
                          'scipy',
                          'pyuvdata>=1.3.8',
                          'six>=1.10'],
-    'test_suite': 'nose'
+    'tests_require': ['pytest'],
 }
 
 if __name__ == '__main__':
