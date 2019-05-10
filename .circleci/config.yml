@@ -84,8 +84,7 @@ jobs:
           command: |
             source activate ${ENV_NAME}
             mkdir test-reports
-            nosetests simpleDS -v --with-xunit --xunit-file=test-reports/xunit.xml --with-coverage --cover-package=simpleDS --cover-xml
-      - save_cache:
+            python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:test-reports/coverage.xml simpleDS
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
