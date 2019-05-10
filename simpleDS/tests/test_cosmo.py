@@ -13,7 +13,7 @@ from __future__ import print_function
 import os
 import sys
 import numpy as np
-import nose.tools as nt
+import pytest
 from scipy import integrate
 from astropy import constants as const
 from astropy import units
@@ -28,35 +28,35 @@ f21 = 1420405751.7667 * units.Hz
 def test_calc_z_freq_unitless():
     """Test redshift calculation fails for non-quantity freqs."""
     test_freq = .15e9
-    nt.assert_raises(TypeError, cosmo.calc_z, test_freq)
+    pytest.raises(TypeError, cosmo.calc_z, test_freq)
 
 
 def test_calc_z_freq_wrong_unit():
     """Test redshift calculation fails for non-quantity freqs."""
     test_freq = .15e9 * units.m
-    nt.assert_raises(units.UnitsError, cosmo.calc_z, test_freq)
+    pytest.raises(units.UnitsError, cosmo.calc_z, test_freq)
 
 
 def test_calc_z_value():
     """Test redshift calculation value."""
     test_freq = .15 * units.GHz
     test_z = f21 / test_freq - 1
-    nt.assert_true(np.isclose(test_z, cosmo.calc_z(test_freq)))
+    assert np.isclose(test_z, cosmo.calc_z(test_freq))
 
 
 def test_calc_freq_value():
     """Test frequency calculation value."""
     test_freq = .15 * units.GHz
     test_z = f21 / test_freq.to('Hz') - 1
-    nt.assert_true(np.isclose(test_freq.si.value,
-                              cosmo.calc_freq(test_z).value))
+    assert (np.isclose(test_freq.si.value,
+                       cosmo.calc_freq(test_z).value))
 
 
 def test_calc_freq_unit():
     """Test calc_freq returns a Quantity with units Hz."""
     test_z = 10
     test_freq = cosmo.calc_freq(test_z)
-    nt.assert_equal(units.Hz, test_freq.si.unit)
+    assert units.Hz == test_freq.si.unit
 
 
 def test_u2kperp_unit():
@@ -64,7 +64,7 @@ def test_u2kperp_unit():
     test_z = 7.6363125
     test_u = 10
     test_kperp = cosmo.u2kperp(test_u, test_z)
-    nt.assert_equal(1. / units.Mpc, test_kperp.unit)
+    assert (1. / units.Mpc).unit == test_kperp.unit
 
 
 def test_u2kperp_val():
@@ -73,21 +73,21 @@ def test_u2kperp_val():
     test_u = 10
     test_kperp = cosmo.u2kperp(test_u, test_z)
     test_val = 2 * np.pi * test_u / Planck15.comoving_transverse_distance(test_z)
-    nt.assert_true(np.isclose(test_val.value, test_kperp.value))
+    assert np.isclose(test_val.value, test_kperp.value)
 
 
 def test_kperp2u_error():
     """Test kperp must be a wavenumber Quantity."""
     test_kperp = .01 * units.s
     test_z = 7.6363125
-    nt.assert_raises(units.UnitsError, cosmo.kperp2u, test_kperp, test_z)
+    pytest.raises(units.UnitsError, cosmo.kperp2u, test_kperp, test_z)
 
 
 def test_kperp2u_no_unit():
     """Test kperp must be a Quantity."""
     test_kperp = .01
     test_z = 7.6363125
-    nt.assert_raises(TypeError, cosmo.kperp2u, test_kperp, test_z)
+    pytest.raises(TypeError, cosmo.kperp2u, test_kperp, test_z)
 
 
 def test_kperp2u_unit():
@@ -96,7 +96,7 @@ def test_kperp2u_unit():
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
     test_val = test_kperp.value * Planck15.comoving_transverse_distance(test_z) / (2 * np.pi)
-    nt.assert_equal(test_u.unit.bases, [])
+    assert test_u.unit.bases == []
 
 
 def test_kperp2u_value():
@@ -105,7 +105,7 @@ def test_kperp2u_value():
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
     test_val = test_kperp.value * Planck15.comoving_transverse_distance(test_z) / (2 * np.pi)
-    nt.assert_true(np.isclose(test_val.value, test_u.value))
+    assert np.isclose(test_val.value, test_u.value)
 
 
 def test_kperp2u2kperp_equal():
@@ -114,21 +114,21 @@ def test_kperp2u2kperp_equal():
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
     test_u2kperp = cosmo.u2kperp(test_u, test_z)
-    nt.assert_equal(test_kperp, test_u2kperp)
+    assert test_kperp == test_u2kperp
 
 
 def test_eta2kparr_error():
     """Test eta must be Quantity."""
     test_eta = 200 * 1e-9
     test_z = 9.19508
-    nt.assert_raises(TypeError, cosmo.eta2kparr, test_eta, test_z)
+    pytest.raises(TypeError, cosmo.eta2kparr, test_eta, test_z)
 
 
 def test_eta2kparr_wrong_unit():
     """Test eta must be frequncy Quantity."""
     test_eta = 200 * 1e-9 * units.m
     test_z = 9.19508
-    nt.assert_raises(units.UnitsError, cosmo.eta2kparr, test_eta, test_z)
+    pytest.raises(units.UnitsError, cosmo.eta2kparr, test_eta, test_z)
 
 
 def test_eta2kparr_val():
@@ -138,7 +138,7 @@ def test_eta2kparr_val():
     test_kparr = cosmo.eta2kparr(test_eta, test_z)
     test_val = (test_eta * (2 * np.pi * Planck15.H0 * f21 * Planck15.efunc(test_z))
                 / (const.c * (1 + test_z)**2)).to('1/Mpc')
-    nt.assert_true(np.isclose(test_val.value, test_kparr.value))
+    assert np.isclose(test_val.value, test_kparr.value)
 
 
 def test_eta2kparr_unit():
@@ -146,21 +146,21 @@ def test_eta2kparr_unit():
     test_eta = 200 * 1e-9 * units.s
     test_z = 9.19508
     test_kparr = cosmo.eta2kparr(test_eta, test_z)
-    nt.assert_equal(1. / units.Mpc, test_kparr.unit)
+    assert (1. / units.Mpc).unit == test_kparr.unit
 
 
 def test_kparr2eta_error():
     """Test kparr2eta errors for non quantity objects."""
     test_kparr = .1
     test_z = 9.19508
-    nt.assert_raises(TypeError, cosmo.kparr2eta, test_kparr, test_z)
+    pytest.raises(TypeError, cosmo.kparr2eta, test_kparr, test_z)
 
 
 def test_kparr2eta_wrong_unit():
     """Test kparr2eta errors for non quantity objects."""
     test_kparr = .1 * units.s
     test_z = 9.19508
-    nt.assert_raises(units.UnitsError, cosmo.kparr2eta, test_kparr, test_z)
+    pytest.raises(units.UnitsError, cosmo.kparr2eta, test_kparr, test_z)
 
 
 def test_kparr2eta_val():
@@ -170,7 +170,7 @@ def test_kparr2eta_val():
     test_eta = cosmo.kparr2eta(test_kparr, test_z)
     test_val = (test_kparr * const.c * (1 + test_z)**2
                 / (2 * np.pi * Planck15.H0 * f21 * Planck15.efunc(test_z))).to('s')
-    nt.assert_true(np.isclose(test_val.value, test_eta.value))
+    assert np.isclose(test_val.value, test_eta.value)
 
 
 def test_kparr2eta_unit():
@@ -178,7 +178,7 @@ def test_kparr2eta_unit():
     test_kparr = .1 / units.Mpc
     test_z = 9.19508
     test_eta = cosmo.kparr2eta(test_kparr, test_z)
-    nt.assert_equal(units.s, test_eta.unit)
+    assert units.s == test_eta.unit
 
 
 def test_kparr2eta_eta2kparr():
@@ -187,14 +187,14 @@ def test_kparr2eta_eta2kparr():
     test_z = 9.19508
     test_eta = cosmo.kparr2eta(test_kparr, test_z)
     test_eta2kparr = cosmo.eta2kparr(test_eta, test_z)
-    nt.assert_true(np.isclose(test_kparr.value, test_eta2kparr.value))
+    assert np.isclose(test_kparr.value, test_eta2kparr.value)
 
 
 def test_X2Y_unit():
     """Test unit on X2Y are 1/(Hz/Mpc)^3 or Mpc^3 * s."""
     test_z = 7
     test_x2y = cosmo.X2Y(test_z)
-    nt.assert_equal(units.Mpc**3 * units.s / units.sr, test_x2y.unit)
+    assert units.Mpc**3 * units.s / units.sr == test_x2y.unit
 
 
 def tests_X2Y_val():
@@ -203,4 +203,4 @@ def tests_X2Y_val():
     test_x2y = cosmo.X2Y(test_z)
     compare_x2y = (2 * np.pi)**3 / (cosmo.u2kperp(1, test_z)**2 * units.sr
                                     * cosmo.eta2kparr(1 * units.s, test_z))
-    nt.assert_true(np.isclose(compare_x2y.value, test_x2y.value))
+    assert np.isclose(compare_x2y.value, test_x2y.value)
