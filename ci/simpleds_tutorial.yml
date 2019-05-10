@@ -8,6 +8,5 @@ dependencies:
   - pip
   - scipy
   - six
-  - coveralls
   - nbval
   - matplotlib
