@@ -688,14 +688,14 @@ def test_delay_spectrum_power_units_input_kelvin_str():
                     'Antenna positions are not present in the file.']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
@@ -725,14 +725,14 @@ def test_delay_spectrum_power_units_input_uncalib():
                     'Antenna positions are not present in the file.']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
@@ -781,14 +781,14 @@ def test_delay_spectrum_noise_power_units():
                     'or miriad file types']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
@@ -834,14 +834,14 @@ def test_delay_spectrum_thermal_power_units():
                     'or miriad file types']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
@@ -887,14 +887,14 @@ def test_delay_spectrum_thermal_power_shape():
                     'or miriad file types']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
@@ -992,14 +992,14 @@ def test_update_cosmology_unit_and_shape_kelvin_sr():
                     'Antenna positions are not present in the file.']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
@@ -1033,14 +1033,14 @@ def test_update_cosmology_unit_and_shape_uncalib():
                     'Antenna positions are not present in the file.']
     pend_dep_message = ['antenna_positions are not defined. '
                         'antenna_positions will be a required parameter in '
-                        'future versions.']
+                        'version 1.5']
 
     test_uv_1 = uvtest.checkWarnings(utils.read_paper_miriad,
                                      func_args=[test_miriad, test_antpos_file],
                                      func_kwargs={'skip_header': 3,
                                                   'usecols': [1, 2, 3]},
                                      category=[UserWarning] * len(warn_message)
-                                     + [PendingDeprecationWarning],
+                                     + [DeprecationWarning],
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
