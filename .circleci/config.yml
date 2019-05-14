@@ -84,7 +84,7 @@ jobs:
           command: |
             source activate ${ENV_NAME}
             mkdir test-reports
-            python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml simpleDS
+            python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS 
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
