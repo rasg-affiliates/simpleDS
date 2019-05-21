@@ -1236,7 +1236,7 @@ class DelaySpectrum(UVBase):
                                 for p in self.polarization_array])
         npols_noise = npols_noise.reshape(1, self.Npols, 1, 1, 1, 1)
         with np.errstate(divide='ignore', invalid='ignore'):
-            Tsys = 180. * units.K * np.power(self.freq_array / (.18 * units.GHz), -2.55)
+            Tsys = 180. * units.K * np.power(self.freq_array.to('GHz') / (.18 * units.GHz), -2.55)
             Tsys += self.trcvr.to('K')
             Tsys = Tsys.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs)
             thermal_power = (Tsys.to('mK')
@@ -1249,7 +1249,7 @@ class DelaySpectrum(UVBase):
             thermal_power = (self.freq_array.unit
                              * thermal_power.unit**2
                              * integrate.trapz(thermal_power.value**2
-                                               * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs),
+                                               * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs)**2,
                                                x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
                                                axis=-1)
                              )
