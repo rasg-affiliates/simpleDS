@@ -907,7 +907,7 @@ class DelaySpectrum(UVBase):
         cosmology : Astropy Cosmology Object, optional
             input assumed cosmology. Must be an astropy cosmology object. Defualts to self.cosmology
         littleh_units: Bool, default:False
-                       automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
+                       automatically convert to to mK^2 / (littleh / Mpc)^3. Only applies in python 3.
 
         Raises
         ------
@@ -933,7 +933,14 @@ class DelaySpectrum(UVBase):
         # If power spectrum estimation has already occurred, need to re-normalize
         # in the new cosmological framework.
         if self.power_array is not None:
-            if self.unit_conversion is not None:
+            if six.PY3:
+                if self.power_array.unit.is_equivalent(units.mK**2 * units.Mpc**3 / units.littleh**3):
+                    self.power_array = self.power_array.to(units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0))
+                    self.noise_power = self.noise_power.to(units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0))
+            # only divide by the conversion when power array is in cosmological units
+            # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
+            if self.unit_conversion is not None and not self.power_array.unit.is_equivalent((units.Jy**2 * units.Hz**2,
+                                                                                             units.K**2 * units.sr**2 * units.Hz**2)):
                 with np.errstate(divide='ignore', invalid='ignore'):
                     self.power_array = self.power_array / self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
                     self.noise_power = self.noise_power / self.unit_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1, 1)
@@ -977,7 +984,13 @@ class DelaySpectrum(UVBase):
                 self.noise_power = self.noise_power.to('mK^2 * Mpc^3')
 
         if self.thermal_power is not None:
-            if self.thermal_conversion is not None:
+            if six.PY3:
+                if self.thermal_power.unit.is_equivalent(units.mK**2 * units.Mpc**3 / units.littleh**3):
+                    self.thermal_power = self.thermal_power.to(units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0))
+            # only divide by the conversion when power array is in cosmological units
+            # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
+            if self.thermal_conversion is not None and not self.thermal_power.unit.is_equivalent((units.Jy**2 * units.Hz**2,
+                                                                                                  units.K**2 * units.sr**2 * units.Hz**2)):
                 with np.errstate(divide='ignore', invalid='ignore'):
                     self.thermal_power = self.thermal_power / self.thermal_conversion.reshape(self.Nspws, self.Npols, 1, 1, 1)
             integration_array = (1.
@@ -1156,7 +1169,7 @@ class DelaySpectrum(UVBase):
             Input assumed cosmology
             Setting this value will overwrite the cosmology set on the DelaySpectrum Object.
         littleh_units: Bool, default:False
-                       automatically convert to to mK^2 / (litlteh / Mpc)^3. Only applies in python 3.
+                       automatically convert to to mK^2 / (littleh / Mpc)^3. Only applies in python 3.
 
         Raises
         ------
