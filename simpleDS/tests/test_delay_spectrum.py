@@ -1173,3 +1173,54 @@ def test_call_update_cosmology_twice_no_littleh():
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == 'Planck15'
     assert dspec_object.check()
+
+
+def test_call_delay_spectrum_twice_no_littleh():
+    """Test calculate_delay_spectrum can be called at least twice in a row without littleh_units."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    test_cosmo1 = WMAP9
+    test_cosmo2 = Planck15
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum(cosmology=test_cosmo1, littleh_units=False)
+
+    assert dspec_object.check()
+    assert dspec_object.cosmology.name == 'WMAP9'
+
+    dspec_object.calculate_delay_spectrum(cosmology=test_cosmo2, littleh_units=False)
+    test_unit = units.mK**2 * units.Mpc**3
+    assert dspec_object.power_array.unit == test_unit
+    assert dspec_object.cosmology.name == 'Planck15'
+    assert dspec_object.check()
+
+
+@sdstest.skipIf_py2
+def test_call_delay_spectrum_twice():
+    """Test calculate_delay_spectrum can be called at least twice in a row."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    test_cosmo1 = WMAP9
+    test_cosmo2 = Planck15
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum(cosmology=test_cosmo1, littleh_units=True)
+
+    assert dspec_object.check()
+    assert dspec_object.cosmology.name == 'WMAP9'
+
+    dspec_object.calculate_delay_spectrum(cosmology=test_cosmo2, littleh_units=True)
+    test_unit = units.mK**2 * units.Mpc**3 / units.littleh**3
+    assert dspec_object.power_array.unit == test_unit
+    assert dspec_object.cosmology.name == 'Planck15'
+    assert dspec_object.check()
