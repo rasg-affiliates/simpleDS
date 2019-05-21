@@ -15,7 +15,7 @@ from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 from astropy import constants as const
 from astropy import units
-from astropy.cosmology import Planck15
+from astropy.cosmology import Planck15, WMAP9
 from scipy.signal import windows
 
 from simpleDS import DelaySpectrum, delay_spectrum as dspec
@@ -1122,3 +1122,29 @@ def test_update_cosmology_littleh_units_from_calc_delay_spectr():
     test_unit = (units.mK**2) / (units.littleh / units.Mpc)**3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == 'Planck15'
+
+
+@sdstest.skipIf_py2
+def test_call_update_cosmology_twice():
+    """Test cosmology can be updated at least twice in a row with littleh_units."""
+    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
+    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
+    test_cosmo1 = WMAP9
+    test_cosmo2 = Planck15
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.calculate_delay_spectrum(cosmology=test_cosmo1, littleh_units=True)
+
+    assert dspec_object.check()
+    assert dspec_object.cosmology.name == 'WMAP9'
+
+    dspec_object.update_cosmology(test_cosmo2, littleh_units=True)
+    test_unit = (units.mK**2) / (units.littleh / units.Mpc)**3
+    assert dspec_object.power_array.unit == test_unit
+    assert dspec_object.cosmology.name == 'Planck15'
+    assert dspec_object.check()
