@@ -14,10 +14,13 @@ All notable changes to this project will be documented in this file.
 - Updated to DeprecationWarning for pyuvdata warnings
 - updated warning text from pyuvdata
 - Transition from nose to pytest
+
 ### Fixed
 - various typos.
-- Bug where `update_cosmology` would not convert littleh units back before trying to re-normalie power spectrum.
+- Bug where `update_cosmology` would not convert littleh units back before trying to re-normalize power spectrum.
 - Can call `calculate_delay_spectrum` twice now.
+- Bug where frequency array was not cast to GHz in the `thermal_power` calculation.
+- bug where `taper` was not squared in `thermal_power` calculation.
 
 ## [1.0.1] 19 April 2019
 ### Added
