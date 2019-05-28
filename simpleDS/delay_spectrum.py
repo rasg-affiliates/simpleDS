@@ -96,8 +96,8 @@ class DelaySpectrum(UVBase):
                                   acceptable_vals=[0, 1, 2], value=0,
                                   value_not_quantity=True)
 
-        dec = ('The number of spectral windows over which the Delay Transform '
-               'is performed. All spectral windows must be the same size.')
+        desc = ('The number of spectral windows over which the Delay Transform '
+                'is performed. All spectral windows must be the same size.')
         self._Nspws = UnitParameter('Nspws', description=desc,
                                     expected_type=int, value_not_quantity=True)
         # Fourier domain information
@@ -196,7 +196,7 @@ class DelaySpectrum(UVBase):
                                          expected_type=np.float,
                                          tols=1e-3 * units.Hz, expected_units=units.Hz)
 
-        dest = 'Array of delay, shape (Ndelays), units ns'
+        desc = 'Array of delay, shape (Ndelays), units ns'
         self._delay_array = UnitParameter('delay_array', description=desc,
                                           form=('Ndelays',),
                                           expected_type=np.float,
