@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - ReadTheDocs support for simpleDS Documentation
 - Versioning definition.
+
 ### Changed
 - Default cosmology is now Planck15
 - specifies minimum dependency for pyuvdata >= 1.3.8
