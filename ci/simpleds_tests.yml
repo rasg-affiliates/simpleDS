@@ -5,7 +5,10 @@ channels:
 dependencies:
   - astropy
   - numpy
-  - pip
   - scipy
   - six
+  - h5py
   - pytest-cov
+  - pip
+  - pip:
+    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
