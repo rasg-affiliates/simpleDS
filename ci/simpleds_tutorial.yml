@@ -8,6 +8,7 @@ dependencies:
   - scipy
   - six
   - h5py
+  - pytest
   - nbval
   - matplotlib
   - pip
