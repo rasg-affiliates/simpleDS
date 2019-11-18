@@ -588,7 +588,7 @@ class DelaySpectrum(UVBase):
             spectral windows ranges like (start_index, end_index) where the indices are the frequency channel numbers.
 
         tol : float
-            Tolerance in meters of the redundancy allowed for pyuvdata.get_baseline_redundancies calculation
+            Tolerance in meters of the redundancy allowed for pyuvdata.get_redundancies calculation
 
         Raises
         ------
@@ -602,7 +602,7 @@ class DelaySpectrum(UVBase):
             raise ValueError('Input data object must be an instance or '
                              'subclass of UVData.')
 
-        red_groups, uvw_centers, lengths, conjugates = uv.get_baseline_redundancies(tol=tol)
+        red_groups, uvw_centers, lengths, conjugates = uv.get_redundancies(tol=tol, get_conjugates=True)
         if len(red_groups) > 1:
             raise ValueError('A DelaySpectrum object can only perform a Fourier '
                              'Transform along a single baseline vector. '
