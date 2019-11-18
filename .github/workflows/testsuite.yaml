@@ -1,0 +1,152 @@
+name: Run Tests
+on: [push, pull_request]
+
+jobs:
+  linter:
+    name: Linter
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: simpleds_linting
+      WITH_SUDO: yes
+      PYTHON: 3.7
+    steps:
+     - uses: actions/checkout@master
+       with:
+         fetch-depth: 1
+
+     - name: Setup Environment
+       run: |
+         export PATH="/usr/share/miniconda/bin:$PATH"
+         ./ci/install-circle.sh
+
+     - name: Linting
+       run: |
+         source /usr/share/miniconda/bin/activate $ENV_NAME
+         pycodestyle simpleDS
+
+  docstyle:
+    name: Docstyle
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: simpleds_docstyle
+      WITH_SUDO: yes
+      PYTHON: 3.7
+    steps:
+     - uses: actions/checkout@master
+       with:
+         fetch-depth: 1
+     - name: Setup Environment
+       run: |
+         export PATH="/usr/share/miniconda/bin:$PATH"
+         ./ci/install-circle.sh
+
+     - name: Linting
+       run: |
+         source /usr/share/miniconda/bin/activate $ENV_NAME
+         pydocstyle simpleDS
+
+  tests:
+    env:
+      ENV_NAME: simpleds_tests
+      PYTHON: ${{ matrix.python-version }}
+      WITH_SUDO: yes
+      OS: ${{ matrix.os }}
+    name: Testing
+    needs: [linter, docstyle]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: [2.7, 3.6, 3.7]
+    steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+      - name: Get Miniconda MacOSX
+        if: matrix.os == 'macos-latest'
+        run: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O $HOME/miniconda.sh;
+          bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+      - name: Get Miniconda Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
+          bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+      - name: Setup Environment
+        run: |
+          export PATH="$HOME/miniconda/bin:$PATH"
+          ./ci/install-circle.sh
+
+      - name: Install
+        run: |
+          export PATH="$HOME/miniconda/bin:$PATH"
+          source activate ${ENV_NAME}
+          pip install -e .
+
+      - name: Run Tests
+        run: |
+          export PATH="$HOME/miniconda/bin:$PATH"
+          source activate $ENV_NAME
+          python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS
+
+      - uses: codecov/codecov-action@v1.0.3
+        if: matrix.os == 'ubuntu-latest' && success()
+        with:
+          token: ${{secrets.CODECOV_TOKEN}} #required
+          file: ./coverage.xml #optional
+
+  notebook:
+    name: Tutorial Notebook
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.7]
+
+    needs: [tests]
+
+    env:
+      ENV_NAME: simpleds_tutorial
+      WITH_SUDO: yes
+      PYTHON: ${{ matrix.python-version }}
+      OS: ${{ matrix.os }}
+    steps:
+     - uses: actions/checkout@master
+       with:
+         fetch-depth: 1
+
+     - name: Get Miniconda MacOSX
+       if: matrix.os == 'macos-latest'
+       run: |
+         wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O $HOME/miniconda.sh;
+         bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+     - name: Get Miniconda Linux
+       if: matrix.os == 'ubuntu-latest'
+       run: |
+         wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
+         bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+     - name: Setup Environment
+       run: |
+         export PATH="$HOME/miniconda/bin:$PATH"
+         ./ci/install-circle.sh
+
+     - name: Install
+       run: |
+         export PATH="$HOME/miniconda/bin:$PATH"
+         source activate ${ENV_NAME}
+         pip install -e .
+
+     - name: Run Tests
+       run: |
+         export PATH="$HOME/miniconda/bin:$PATH"
+         source activate $ENV_NAME
+         python -m pytest --nbval --current-env docs/examples/simpleDS_tutorial.ipynb

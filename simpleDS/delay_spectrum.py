@@ -602,7 +602,7 @@ class DelaySpectrum(UVBase):
             raise ValueError('Input data object must be an instance or '
                              'subclass of UVData.')
 
-        red_groups, uvw_centers, lengths, conjugates = uv.get_redundancies(tol=tol, get_conjugates=True)
+        red_groups, uvw_centers, lengths, conjugates = uv.get_redundancies(tol=tol, include_conjugates=True)
         if len(red_groups) > 1:
             raise ValueError('A DelaySpectrum object can only perform a Fourier '
                              'Transform along a single baseline vector. '

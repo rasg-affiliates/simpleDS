@@ -1,6 +1,16 @@
 set -xe
 
-apt-get update; apt-get install -y gcc g++
+# want 1 script to rule them all
+# but this part is not needed on MACOS
+if [[ ! $OS == 'macos-latest' ]]; then
+  if [ ! -z "$WITH_SUDO" ]; then
+    sudo apt-get update
+    sudo apt-get install -y gcc g++
+  else
+    apt-get update
+    apt-get install -y gcc g++
+  fi
+fi
 conda config --set always_yes yes --set changeps1 no
 conda update -q conda
 conda info -a
