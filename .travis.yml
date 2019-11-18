@@ -28,7 +28,7 @@ install:
 
   - conda create -q -n testenv python=$PYTHON_VERSION
   - source activate testenv
-  - conda install -c defaults -y 'libgfortran =3.0.0' libgfortran-ng;
+  - conda install -c defaults -y libgfortran libgfortran-ng
 
   - conda config --add channels conda-forge
   # - conda config --remove channels defaults
