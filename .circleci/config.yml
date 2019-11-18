@@ -70,11 +70,6 @@ jobs:
           name: configure conda environment
           command: ./ci/install-circle.sh
       - run:
-          name: install pyuvdata
-          command: |
-            source activate ${ENV_NAME}
-            pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
-      - run:
           name: install
           command: |
             source activate ${ENV_NAME}
@@ -84,7 +79,7 @@ jobs:
           command: |
             source activate ${ENV_NAME}
             mkdir test-reports
-            python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS 
+            python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
@@ -110,11 +105,6 @@ jobs:
         - run:
             name: configure conda environment
             command: ./ci/install-circle.sh
-        - run:
-            name: install pyuvdata
-            command: |
-              source activate ${ENV_NAME}
-              pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
         - run:
             name: install
             command: |
@@ -145,11 +135,6 @@ jobs:
       - run:
           name: configure conda environment
           command: ./ci/install-circle.sh
-      - run:
-          name: install pyuvdata
-          command: |
-            source activate ${ENV_NAME}
-            pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
       - run:
           name: install
           command: |
