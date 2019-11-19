@@ -6,7 +6,7 @@ jobs:
     name: Flake8
     runs-on: ubuntu-latest
     env:
-      ENV_NAME: simpleds_linting
+      ENV_NAME: linting
       WITH_SUDO: yes
       PYTHON: 3.7
     steps:
@@ -32,7 +32,7 @@ jobs:
 
   tests:
     env:
-      ENV_NAME: simpleds_tests
+      ENV_NAME: tests
       PYTHON: ${{ matrix.python-version }}
       WITH_SUDO: yes
       OS: ${{ matrix.os }}
@@ -98,7 +98,7 @@ jobs:
     needs: [tests]
 
     env:
-      ENV_NAME: simpleds_tutorial
+      ENV_NAME: tutorial
       WITH_SUDO: yes
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}

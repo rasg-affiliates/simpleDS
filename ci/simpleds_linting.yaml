@@ -1,4 +1,4 @@
-name: simpleds_linting
+name: linting
 channels:
   - defaults
   - conda-forge
@@ -7,3 +7,4 @@ dependencies:
   - pip
   - pip:
     - flake8-docstrings
+    - flake8-black
