@@ -90,7 +90,6 @@ def test_kperp2u_unit():
     test_kperp = .01 * 1. / units.Mpc
     test_z = 7.6363125
     test_u = cosmo.kperp2u(test_kperp, test_z)
-    test_val = test_kperp.value * Planck15.comoving_transverse_distance(test_z) / (2 * np.pi)
     assert test_u.unit.bases == []
 
 

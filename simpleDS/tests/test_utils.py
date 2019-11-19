@@ -5,12 +5,10 @@
 from __future__ import print_function
 
 import os
-import sys
 import copy
 import numpy as np
 import pytest
 from scipy.signal import windows
-import pyuvdata
 from pyuvdata import UVData, utils as uvutils
 import pyuvdata.tests as uvtest
 from simpleDS import utils
@@ -467,7 +465,6 @@ def test_cross_multiply_array_different_shapes():
 def test_cross_multiply_shape():
     """Test that the shape of the array is correct size."""
     array_1 = np.ones((1, 3))
-    axis = 1
     array_out = utils.cross_multiply_array(array_1, axis=1)
     assert (1, 3, 3) == array_out.shape
 
@@ -475,7 +472,6 @@ def test_cross_multiply_shape():
 def test_cross_multiply_from_list():
     """Test that conversion to array occurs correctly from list."""
     array_1 = np.ones((1, 3)).tolist()
-    axis = 1
     array_out = utils.cross_multiply_array(array_1, axis=1)
     assert (1, 3, 3) == array_out.shape
 
@@ -484,7 +480,6 @@ def test_cross_multiply_array_2_list():
     """Test array_2 behaves properly if originally a list."""
     array_1 = np.ones((1, 3))
     array_2 = np.ones((1, 3)).tolist()
-    axis = 1
     array_out = utils.cross_multiply_array(array_1, array_2, axis=1)
     assert (1, 3, 3) == array_out.shape
 
@@ -492,7 +487,6 @@ def test_cross_multiply_array_2_list():
 def test_cross_multiply_quantity():
     """Test that cross mulitplying quantities behaves well."""
     array_1 = np.ones((1, 3)) * units.Hz
-    axis = 1
     array_out = utils.cross_multiply_array(array_1, axis=1)
     assert (1, 3, 3) == array_out.shape
 
@@ -500,7 +494,6 @@ def test_cross_multiply_quantity():
 def test_cross_multiply_quantity_units():
     """Test that cross mulitplying quantities have the right units."""
     array_1 = np.ones((1, 3)) * units.Hz
-    axis = 1
     array_out = utils.cross_multiply_array(array_1, axis=1)
     assert units.Hz**2 == array_out.unit
 
@@ -514,7 +507,6 @@ def test_noise_shape():
 
 def test_noise_amplitude():
     """Ensure noise amplitude is reasonable within 1 percent."""
-    rtol = 1e-2
     test_sample = np.ones((100, 1000)) * 3
     test_noise = utils.generate_noise(test_sample)
     noise_power = test_noise.std(1)
