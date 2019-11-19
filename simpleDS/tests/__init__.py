@@ -11,5 +11,5 @@ from simpleDS.data import DATA_PATH  # noqa
 
 
 # defines a decorator to skip tests that require PY3.
-reason = 'Astropy.units.littleh is a python3 only unit. Skipping in python 2'
+reason = "Astropy.units.littleh is a python3 only unit. Skipping in python 2"
 skipIf_py2 = pytest.mark.skipif(not six.PY3, reason=reason)
