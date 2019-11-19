@@ -1,5 +1,6 @@
 # Simple Delay Spectrum (SimpleDS)
 
+![](https://github.com/RadioAstronomySoftwareGroup/simpleDS/workflows/Run%20Tests/badge.svg?branch=master)
 [![Build Status](https://travis-ci.com/RadioAstronomySoftwareGroup/simpleDS.svg?branch=master)](https://travis-ci.com/RadioAstronomySoftwareGroup/simpleDS)
 [![CircleCI](https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS.svg?style=svg)](https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS)
 [![codecov](https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS/branch/master/graph/badge.svg)](https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS)
