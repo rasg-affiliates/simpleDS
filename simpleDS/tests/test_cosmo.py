@@ -10,16 +10,11 @@ Phys. Rev. D 90, 023018 or 	arXiv:1404.2596
 """
 from __future__ import print_function
 
-import os
-import sys
 import numpy as np
 import pytest
-from scipy import integrate
 from astropy import constants as const
 from astropy import units
-from astropy.units import Quantity
 from astropy.cosmology import Planck15
-from simpleDS.data import DATA_PATH
 from simpleDS import cosmo
 # the emission frequency of 21m photons
 f21 = 1420405751.7667 * units.Hz

@@ -4,10 +4,9 @@
 """Read and Write support for PAPER miriad files with pyuvdata."""
 
 import os
-import sys
 import copy
 import six
-from six.moves import range, map
+from six.moves import range
 import numpy as np
 from astropy import constants as const
 from astropy import units
@@ -777,7 +776,6 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
                                           error=uncertainty.shape))
 
     if weights is None:
-        no_input_weights = True
         if not array.imag.value.any():
             weights = np.ones_like(array)
         else:

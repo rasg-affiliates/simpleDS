@@ -5,7 +5,6 @@
 from __future__ import print_function
 
 import os
-import sys
 import numpy as np
 import copy
 import pytest
@@ -13,12 +12,11 @@ import unittest
 
 from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
-from astropy import constants as const
 from astropy import units
 from astropy.cosmology import Planck15, WMAP9
 from scipy.signal import windows
 
-from simpleDS import DelaySpectrum, delay_spectrum as dspec
+from simpleDS import DelaySpectrum
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from pyuvdata.data import DATA_PATH as UVDATA_PATH
@@ -385,7 +383,6 @@ def test_loading_uvb_object():
 
 def test_loading_uvb_object_no_data():
     """Test error is raised if adding a UVBeam object but no data."""
-    testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
     test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
 
     uvb = UVBeam()
@@ -429,7 +426,6 @@ def test_loading_uvb_object_with_trcvr():
 def test_add_trcvr_scalar():
     """Test a scalar trcvr quantity is broadcast to the correct shape."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -441,7 +437,6 @@ def test_add_trcvr_scalar():
 def test_add_trcvr_bad_number_of_spectral_windows():
     """Test error is raised if the number of spectral windows do not match with input trcvr."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -452,7 +447,6 @@ def test_add_trcvr_bad_number_of_spectral_windows():
 def test_add_trcvr_bad_number_of_freqs():
     """Test error is raised if number of frequencies does not match input trcvr."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -463,7 +457,6 @@ def test_add_trcvr_bad_number_of_freqs():
 def test_add_trcvr_vector():
     """Test an arry of trcvr quantity."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -476,7 +469,6 @@ def test_add_trcvr_vector():
 def test_add_trcvr_init():
     """Test a scalar trcvr quantity is broadcast to the correct shape during init."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd, trcvr=9 * units.K)
@@ -498,7 +490,6 @@ def test_spectrum_on_no_data():
 def test_noise_shape():
     """Test the generate noise and calculate_noise_power produce correct shape."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -509,10 +500,9 @@ def test_noise_shape():
             == dspec_object.noise_array.shape)
 
 
-def test_noise_shape():
+def test_noise_unit():
     """Test the generate noise and calculate_noise_power produce correct units."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -526,7 +516,6 @@ def test_noise_amplitude():
     """Test noise amplitude with a fixed seed."""
     np.random.seed(0)
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -554,7 +543,6 @@ def test_noise_amplitude():
 def test_delay_transform_units():
     """Test units after calling delay_transform are correct."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     dspec_object = DelaySpectrum(uv=uvd)
@@ -568,7 +556,6 @@ def test_delay_transform_units():
 def test_warning_from_uncalibrated_data():
     """Test scaling warning is raised when delay transforming uncalibrated data."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
     uvd.vis_units = 'uncalib'
@@ -590,7 +577,6 @@ def test_warning_from_uncalibrated_data():
 def test_delay_transform_bad_data_type():
     """Test error is raised in delay_transform if data_type is bad."""
     testfile = os.path.join(UVDATA_PATH, 'test_redundant_array.uvfits')
-    test_uvb_file = os.path.join(DATA_PATH, 'test_redundant_array.beamfits')
     uvd = UVData()
     uvd.read(testfile)
 
@@ -699,7 +685,6 @@ def test_delay_spectrum_power_units_input_kelvin_str():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
@@ -736,7 +721,6 @@ def test_delay_spectrum_power_units_input_uncalib():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
@@ -792,7 +776,6 @@ def test_delay_spectrum_noise_power_units():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
@@ -845,7 +828,6 @@ def test_delay_spectrum_thermal_power_units():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
@@ -898,7 +880,6 @@ def test_delay_spectrum_thermal_power_shape():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
@@ -1003,7 +984,6 @@ def test_update_cosmology_unit_and_shape_kelvin_sr():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
@@ -1044,7 +1024,6 @@ def test_update_cosmology_unit_and_shape_uncalib():
                                      nwarnings=len(warn_message) + 1,
                                      message=warn_message + pend_dep_message)
     test_uv_2 = copy.deepcopy(test_uv_1)
-    reds = np.array(list(set(test_uv_2.baseline_array)))
 
     beam_file = os.path.join(DATA_PATH, 'test_paper_pI.beamfits')
 
