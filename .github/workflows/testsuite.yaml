@@ -2,8 +2,8 @@ name: Run Tests
 on: [push, pull_request]
 
 jobs:
-  linter:
-    name: Linter
+  flake8:
+    name: Flake8
     runs-on: ubuntu-latest
     env:
       ENV_NAME: simpleds_linting
@@ -22,28 +22,7 @@ jobs:
      - name: Linting
        run: |
          source /usr/share/miniconda/bin/activate $ENV_NAME
-         pycodestyle simpleDS
-
-  docstyle:
-    name: Docstyle
-    runs-on: ubuntu-latest
-    env:
-      ENV_NAME: simpleds_docstyle
-      WITH_SUDO: yes
-      PYTHON: 3.7
-    steps:
-     - uses: actions/checkout@master
-       with:
-         fetch-depth: 1
-     - name: Setup Environment
-       run: |
-         export PATH="/usr/share/miniconda/bin:$PATH"
-         ./ci/install-circle.sh
-
-     - name: Linting
-       run: |
-         source /usr/share/miniconda/bin/activate $ENV_NAME
-         pydocstyle simpleDS
+         flake8 simpleDS
 
   tests:
     env:
@@ -52,7 +31,7 @@ jobs:
       WITH_SUDO: yes
       OS: ${{ matrix.os }}
     name: Testing
-    needs: [linter, docstyle]
+    needs: [flake8]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

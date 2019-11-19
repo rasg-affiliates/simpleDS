@@ -10,7 +10,7 @@ import os
 import json
 import io
 
-from simpleDS import version  # noqa (pycodestyle complains about import below code)
+from simpleDS import version  # noqa
 
 data = [
     version.git_origin,
