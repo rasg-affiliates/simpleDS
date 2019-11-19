@@ -2,7 +2,7 @@
 formats:
     - none
 conda:
-    file: ci/rtd_env.yml
+    file: ci/rtd.yaml
 build:
     image: latest
 python:
