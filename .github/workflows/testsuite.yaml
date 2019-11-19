@@ -93,7 +93,7 @@ jobs:
           source activate $ENV_NAME
           python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS
 
-      - uses: codecov/codecov-action@v1.0.3
+      - uses: codecov/codecov-action@master
         if: matrix.os == 'ubuntu-latest' && success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
