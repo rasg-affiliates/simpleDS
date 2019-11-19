@@ -1,4 +1,4 @@
-name: simpleds_tutorial
+name: tutorial
 channels:
   - defaults
   - conda-forge

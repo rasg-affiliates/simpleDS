@@ -10,11 +10,11 @@ jobs:
       - image: continuumio/miniconda:latest
     environment:
       PYTHON: << parameters.python_version >>
-      ENV_NAME: simpleds_linting
+      ENV_NAME: linting
     steps:
       - checkout
       - restore_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/linting.yaml" }}
       - run:
           name: configure conda environment
           command: ./ci/install_conda.sh
@@ -24,7 +24,7 @@ jobs:
             source activate ${ENV_NAME}
             flake8 simpleDS
       - save_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/linting.yaml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
 
@@ -36,11 +36,11 @@ jobs:
       - image: continuumio/miniconda:latest
     environment:
       PYTHON: << parameters.python_version >>
-      ENV_NAME: simpleds_tests
+      ENV_NAME: tests
     steps:
       - checkout
       - restore_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/tests.yaml" }}
       - run:
           name: configure conda environment
           command: ./ci/install_conda.sh
@@ -55,7 +55,7 @@ jobs:
             source activate ${ENV_NAME}
             mkdir test-reports
             python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/tests.yaml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
       - store_test_results:
@@ -72,11 +72,11 @@ jobs:
         - image: continuumio/miniconda:latest
       environment:
         PYTHON: << parameters.python_version >>
-        ENV_NAME: simpleds_tests
+        ENV_NAME: tests
       steps:
         - checkout
         - restore_cache:
-            key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+            key: deps-{{ .Branch }}-{{ checksum "ci/tests.yaml" }}
         - run:
             name: configure conda environment
             command: ./ci/install_conda.sh
@@ -91,7 +91,7 @@ jobs:
               source activate ${ENV_NAME}
               python -m doctest docs/tutorial.rst
         - save_cache:
-            key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
+            key: deps-{{ .Branch }}-{{ checksum "ci/tests.yaml" }}
             paths:
               - "/opt/conda/envs/${ENV_NAME}/"
   tutorial_notebook:
@@ -102,11 +102,11 @@ jobs:
       - image: continuumio/miniconda:latest
     environment:
       PYTHON: << parameters.python_version >>
-      ENV_NAME: simpleds_tutorial
+      ENV_NAME: tutorial
     steps:
       - checkout
       - restore_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tutorial.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/tutorial.yaml" }}
       - run:
           name: configure conda environment
           command: ./ci/install_conda.sh
@@ -122,7 +122,7 @@ jobs:
             source activate ${ENV_NAME}
             python -m pytest --nbval --current-env docs/examples/simpleDS_tutorial.ipynb
       - save_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tutorial.yml" }}
+          key: deps-{{ .Branch }}-{{ checksum "ci/tutorial.yaml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
 workflows:

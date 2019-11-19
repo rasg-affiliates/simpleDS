@@ -1,4 +1,4 @@
-name: simpleds_tests
+name: tests
 channels:
   - defaults
   - conda-forge
