@@ -14,14 +14,20 @@ jobs:
        with:
          fetch-depth: 1
 
+     - name: Get Miniconda Linux
+       run: |
+         wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
+         bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
      - name: Setup Environment
        run: |
-         export PATH="/usr/share/miniconda/bin:$PATH"
-         ./ci/install-circle.sh
+         export PATH="$HOME/miniconda/bin:$PATH"
+         ./ci/install_conda.sh
 
      - name: Linting
        run: |
-         source /usr/share/miniconda/bin/activate $ENV_NAME
+         export PATH="$HOME/miniconda/bin:$PATH"
+         conda activate $ENV_NAME
          flake8
 
   tests:
@@ -58,7 +64,7 @@ jobs:
       - name: Setup Environment
         run: |
           export PATH="$HOME/miniconda/bin:$PATH"
-          ./ci/install-circle.sh
+          ./ci/install_conda.sh
 
       - name: Install
         run: |
@@ -116,7 +122,7 @@ jobs:
      - name: Setup Environment
        run: |
          export PATH="$HOME/miniconda/bin:$PATH"
-         ./ci/install-circle.sh
+         ./ci/install_conda.sh
 
      - name: Install
        run: |
