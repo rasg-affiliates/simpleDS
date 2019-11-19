@@ -31,12 +31,12 @@ def write_index_rst(readme_file=None, write_file=None):
 
     title_badge_text = (
         "simpleDS\n========\n\n"
-        ".. image:: https://travis-ci.com/RadioAstronomySoftwareGroup/simpleDS.svg?branch=master\n"
-        "    :target: https://travis-ci.com/RadioAstronomySoftwareGroup/simpleDS\n\n"
-        ".. image:: https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS.svg?style=svg\n"
-        "    :target: https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS\n\n"
-        ".. image:: https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS/branch/master/graph/badge.svg\n"
-        "  :target: https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS\n\n"
+        ".. image:: https://travis-ci.com/rasg-affiliates/simpleDS.svg?branch=master\n"
+        "    :target: https://travis-ci.com/rasg-affiliates/simpleDS\n\n"
+        ".. image:: https://circleci.com/gh/rasg-affiliates/simpleDS.svg?style=svg\n"
+        "    :target: https://circleci.com/gh/rasg-affiliates/simpleDS\n\n"
+        ".. image:: https://codecov.io/gh/rasg-affiliates/simpleDS/branch/master/graph/badge.svg\n"
+        "  :target: https://codecov.io/gh/rasg-affiliates/simpleDS\n\n"
     )
 
     readme_text = pypandoc.convert_file(readme_file, "rst")
