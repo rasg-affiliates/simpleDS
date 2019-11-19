@@ -22,7 +22,7 @@ jobs:
      - name: Linting
        run: |
          source /usr/share/miniconda/bin/activate $ENV_NAME
-         flake8 simpleDS
+         flake8
 
   tests:
     env:
@@ -70,7 +70,7 @@ jobs:
         run: |
           export PATH="$HOME/miniconda/bin:$PATH"
           source activate $ENV_NAME
-          python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml simpleDS
+          python -m pytest -v --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - uses: codecov/codecov-action@master
         if: matrix.os == 'ubuntu-latest' && success()
