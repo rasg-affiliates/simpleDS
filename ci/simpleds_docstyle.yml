@@ -1,6 +1,0 @@
-name: simpleds_docstyle
-channels:
-  - defaults
-  - conda-forge
-dependencies:
-  - pydocstyle
