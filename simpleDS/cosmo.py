@@ -20,7 +20,7 @@ f21 = 1420405751.7667 * units.Hz
 default_cosmology.set(Planck15)
 
 
-@units.quantity_input(freq='frequency')
+@units.quantity_input(freq="frequency")
 def calc_z(freq):
     """Calculate the redshift from a given frequency or frequncies.
 
@@ -79,7 +79,7 @@ def u2kperp(u, z, cosmo=None):
     return 2 * np.pi * u / cosmo.comoving_transverse_distance(z)
 
 
-@units.quantity_input(kperp='wavenumber')
+@units.quantity_input(kperp="wavenumber")
 def kperp2u(kperp, z, cosmo=None):
     """Convert comsological k_perpendicular to baseline length u.
 
@@ -105,7 +105,7 @@ def kperp2u(kperp, z, cosmo=None):
     return kperp * cosmo.comoving_transverse_distance(z) / (2 * np.pi)
 
 
-@units.quantity_input(eta='time')
+@units.quantity_input(eta="time")
 def eta2kparr(eta, z, cosmo=None):
     """Conver delay eta to k_parallel (comoving 1./Mpc along line of sight).
 
@@ -127,11 +127,12 @@ def eta2kparr(eta, z, cosmo=None):
     """
     if cosmo is None:
         cosmo = default_cosmology.get()
-    return (eta * (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z))
-            / (const.c * (1 + z)**2)).to('1/Mpc')
+    return (
+        eta * (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z)) / (const.c * (1 + z) ** 2)
+    ).to("1/Mpc")
 
 
-@units.quantity_input(kparr='wavenumber')
+@units.quantity_input(kparr="wavenumber")
 def kparr2eta(kparr, z, cosmo=None):
     """Convert k_parallel (comoving 1/Mpc along line of sight) to delay eta.
 
@@ -153,8 +154,9 @@ def kparr2eta(kparr, z, cosmo=None):
     """
     if cosmo is None:
         cosmo = default_cosmology.get()
-    return (kparr * const.c * (1 + z)**2
-            / (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z))).to('s')
+    return (
+        kparr * const.c * (1 + z) ** 2 / (2 * np.pi * cosmo.H0 * f21 * cosmo.efunc(z))
+    ).to("s")
 
 
 def X2Y(z, cosmo=None):
@@ -179,6 +181,6 @@ def X2Y(z, cosmo=None):
     """
     if cosmo is None:
         cosmo = default_cosmology.get()
-    X2Y = const.c * (1 + z)**2 * cosmo.comoving_transverse_distance(z)**2
+    X2Y = const.c * (1 + z) ** 2 * cosmo.comoving_transverse_distance(z) ** 2
     X2Y /= cosmo.H0 * f21 * cosmo.efunc(z) * units.sr
-    return X2Y.to('Mpc^3*s/sr')
+    return X2Y.to("Mpc^3*s/sr")

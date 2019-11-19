@@ -18,7 +18,7 @@ def _get_git_output(args, capture_stderr=False):
 
     Ensuring that it is of the ``str`` type, not bytes.
     """
-    argv = ['git', '-C', simpleDS_dir] + args
+    argv = ["git", "-C", simpleDS_dir] + args
 
     if capture_stderr:
         data = subprocess.check_output(argv, stderr=subprocess.STDOUT)
@@ -29,13 +29,13 @@ def _get_git_output(args, capture_stderr=False):
 
     if six.PY2:
         return data
-    return data.decode('utf8')
+    return data.decode("utf8")
 
 
 def _get_gitinfo_file(git_file=None):
     """Get saved info from GIT_INFO file that was created when installing package."""
     if git_file is None:
-        git_file = os.path.join(simpleDS_dir, 'GIT_INFO')
+        git_file = os.path.join(simpleDS_dir, "GIT_INFO")
 
     with open(git_file) as data_file:
         data = [_unicode_to_str(x) for x in json.loads(data_file.read().strip())]
@@ -44,37 +44,54 @@ def _get_gitinfo_file(git_file=None):
         git_description = data[2]
         git_branch = data[3]
 
-    return {'git_origin': git_origin, 'git_hash': git_hash,
-            'git_description': git_description, 'git_branch': git_branch}
+    return {
+        "git_origin": git_origin,
+        "git_hash": git_hash,
+        "git_description": git_description,
+        "git_branch": git_branch,
+    }
 
 
 def _unicode_to_str(u):
     if six.PY2:
-        return u.encode('utf8')
+        return u.encode("utf8")
     return u
 
 
 def construct_version_info():
     """Execute other functions and compile version info in dict."""
-    version_file = os.path.join(simpleDS_dir, 'VERSION')
+    version_file = os.path.join(simpleDS_dir, "VERSION")
     with open(version_file) as f:
         version = f.read().strip()
 
-    git_origin = ''
+    git_origin = ""
 
-    version_info = {'version': version, 'git_origin': '', 'git_hash': '',
-                    'git_description': '', 'git_branch': ''}
+    version_info = {
+        "version": version,
+        "git_origin": "",
+        "git_hash": "",
+        "git_description": "",
+        "git_branch": "",
+    }
 
     try:
-        git_origin = _get_git_output(['config', '--get', 'remote.origin.url'], capture_stderr=True)
-        if git_origin.split('/')[-1] != 'simpleDS.git':  # pragma: no cover
+        git_origin = _get_git_output(
+            ["config", "--get", "remote.origin.url"], capture_stderr=True
+        )
+        if git_origin.split("/")[-1] != "simpleDS.git":  # pragma: no cover
             # this is version info for a non-simpleDS repo, don't use it
-            raise ValueError('This is not a simpleDS repo')
+            raise ValueError("This is not a simpleDS repo")
 
-        version_info['git_origin'] = git_origin
-        version_info['git_hash'] = _get_git_output(['rev-parse', 'HEAD'], capture_stderr=True)
-        version_info['git_description'] = _get_git_output(['describe', '--dirty', '--tag', '--always'])
-        version_info['git_branch'] = _get_git_output(['rev-parse', '--abbrev-ref', 'HEAD'], capture_stderr=True)
+        version_info["git_origin"] = git_origin
+        version_info["git_hash"] = _get_git_output(
+            ["rev-parse", "HEAD"], capture_stderr=True
+        )
+        version_info["git_description"] = _get_git_output(
+            ["describe", "--dirty", "--tag", "--always"]
+        )
+        version_info["git_branch"] = _get_git_output(
+            ["rev-parse", "--abbrev-ref", "HEAD"], capture_stderr=True
+        )
     except (subprocess.CalledProcessError, ValueError, OSError):  # pragma: no cover
         try:
             # Check if a GIT_INFO file was created when installing package
@@ -86,20 +103,20 @@ def construct_version_info():
 
 
 version_info = construct_version_info()
-version = version_info['version']
-git_origin = version_info['git_origin']
-git_hash = version_info['git_hash']
-git_description = version_info['git_description']
-git_branch = version_info['git_branch']
+version = version_info["version"]
+git_origin = version_info["git_origin"]
+git_hash = version_info["git_hash"]
+git_description = version_info["git_description"]
+git_branch = version_info["git_branch"]
 
 
 def main():
     """Print out version info if called directly."""
-    print('Version = {0}'.format(version))
-    print('git origin = {0}'.format(git_origin))
-    print('git branch = {0}'.format(git_branch))
-    print('git description = {0}'.format(git_description))
+    print("Version = {0}".format(version))
+    print("git origin = {0}".format(git_origin))
+    print("git branch = {0}".format(git_branch))
+    print("git description = {0}".format(git_description))
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     main()
