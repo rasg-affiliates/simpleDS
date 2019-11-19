@@ -984,17 +984,22 @@ class DelaySpectrum(UVBase):
                         ),
                         UserWarning,
                     )
-            elif p in ["_beam_area, _beam_sq_area", "_trcvr"]:
-                if my_parm.value is not None and my_parm != other_parm:
-                    if (
-                        np.isfinite(my_parm.value.value).all()
-                        and np.isfinite(other_parm.value.value).all()
-                    ):
-                        raise ValueError(
-                            "Input data differs from previously "
-                            "loaded data. Parameter {name} is not "
-                            "the same".format(name=p)
-                        )
+            # these next lines don't seem reasonable
+            # the this object will never have a beam area, beam sq area or trcvr
+            # that isfinite().all() = Tru
+            # elif p in ["_beam_area, _beam_sq_area", "_trcvr"]:
+            #     if my_parm.value is not None and my_parm != other_parm:
+            #         if (
+            #             np.isfinite(my_parm.value.value).all()
+            #             and np.isfinite(other_parm.value.value).all()
+            #         ):
+            #             raise ValueError(
+            #                 "Input data differs from previously "
+            #                 "loaded data. Parameter {name} is not "
+            #                 "the same".format(name=p)
+            #             )
+            else:
+                pass
 
         # Increment by one the number of read uvdata objects
         self._Nuv.value += 1

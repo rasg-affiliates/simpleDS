@@ -447,6 +447,21 @@ def test_loading_uvb_object():
     )
 
 
+def test_add_uvdata_uvbeam_uvdata():
+    """Test that a uvb can be added in between two uvdata objects."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.add_uvdata(uvd)
+    assert dspec_object.check()
+
+
 def test_loading_uvb_object_no_data():
     """Test error is raised if adding a UVBeam object but no data."""
     test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
