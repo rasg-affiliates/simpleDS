@@ -4,4 +4,6 @@ channels:
   - conda-forge
 dependencies:
   - flake8
-  - flake8-docstrings
+  - pip
+  - pip:
+    - flake8-docstrings
