@@ -3,4 +3,5 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - pycodestyle
+  - flake8
+  - flake8-docstrings

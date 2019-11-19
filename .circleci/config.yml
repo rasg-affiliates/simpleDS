@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.2 # to get this to work, had to opt-in to using third party orbs in Organization Security settings.
 jobs:
-  linter:
+  flake8:
     parameters:
       python_version:
         type: string
@@ -22,34 +22,9 @@ jobs:
           name: linting for PEP8 compliance
           command: |
             source activate ${ENV_NAME}
-            pycodestyle simpleDS
+            flake8 simpleDS
       - save_cache:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
-          paths:
-            - "/opt/conda/envs/${ENV_NAME}/"
-  docstyle:
-    parameters:
-      python_version:
-        type: string
-    docker:
-      - image: continuumio/miniconda:latest
-    environment:
-      PYTHON: << parameters.python_version >>
-      ENV_NAME: simpleds_docstyle
-    steps:
-      - checkout
-      - restore_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_docstyle.yml" }}
-      - run:
-          name: configure conda environment
-          command: ./ci/install-circle.sh
-      - run:
-          name: Checking Docstrings in numpy convention
-          command: |
-            source activate ${ENV_NAME}
-            pydocstyle simpleDS
-      - save_cache:
-          key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_docstyle.yml" }}
           paths:
             - "/opt/conda/envs/${ENV_NAME}/"
 
@@ -154,28 +129,23 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - linter:
-          python_version: "3.6"
-      - docstyle:
+      - flake8:
           python_version: "3.6"
       - simpleds:
           name: simpleds_2.7
           python_version: "2.7"
           requires:
-            - linter
-            - docstyle
+            - flake8
       - simpleds:
           name: simpleds_3.6
           python_version: "3.6"
           requires:
-            - linter
-            - docstyle
+            - flake8
       - simpleds:
           name: simpleds_3.7
           python_version: "3.7"
           requires:
-            - linter
-            - docstyle
+            - flake8
       - doctest:
           python_version: "3.6"
           requires:
