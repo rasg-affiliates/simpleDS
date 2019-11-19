@@ -4,14 +4,10 @@
 """Setup testing environment, define useful testing functions."""
 from __future__ import absolute_import, division, print_function
 
-import os
-import warnings
-import sys
-import numpy as np
 import six
 import pytest
 
-from simpleDS.data import DATA_PATH
+from simpleDS.data import DATA_PATH  # noqa
 
 
 # defines a decorator to skip tests that require PY3.
