@@ -4,8 +4,6 @@
 """Calculate Delay Spectrum from pyuvdata object."""
 from __future__ import print_function, absolute_import, division
 
-import os
-import sys
 import copy
 import six
 
@@ -13,7 +11,6 @@ import numpy as np
 import warnings
 from pyuvdata import UVData, UVBase, utils as uvutils
 import astropy.units as units
-from astropy.units import Quantity
 from astropy import constants as const
 from astropy.cosmology.core import Cosmology as reference_cosmology_object
 

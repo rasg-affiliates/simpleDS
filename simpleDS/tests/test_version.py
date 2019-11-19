@@ -4,11 +4,9 @@
 """Tests for version.py."""
 from __future__ import absolute_import, division, print_function
 
-import pytest
 import sys
 import os
 import six
-from six import StringIO
 import subprocess
 import json
 
@@ -92,7 +90,6 @@ def test_construct_version_info():
         git_hash = get_git_output(['rev-parse', 'HEAD'], capture_stderr=True)
         git_description = get_git_output(['describe', '--dirty', '--tag', '--always'])
         git_branch = get_git_output(['rev-parse', '--abbrev-ref', 'HEAD'], capture_stderr=True)
-        git_version = get_git_output(['describe', '--tags', '--abbrev=0'])
     except (subprocess.CalledProcessError, ValueError):
         try:
             # Check if a GIT_INFO file was created when installing package

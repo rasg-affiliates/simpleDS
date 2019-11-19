@@ -7,12 +7,9 @@ All cosmological calculations and converions follow from Liu et al 2014a
 Phys. Rev. D 90, 023018 or 	arXiv:1404.2596
 """
 
-import os
-import sys
 import numpy as np
 from astropy import constants as const
 from astropy import units
-from astropy.units import Quantity
 from astropy.cosmology import Planck15, default_cosmology
 
 # the emission frequency of 21m photons in the Hydrogen's rest frame
