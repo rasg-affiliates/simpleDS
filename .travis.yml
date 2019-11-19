@@ -50,7 +50,9 @@ install:
 script:
   - python setup.py build_ext --force --inplace
   - python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml -v simpleDS
-  - flake8 simpleDS
+  - if [[ ! "$PYTHON_VERSION" == "2.7" ]]; then
+      flake8 simpleDS
+    fi
 
 after_success:
   - codecov
