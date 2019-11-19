@@ -1,9 +1,9 @@
 # Simple Delay Spectrum (SimpleDS)
 
-![](https://github.com/RadioAstronomySoftwareGroup/simpleDS/workflows/Run%20Tests/badge.svg?branch=master)
-[![Build Status](https://travis-ci.com/RadioAstronomySoftwareGroup/simpleDS.svg?branch=master)](https://travis-ci.com/RadioAstronomySoftwareGroup/simpleDS)
-[![CircleCI](https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS.svg?style=svg)](https://circleci.com/gh/RadioAstronomySoftwareGroup/simpleDS)
-[![codecov](https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS/branch/master/graph/badge.svg)](https://codecov.io/gh/RadioAstronomySoftwareGroup/simpleDS)
+![](https://github.com/rasg-affiliates/simpleDS/workflows/Run%20Tests/badge.svg?branch=master)
+[![Build Status](https://travis-ci.com/rasg-affiliates/simpleDS.svg?branch=master)](https://travis-ci.com/rasg-affiliates/simpleDS)
+[![CircleCI](https://circleci.com/gh/rasg-affiliates/simpleDS.svg?style=svg)](https://circleci.com/gh/rasg-affiliates/simpleDS)
+[![codecov](https://codecov.io/gh/rasg-affiliates/simpleDS/branch/master/graph/badge.svg)](https://codecov.io/gh/rasg-affiliates/simpleDS)
 
 SimpleDS is currently in a working *BETA* state.  All code will execute and tests pass, however there are still a number of bugs to fix and enhancements to make.
 
@@ -49,7 +49,7 @@ For anaconda users, we suggest using conda to install astropy, numpy and scipy.
 
 ## Installing simpleDS
 Clone the repo using
-`git clone https://github.com/RadioAstronomySoftwareGroup/simpleDS.git`
+`git clone https://github.com/rasg-affiliates/simpleDS.git`
 
 Navigate into the directory and run `python setup.py install` or `pip install .`
 
@@ -65,7 +65,7 @@ We use a `generation.major.minor` version number format.
 - The `major` number to indicate substantial package changes.
 - The `minor` number to release smaller incremental updates which usually do not include breaking API changes.
 
-We do our best to provide a significant period of deprecation warnings for all breaking changes to the API. We track all changes in our [changelog](https://github.com/RadioAstronomySoftwareGroup/simpleDS/blob/master/CHANGELOG.md).
+We do our best to provide a significant period of deprecation warnings for all breaking changes to the API. We track all changes in our [changelog](https://github.com/rasg-affiliates/simpleDS/blob/master/CHANGELOG.md).
 
 # Documentation
 A tutorial with example usage is hosted on [ReadTheDocs](https://simpleds.readthedocs.io).
