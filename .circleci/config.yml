@@ -17,7 +17,7 @@ jobs:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_linting.yml" }}
       - run:
           name: configure conda environment
-          command: ./ci/install-circle.sh
+          command: ./ci/install_conda.sh
       - run:
           name: linting for PEP8 compliance
           command: |
@@ -43,7 +43,7 @@ jobs:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
       - run:
           name: configure conda environment
-          command: ./ci/install-circle.sh
+          command: ./ci/install_conda.sh
       - run:
           name: install
           command: |
@@ -79,7 +79,7 @@ jobs:
             key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tests.yml" }}
         - run:
             name: configure conda environment
-            command: ./ci/install-circle.sh
+            command: ./ci/install_conda.sh
         - run:
             name: install
             command: |
@@ -109,7 +109,7 @@ jobs:
           key: deps-{{ .Branch }}-{{ checksum "ci/simpleds_tutorial.yml" }}
       - run:
           name: configure conda environment
-          command: ./ci/install-circle.sh
+          command: ./ci/install_conda.sh
       - run:
           name: install
           command: |
