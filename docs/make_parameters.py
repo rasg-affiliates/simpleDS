@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import inspect
 from simpleDS import DelaySpectrum
-import numpy as np
 from astropy.time import Time
 
 

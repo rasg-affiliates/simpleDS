@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 import codecs
 import os
 import inspect
-import re
 import pypandoc
 from astropy.time import Time
 
