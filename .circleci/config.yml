@@ -22,7 +22,7 @@ jobs:
           name: linting for PEP8 compliance
           command: |
             source activate ${ENV_NAME}
-            flake8 simpleDS
+            flake8
       - save_cache:
           key: deps-{{ .Branch }}-{{ checksum "ci/linting.yaml" }}
           paths:
