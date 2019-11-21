@@ -5,6 +5,12 @@
 [![CircleCI](https://circleci.com/gh/rasg-affiliates/simpleDS.svg?style=svg)](https://circleci.com/gh/rasg-affiliates/simpleDS)
 [![codecov](https://codecov.io/gh/rasg-affiliates/simpleDS/branch/master/graph/badge.svg)](https://codecov.io/gh/rasg-affiliates/simpleDS)
 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+
+
 SimpleDS is currently in a working *BETA* state.  All code will execute and tests pass, however there are still a number of bugs to fix and enhancements to make.
 
 
