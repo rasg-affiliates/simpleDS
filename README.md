@@ -43,6 +43,7 @@ First install dependencies.
 * astropy >= 2.0
 * h5py (for uvh5 compatibility with pyuvdata, optional)
 * six >= 1.10 (for compatibility between python 2 and 3)
+* astropy-healpix used for UVBeam interpolations through pyuvdata (optional, only used with `use_exact` keyword for `add_uvbeam`)
 * pyuvdata >=1.3.8 (conda install -c conda-forge pyuvdata, `pip install pyuvdata`, or use the development version  https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git)
 
 For anaconda users, we suggest using conda to install astropy, numpy and scipy.
@@ -52,6 +53,7 @@ Clone the repo using
 `git clone https://github.com/rasg-affiliates/simpleDS.git`
 
 Navigate into the directory and run `python setup.py install` or `pip install .`
+To also install the optional `astropy-healpix` use `pip install .[all]`
 
 ## Running Tests
 We use `pytest` to execute the tests for this pacakge.

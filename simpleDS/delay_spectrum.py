@@ -16,6 +16,7 @@ from astropy.cosmology.core import Cosmology as reference_cosmology_object
 
 from scipy.signal import windows
 import scipy.integrate as integrate
+from scipy.interpolate import interp1d
 from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
 
@@ -439,7 +440,7 @@ class DelaySpectrum(UVBase):
             description=desc,
             expected_type=np.float,
             required=False,
-            form=("Nspws", "Npols", "Nbls", "Nbls", "Ntimes",),
+            form=("Nspws", "Npols", "Nbls", "Nbls", "Ntimes"),
             expected_units=_thermal_power_units,
         )
 
@@ -1400,10 +1401,23 @@ class DelaySpectrum(UVBase):
                         "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
                     )
 
-    def add_uvbeam(self, uvb, no_read_trcvr=False):
+    def add_uvbeam(
+        self,
+        uvb,
+        no_read_trcvr=False,
+        use_exact=False,
+        bounds_error=False,
+        fill_value="extrapolate",
+        kind="cubic",
+    ):
         """Add the beam_area and beam_square_area integrals into memory.
 
         Also adds receiver temperature information if set in UVBeam object.
+        By default will interpolate the beam_area and beam_sq_area value
+        to the frequencies defined in the DelaySpectrum object.
+
+        Exact values from the UVBeam object can be used if frequencies match
+        exactly with the DelaySpectrum object by setting the 'use_exact' flag.
 
         Parameters
         ----------
@@ -1411,24 +1425,89 @@ class DelaySpectrum(UVBase):
             Reads `beam_area` and `beam_sq_area` from input UVBeam object.
             Currently assumes 1 beam object can describe all baselines
             Must be a power beam in healpix coordinates and peak normalized
-        no_read_trcvr: (Bool, default False)
-                       Flag to Not read trcvr from UVBeam object even if set in UVBeam.
-                       This is useful if a trcvr wants to be manually set but
-                       a beam read from a file which also contains receiver temperature information.
+        no_read_trcvr : (Bool, default False)
+           Flag to Not read trcvr from UVBeam object even if set in UVBeam.
+           This is useful if a trcvr wants to be manually set but
+           a beam read from a file which also contains receiver temperature information.
+        use_exact : Bool
+            Use frequencies exactly out of the UVBeam object. If frequencies are
+            not found use the UVBeam's interp to interpolate along the frequency
+            dimension.
+        bounds_error : Bool
+            scipy.interpolate.interp1d bounds_error flag. When set to True,
+            interpolate will error if new frequencies lay outisde of the bounds
+            of the old frequencies
+        fill_value : float or str
+            scipy.interpolate.interp1d fill_value flag. If set to a float, will
+            use that float to fill values outside of the bounds when bounds_error
+            is False. If set to 'extrapolate' will extrapolate values outside
+            of the original bounds.
+        kind : str
+            scipy.interpolate.interp1d kind flag. defines the type of interpolation
+            (‘linear’, ‘nearest’, ‘zero’, ‘slinear’, ‘quadratic’, ‘cubic’, ‘previous’, ‘next’)
 
         """
-        for spw, freqs in enumerate(self.freq_array):
-            _beam = uvb.select(frequencies=freqs.to("Hz").value, inplace=False)
-            for pol_cnt, pol in enumerate(self.polarization_array):
-                self.beam_area[spw, pol_cnt, :] = (
-                    _beam.get_beam_area(pol=pol) * units.sr
-                )
-                self.beam_sq_area[spw, pol_cnt, :] = (
-                    _beam.get_beam_sq_area(pol=pol) * units.sr
-                )
+        if use_exact:
+            for spw, freqs in enumerate(self.freq_array):
+                if any(f not in uvb.freq_array.squeeze() for f in freqs.to_value("Hz")):
+                    uvb.freq_interp_kind = kind
+                    _beam = uvb.interp(freq_array=freqs.to("Hz").value, new_object=True)
+                else:
+                    _beam = uvb.select(frequencies=freqs.to("Hz").value, inplace=False)
 
-                if _beam.receiver_temperature_array is not None and not no_read_trcvr:
-                    self.trcvr[spw, :] = _beam.receiver_temperature_array[0] * units.K
+                for pol_cnt, pol in enumerate(self.polarization_array):
+                    self.beam_area[spw, pol_cnt, :] = (
+                        _beam.get_beam_area(pol=pol) * units.sr
+                    )
+                    self.beam_sq_area[spw, pol_cnt, :] = (
+                        _beam.get_beam_sq_area(pol=pol) * units.sr
+                    )
+
+                    if (
+                        _beam.receiver_temperature_array is not None
+                        and not no_read_trcvr
+                    ):
+                        self.trcvr[spw, :] = (
+                            _beam.receiver_temperature_array[0] * units.K
+                        )
+        else:
+            for pol_cnt, pol in enumerate(self.polarization_array):
+                beam_sq_interp = interp1d(
+                    np.asarray(uvb.freq_array.squeeze()),
+                    uvb.get_beam_sq_area(pol=pol),
+                    bounds_error=bounds_error,
+                    fill_value=fill_value,
+                    kind=kind,
+                )
+                beam_area_interp = interp1d(
+                    np.asarray(uvb.freq_array.squeeze()),
+                    uvb.get_beam_area(pol=pol),
+                    bounds_error=bounds_error,
+                    fill_value=fill_value,
+                    kind=kind,
+                )
+                if uvb.receiver_temperature_array is not None and not no_read_trcvr:
+                    trcvr_interp = interp1d(
+                        np.asarray(uvb.freq_array.squeeze()),
+                        uvb.receiver_temperature_array[0],
+                        bounds_error=bounds_error,
+                        fill_value=fill_value,
+                        kind=kind,
+                    )
+
+                for spw, freqs in enumerate(self.freq_array):
+                    self.beam_area[spw, pol_cnt, :] = (
+                        beam_area_interp(freqs.to_value("Hz")) * units.sr
+                    )
+
+                    self.beam_sq_area[spw, pol_cnt, :] = (
+                        beam_sq_interp(freqs.to_value("Hz")) * units.sr
+                    )
+
+                    if uvb.receiver_temperature_array is not None and not no_read_trcvr:
+                        self.trcvr[spw, :] = (
+                            trcvr_interp(freqs.to_value("Hz")) * units.K
+                        )
 
     @units.quantity_input(trcvr=units.K)
     def add_trcvr(self, trcvr):
