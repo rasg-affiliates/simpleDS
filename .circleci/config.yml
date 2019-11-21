@@ -146,12 +146,18 @@ workflows:
           python_version: "3.7"
           requires:
             - flake8
+      - simpleds:
+          name: simpleds_3.8
+          python_version: "3.8"
+          requires:
+            - flake8
       - doctest:
           python_version: "3.6"
           requires:
               - simpleds_2.7
               - simpleds_3.6
               - simpleds_3.7
+              - simpleds_3.8
       - tutorial_notebook:
           name: tutorial
           python_version: "3.6"
@@ -159,3 +165,4 @@ workflows:
               - simpleds_2.7
               - simpleds_3.6
               - simpleds_3.7
+              - simpleds_3.8
