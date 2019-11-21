@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+
+## [1.0.2] 21 November 2019
 ### Added
 - ReadTheDocs support for simpleDS Documentation
 - Versioning definition.
