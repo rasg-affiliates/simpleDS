@@ -13,6 +13,7 @@
 """Configuration for sphinx documtation."""
 import os
 import sys
+import simpleDS
 
 sys.path.insert(0, os.path.abspath("../simpleDS/"))
 readme_file = os.path.join(os.path.abspath("../"), "README.md")
@@ -26,8 +27,8 @@ copyright = "2019, rasg-affiliates"
 author = "rasg-affiliates"
 
 # The full version, including alpha/beta/rc tags
-release = "1.0.1"
-
+version = simpleDS.__version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 
