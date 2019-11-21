@@ -10,3 +10,16 @@ repos:
       - id: flake8
         additional_dependencies: [flake8-docstrings]
         exclude: ^docs/
+  - repo: git://github.com/pre-commit/pre-commit-hooks
+    rev: v2.2.3
+    hooks:
+    - id: trailing-whitespace
+    - id: check-added-large-files
+    - id: check-ast
+    - id: check-json
+    - id: check-merge-conflict
+    - id: check-xml
+    - id: check-yaml
+    - id: debug-statements
+    - id: end-of-file-fixer
+    - id: requirements-txt-fixer

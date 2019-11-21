@@ -6,7 +6,7 @@ Under the hood they are actually properties based on UnitParameter object which 
 
 Required
 ----------------
-These parameters are required to have a sensible DelaySpectrum object and 
+These parameters are required to have a sensible DelaySpectrum object and
 are required for most kinds of power spectrum estimation.
 
 **Nbls**
