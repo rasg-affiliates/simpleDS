@@ -1,5 +1,5 @@
 # -*- mode: python; coding: utf-8 -*
-# Copyright (c) 2018 Radio Astronomy Software Group
+# Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Tests for cosmo module.
 

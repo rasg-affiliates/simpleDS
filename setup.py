@@ -1,5 +1,5 @@
 # -*- mode: python; coding: utf-8 -*
-# Copyright (c) 2018 Radio Astronomy Software Group
+# Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Setup modules simpleDS."""
 from __future__ import absolute_import, division, print_function
@@ -26,7 +26,7 @@ with io.open("README.md", "r", encoding="utf-8") as readme_file:
 
 setup_args = {
     "name": "simpleDS",
-    "author": "Radio Astronomy Software Group",
+    "author": "rasg-affiliates",
     "license": "BSD",
     "description": ("A Simple Delay Spectrum calculator for radio interferometers. "),
     "long_description": readme,

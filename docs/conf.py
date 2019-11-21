@@ -22,8 +22,8 @@ dataparams_file = os.path.join(os.path.abspath("../docs"), "dspec_parameters.rst
 # -- Project information -----------------------------------------------------
 
 project = "simpleDS"
-copyright = "2019, Radio Astronomy Software Group"
-author = "Radio Astronomy Software Group"
+copyright = "2019, rasg-affiliates"
+author = "rasg-affiliates"
 
 # The full version, including alpha/beta/rc tags
 release = "1.0.1"
