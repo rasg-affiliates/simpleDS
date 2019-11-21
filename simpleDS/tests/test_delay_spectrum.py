@@ -459,6 +459,8 @@ def test_add_uvb_interp_areas():
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
+    uvb.freq_array += 1e6  # Add 1 MHz to force interpolation
+    assert uvb.freq_array != dspec_object.freq_array
     dspec_object2.add_uvbeam(uvb=uvb)
 
     assert np.allclose(
