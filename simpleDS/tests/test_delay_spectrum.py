@@ -560,6 +560,23 @@ def test_loading_uvb_object_with_trcvr():
     )
 
 
+def test_loading_uvb_object_with_trcvr_interp():
+    """Test a uvb object with trcvr gets added properly."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    uvb.receiver_temperature_array = np.ones((1, uvb.Nfreqs)) * 144
+    uvb.select(frequencies=uvb.freq_array.squeeze()[::2])
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=False)
+    uvb.select(frequencies=uvd.freq_array[0])
+    assert np.allclose(144, dspec_object.trcvr.to("K")[0].value)
+
+
 def test_add_trcvr_scalar():
     """Test a scalar trcvr quantity is broadcast to the correct shape."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
