@@ -28,9 +28,7 @@ setup_args = {
     "name": "simpleDS",
     "author": "Radio Astronomy Software Group",
     "license": "BSD",
-    "description": (
-        "A Simple Delay Spectrum calculator for radio " "interferometers. "
-    ),
+    "description": ("A Simple Delay Spectrum calculator for radio interferometers. "),
     "long_description": readme,
     "long_description_content_type": "text/markdown",
     "package_dir": {"simpleDS": "simpleDS"},
