@@ -573,7 +573,6 @@ def test_loading_uvb_object_with_trcvr_interp():
     uvb.receiver_temperature_array = np.ones((1, uvb.Nfreqs)) * 144
     uvb.select(frequencies=uvb.freq_array.squeeze()[::2])
     dspec_object.add_uvbeam(uvb=uvb, use_exact=False)
-    uvb.select(frequencies=uvd.freq_array[0])
     assert np.allclose(144, dspec_object.trcvr.to("K")[0].value)
 
 
