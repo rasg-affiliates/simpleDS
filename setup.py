@@ -44,6 +44,7 @@ setup_args = {
         "pyuvdata>=1.3.8",
         "six>=1.10",
     ],
+    "extras_require": {"all": ["astropy-healpix"]},
     "tests_require": ["pytest"],
 }
 

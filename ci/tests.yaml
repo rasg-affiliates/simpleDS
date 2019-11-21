@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - astropy
+  - astropy-healpix
   - numpy
   - scipy
   - six

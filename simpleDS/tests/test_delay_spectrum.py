@@ -440,10 +440,64 @@ def test_loading_uvb_object():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
     uvb.select(frequencies=uvd.freq_array[0])
     assert np.allclose(
         uvb.get_beam_area(pol="pI"), dspec_object.beam_area.to("sr").value
+    )
+
+
+def test_add_uvb_interp_areas():
+    """Test that the returned interped uvb areas match the exact ones."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object2 = copy.deepcopy(dspec_object)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
+    dspec_object2.add_uvbeam(uvb=uvb)
+
+    assert np.allclose(
+        dspec_object.beam_area.to_value("sr"), dspec_object2.beam_area.to_value("sr")
+    )
+    assert np.allclose(
+        dspec_object.beam_sq_area.to_value("sr"),
+        dspec_object2.beam_sq_area.to_value("sr"),
+    )
+    assert np.allclose(
+        dspec_object.trcvr.to_value("K"), dspec_object2.trcvr.to_value("K")
+    )
+
+
+def test_add_uvb_interp_missing_freqs():
+    """Test that the built in UVBeam interps match the interped beam areas."""
+    pytest.importorskip("astropy_healpix")
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=uvd)
+    dspec_object2 = copy.deepcopy(dspec_object)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object2.add_uvbeam(uvb=uvb)
+    uvb.select(frequencies=uvb.freq_array.squeeze()[::2])
+    uvb.interpolation_function = "healpix_simple"
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
+    assert np.allclose(
+        dspec_object.beam_area.to_value("sr"), dspec_object2.beam_area.to_value("sr")
+    )
+    assert np.allclose(
+        dspec_object.beam_sq_area.to_value("sr"),
+        dspec_object2.beam_sq_area.to_value("sr"),
+    )
+    assert np.allclose(
+        dspec_object.trcvr.to_value("K"), dspec_object2.trcvr.to_value("K")
     )
 
 
@@ -457,7 +511,7 @@ def test_add_uvdata_uvbeam_uvdata():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
     dspec_object.add_uvdata(uvd)
     assert dspec_object.check()
 
@@ -499,7 +553,7 @@ def test_loading_uvb_object_with_trcvr():
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
     uvb.receiver_temperature_array = np.ones((1, uvb.Nfreqs)) * 144
-    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
     uvb.select(frequencies=uvd.freq_array[0])
     assert np.allclose(
         uvb.receiver_temperature_array[0], dspec_object.trcvr.to("K")[0].value
@@ -714,7 +768,7 @@ def test_delay_spectrum_power_units():
 
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
-    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
     dspec_object.calculate_delay_spectrum()
     assert (units.mK ** 2 * units.Mpc ** 3).is_equivalent(dspec_object.power_array.unit)
 
