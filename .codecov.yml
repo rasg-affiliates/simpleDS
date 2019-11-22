@@ -1,4 +1,15 @@
 codecov:
+  require_ci_to_pass: yes
   ci:
     - travis-ci  # with travis-ci.com execution is faster, can keep
     - circleci
+
+coverage:
+  precision: 3
+  round: down
+  range: "90...100"
+
+  status:
+    project: yes
+    patch: yes
+    changes: no
