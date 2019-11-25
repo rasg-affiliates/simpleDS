@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Removed active python 2.7 support. Python 2.7 support frozen in version 1.0.2
 
 ## [1.0.2] 21 November 2019
 ### Added
