@@ -5,8 +5,6 @@
 
 import os
 import copy
-import six
-from six.moves import range
 import numpy as np
 from astropy import constants as const
 from astropy import units
@@ -49,7 +47,7 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     """
     uv = UVData()
     # find keywords that pass to uv.read
-    uvdata_argspec = six.get_function_code(uv.read).co_varnames
+    uvdata_argspec = uv.read.__code__.co_varnames
     kwargs_uvdata = {key: kwargs[key] for key in kwargs if key in uvdata_argspec}
     uv.read_miriad(filename, **kwargs_uvdata)
 
@@ -60,7 +58,7 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
         raise IOError("{0} not found.".format(antpos_file))
 
     # find keywords that pass to np.genfromtxt
-    genfromtxt_argpsec = six.get_function_code(np.genfromtxt).co_varnames
+    genfromtxt_argpsec = np.genfromtxt.__code__.co_varnames
     kwargs_genfromtxt = {
         key: kwargs[key] for key in kwargs if key in genfromtxt_argpsec
     }
@@ -738,10 +736,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
     return array_out, uncertainty_out
 
 
-if six.PY2:
-    accepted_units = ["mK^2*Mpc^3", "time"]
-else:
-    accepted_units = ["mK^2*Mpc^3", "mK^2*Mpc^3/littleh^3", "time"]
+accepted_units = ["mK^2*Mpc^3", "mK^2*Mpc^3/littleh^3", "time"]
 
 
 @units.quantity_input(delays="time", array=accepted_units)

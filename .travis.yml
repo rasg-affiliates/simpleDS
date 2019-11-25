@@ -38,7 +38,7 @@ install:
 
   # install dependencies
 
-  - conda install numpy scipy pytest-cov pip coverage astropy astropy-healpix six h5py coverage flake8 flake8-docstrings codecov
+  - conda install numpy scipy pytest-cov pip coverage astropy astropy-healpix h5py coverage flake8 flake8-docstrings codecov
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - conda list
   - python --version

@@ -5,7 +5,6 @@
 from __future__ import print_function, absolute_import, division
 
 import copy
-import six
 
 import numpy as np
 import warnings
@@ -20,10 +19,7 @@ from scipy.interpolate import interp1d
 from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
 
-if six.PY3:
-    from collections.abc import Callable
-else:
-    from collections import Callable
+from collections.abc import Callable
 
 
 class DelaySpectrum(UVBase):
@@ -328,10 +324,7 @@ class DelaySpectrum(UVBase):
             expected_units=units.dimensionless_unscaled,
         )
 
-        if six.PY2:
-            _kval_units = 1.0 / units.Mpc
-        else:
-            _kval_units = (1.0 / units.Mpc, units.littleh / units.Mpc)
+        _kval_units = (1.0 / units.Mpc, units.littleh / units.Mpc)
 
         desc = (
             "Cosmological wavenumber of spatial modes probed perpendicular "
@@ -364,14 +357,11 @@ class DelaySpectrum(UVBase):
             form=("Nspws", "Ndelays"),
             expected_units=_kval_units,
         )
-        if six.PY2:
-            _power_units = ((units.mK ** 2 * units.Mpc ** 3), (units.Hz ** 2))
-        else:
-            _power_units = (
-                (units.mK ** 2 * units.Mpc ** 3),
-                (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
-                (units.Hz ** 2),
-            )
+        _power_units = (
+            (units.mK ** 2 * units.Mpc ** 3),
+            (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
+            (units.Hz ** 2),
+        )
 
         desc = (
             "The cross-multiplied power spectrum estimates. "
@@ -391,17 +381,11 @@ class DelaySpectrum(UVBase):
             form=("Nspws", "Npols", "Nbls", "Nbls", "Ntimes", "Ndelays"),
             expected_units=_power_units,
         )
-        if six.PY2:
-            _noise_power_units = (
-                (units.mK ** 2 * units.Mpc ** 3),
-                (units.Jy * units.Hz) ** 2,
-            )
-        else:
-            _noise_power_units = (
-                (units.mK ** 2 * units.Mpc ** 3),
-                (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
-                (units.Jy * units.Hz) ** 2,
-            )
+        _noise_power_units = (
+            (units.mK ** 2 * units.Mpc ** 3),
+            (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
+            (units.Jy * units.Hz) ** 2,
+        )
         desc = (
             "The cross-multiplied simulated noise power spectrum estimates. "
             "Units are converted to cosmological frame (mK^2/(hMpc^-1)^3)."
@@ -420,13 +404,10 @@ class DelaySpectrum(UVBase):
             expected_units=_noise_power_units,
         )
 
-        if six.PY2:
-            _thermal_power_units = units.mK ** 2 * units.Mpc ** 3
-        else:
-            _thermal_power_units = (
-                (units.mK ** 2 * units.Mpc ** 3),
-                (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
-            )
+        _thermal_power_units = (
+            (units.mK ** 2 * units.Mpc ** 3),
+            (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
+        )
         desc = (
             "The predicted thermal variance of the input data averaged over "
             "all input baselines."
@@ -444,28 +425,21 @@ class DelaySpectrum(UVBase):
             expected_units=_thermal_power_units,
         )
 
-        if six.PY2:
-            _conversion_units = (
-                (units.mK ** 2 * units.Mpc ** 3 / (units.Jy * units.Hz) ** 2),
-                (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
-                (units.dimensionless_unscaled),
-            )
-        else:
-            _conversion_units = (
-                (units.mK ** 2 * units.Mpc ** 3 / (units.Jy * units.Hz) ** 2),
-                (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
-                (
-                    units.mK ** 2
-                    * (units.Mpc / units.littleh) ** 3
-                    / (units.Jy * units.Hz) ** 2
-                ),
-                (
-                    units.mK ** 2
-                    * (units.Mpc / units.littleh) ** 3
-                    / (units.K * units.sr * units.Hz) ** 2
-                ),
-                (units.dimensionless_unscaled),
-            )
+        _conversion_units = (
+            (units.mK ** 2 * units.Mpc ** 3 / (units.Jy * units.Hz) ** 2),
+            (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
+            (
+                units.mK ** 2
+                * (units.Mpc / units.littleh) ** 3
+                / (units.Jy * units.Hz) ** 2
+            ),
+            (
+                units.mK ** 2
+                * (units.Mpc / units.littleh) ** 3
+                / (units.K * units.sr * units.Hz) ** 2
+            ),
+            (units.dimensionless_unscaled),
+        )
         desc = (
             "The cosmological unit conversion factor applied to the data. "
             'Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.'
@@ -480,20 +454,14 @@ class DelaySpectrum(UVBase):
             form=("Nspws", "Npols"),
             expected_units=_conversion_units,
         )
-        if six.PY2:
-            _tconversion_units = (
-                (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
-            )
-
-        else:
-            _tconversion_units = (
-                (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
-                (
-                    units.mK ** 2
-                    * (units.Mpc / units.littleh) ** 3
-                    / (units.K * units.sr * units.Hz) ** 2
-                ),
-            )
+        _tconversion_units = (
+            (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
+            (
+                units.mK ** 2
+                * (units.Mpc / units.littleh) ** 3
+                / (units.K * units.sr * units.Hz) ** 2
+            ),
+        )
         desc = (
             "The cosmological unit conversion factor applied to the thermal noise estimate. "
             'Has the form ("Nspws", "Npols"). Accounts for all beam polarizations.'
@@ -1233,16 +1201,15 @@ class DelaySpectrum(UVBase):
         # If power spectrum estimation has already occurred, need to re-normalize
         # in the new cosmological framework.
         if self.power_array is not None:
-            if six.PY3:
-                if self.power_array.unit.is_equivalent(
-                    units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
-                ):
-                    self.power_array = self.power_array.to(
-                        units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
-                    )
-                    self.noise_power = self.noise_power.to(
-                        units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
-                    )
+            if self.power_array.unit.is_equivalent(
+                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+            ):
+                self.power_array = self.power_array.to(
+                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                )
+                self.noise_power = self.noise_power.to(
+                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                )
             # only divide by the conversion when power array is in cosmological units
             # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
             if (
@@ -1332,13 +1299,12 @@ class DelaySpectrum(UVBase):
                 self.noise_power = self.noise_power.to("mK^2 * Mpc^3")
 
         if self.thermal_power is not None:
-            if six.PY3:
-                if self.thermal_power.unit.is_equivalent(
-                    units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
-                ):
-                    self.thermal_power = self.thermal_power.to(
-                        units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
-                    )
+            if self.thermal_power.unit.is_equivalent(
+                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+            ):
+                self.thermal_power = self.thermal_power.to(
+                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                )
             # only divide by the conversion when power array is in cosmological units
             # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
             if (
@@ -1381,25 +1347,24 @@ class DelaySpectrum(UVBase):
             )
             self.thermal_power = self.thermal_power.to("mK^2 Mpc^3")
 
-        if six.PY3:
-            if littleh_units:
-                self.k_perpendicular = self.k_perpendicular.to(
-                    "littleh/Mpc", units.with_H0(self.cosmology.H0)
+        if littleh_units:
+            self.k_perpendicular = self.k_perpendicular.to(
+                "littleh/Mpc", units.with_H0(self.cosmology.H0)
+            )
+            self.k_parallel = self.k_parallel.to(
+                "littleh/Mpc", units.with_H0(self.cosmology.H0)
+            )
+            if self.power_array is not None:
+                self.power_array = self.power_array.to(
+                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
                 )
-                self.k_parallel = self.k_parallel.to(
-                    "littleh/Mpc", units.with_H0(self.cosmology.H0)
+                self.noise_power = self.noise_power.to(
+                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
                 )
-                if self.power_array is not None:
-                    self.power_array = self.power_array.to(
-                        "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
-                    )
-                    self.noise_power = self.noise_power.to(
-                        "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
-                    )
-                if self.thermal_power is not None:
-                    self.thermal_power = self.thermal_power.to(
-                        "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
-                    )
+            if self.thermal_power is not None:
+                self.thermal_power = self.thermal_power.to(
+                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                )
 
     def add_uvbeam(
         self,

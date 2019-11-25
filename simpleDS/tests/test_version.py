@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import os
-import six
+import io
 import subprocess
 import json
 
@@ -82,13 +82,9 @@ def test_construct_version_info():
 
         data = data.strip()
 
-        if six.PY2:
-            return data
         return data.decode("utf8")
 
     def unicode_to_str(u):
-        if six.PY2:
-            return u.encode("utf8")
         return u
 
     try:
@@ -138,7 +134,7 @@ def test_main():
 
     saved_stdout = sys.stdout
     try:
-        out = six.StringIO()
+        out = io.StringIO()
         sys.stdout = out
         simpleDS.version.main()
         output = out.getvalue()
