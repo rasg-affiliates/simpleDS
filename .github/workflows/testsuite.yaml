@@ -84,6 +84,11 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}} #required
           file: ./coverage.xml #optional
 
+      - name: Upload Coverage (Mac OS)
+        if: matrix.os == 'macos-latest' && success()
+        run: |
+          bash <(curl -s https://codecov.io/bash) -t ${{secrets.CODECOV_TOKEN}}
+
   notebook:
     name: Tutorial Notebook
 
