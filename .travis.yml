@@ -4,7 +4,6 @@ os:
   - 'osx'
 env:
   matrix:
-    - PYTHON_VERSION=2.7
     - PYTHON_VERSION=3.6
     - PYTHON_VERSION=3.7
     - PYTHON_VERSION=3.8
@@ -15,11 +14,7 @@ install:
   - git fetch --unshallow --tags
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
-  - if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        wget https://repo.anaconda.com/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O miniconda.sh;
-    else
-        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-    fi
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
 
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -51,11 +46,7 @@ install:
 script:
   - python setup.py build_ext --force --inplace
   - python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml -v simpleDS
-  - if [[ "$PYTHON_VERSION" != "2.7" ]]; then
-      flake8 simpleDS
-    else
-     exit 0;
-    fi
+  - flake8 simpleDS
 
 after_success:
   - codecov
