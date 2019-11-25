@@ -7,7 +7,6 @@ dependencies:
   - astropy-healpix
   - numpy
   - scipy
-  - six
   - h5py
   - pytest-cov
   - pip

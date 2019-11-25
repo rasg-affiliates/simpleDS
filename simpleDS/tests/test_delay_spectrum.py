@@ -20,7 +20,6 @@ from simpleDS import DelaySpectrum
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from pyuvdata.data import DATA_PATH as UVDATA_PATH
-import simpleDS.tests as sdstest
 
 
 class DummyClass(object):
@@ -1333,7 +1332,6 @@ def test_update_cosmology_unit_and_shape_uncalib():
     assert dspec_object.check()
 
 
-@sdstest.skipIf_py2
 def test_update_cosmology_littleh_units():
     """Test the units can convert to 'littleh' units in python 3."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
@@ -1356,7 +1354,6 @@ def test_update_cosmology_littleh_units():
     assert dspec_object.power_array.unit, test_unit
 
 
-@sdstest.skipIf_py2
 def test_update_cosmology_littleh_units_from_calc_delay_spectr():
     """Test the units can convert to 'littleh' units in python 3 passed through calculate_delay_spectrum."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
@@ -1378,7 +1375,6 @@ def test_update_cosmology_littleh_units_from_calc_delay_spectr():
     assert dspec_object.cosmology.name == "Planck15"
 
 
-@sdstest.skipIf_py2
 def test_call_update_cosmology_twice():
     """Test cosmology can be updated at least twice in a row with littleh_units."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
@@ -1454,7 +1450,6 @@ def test_call_delay_spectrum_twice_no_littleh():
     assert dspec_object.check()
 
 
-@sdstest.skipIf_py2
 def test_call_delay_spectrum_twice():
     """Test calculate_delay_spectrum can be called at least twice in a row."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")

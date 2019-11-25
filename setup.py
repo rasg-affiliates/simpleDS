@@ -36,14 +36,8 @@ setup_args = {
     "scripts": glob.glob("scripts/*"),
     "version": version.version,
     "include_package_data": True,
-    "setup_requires": ["pytest-runner", "numpy>=1.15", "six>=1.10"],
-    "install_requires": [
-        "numpy>1.15",
-        "astropy>2.0",
-        "scipy",
-        "pyuvdata>=1.3.8",
-        "six>=1.10",
-    ],
+    "setup_requires": ["pytest-runner", "numpy>=1.15"],
+    "install_requires": ["numpy>1.15", "astropy>2.0", "scipy", "pyuvdata>=1.3.8"],
     "extras_require": {"all": ["astropy-healpix"]},
     "tests_require": ["pytest"],
 }
