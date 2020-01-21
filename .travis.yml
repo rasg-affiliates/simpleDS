@@ -26,6 +26,7 @@ install:
   - ./ci/install_conda.sh
 
 script:
+  - source activate $ENV_NAME
   - pip install -e .[all]
   - python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml simpleDS
 
