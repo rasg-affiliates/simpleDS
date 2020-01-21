@@ -330,7 +330,7 @@ class UnitParameter(uvp.UVParameter):
                 return uvp.UVParameter(
                     name=self.name,
                     required=self.required,
-                    value=self.value.astype(self.expected_type).value,
+                    value=self.expected_type(self.value.value),
                     form=self.form,
                     description=self.description,
                     expected_type=self.expected_type,
@@ -343,7 +343,7 @@ class UnitParameter(uvp.UVParameter):
                 return uvp.UVParameter(
                     name=self.name,
                     required=self.required,
-                    value=self.value.astype(self.expected_type).value,
+                    value=self.expected_type(self.value.value),
                     spoof_val=self.spoof_val,
                     form=self.form,
                     description=self.description,
