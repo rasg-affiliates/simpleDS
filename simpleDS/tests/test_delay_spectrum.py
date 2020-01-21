@@ -1032,6 +1032,75 @@ def test_multiple_polarization_file():
     assert dspec_object.check()
 
 
+def test_remove_cosmology():
+    """Test removing cosmology does not alter data from before cosmology is applied."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+
+    dspec_object2 = copy.deepcopy(dspec_object)
+
+    dspec_object.calculate_delay_spectrum(littleh_units=True)
+
+    dspec_object.remove_cosmology()
+
+    assert dspec_object.power_array.unit.is_equivalent(units.Jy ** 2 * units.Hz ** 2)
+
+    dspec_object2.delay_transform()
+    dspec_object2.power_array = utils.cross_multiply_array(
+        array_1=dspec_object2.data_array[:, 0], axis=2
+    )
+
+    assert units.allclose(dspec_object2.power_array, dspec_object.power_array)
+
+
+def test_remove_cosmology_no_cosmo():
+    """Test removing cosmology does not alter data from before cosmology is applied."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    dspec_object.add_uvbeam(uvb=uvb)
+    dspec_object.delay_transform()
+    dspec_object.power_array = utils.cross_multiply_array(
+        array_1=dspec_object.data_array[:, 0], axis=2
+    )
+    dspec_object.noise_power = utils.cross_multiply_array(
+        array_1=dspec_object.noise_array[:, 0], axis=2
+    )
+
+    dspec_object2 = copy.deepcopy(dspec_object)
+
+    dspec_object.remove_cosmology()
+
+    assert dspec_object.power_array.unit.is_equivalent(units.Jy ** 2 * units.Hz ** 2)
+
+    assert units.allclose(dspec_object2.power_array, dspec_object.power_array)
+
+
+def test_remove_cosmology_cosmo_none():
+    """Test removing cosmology does not alter data from before cosmology is applied."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    uvd = UVData()
+    uvd.read(testfile)
+    dspec_object = DelaySpectrum(uv=[uvd])
+    dspec_object.cosmology = None
+
+    with pytest.raises(ValueError) as cm:
+        dspec_object.remove_cosmology()
+    assert str(cm.value).startswith("Cannot remove cosmology of type")
+
+
 def test_update_cosmology_units_and_shapes():
     """Test the check function on DelaySpectrum after changing cosmologies."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
@@ -1287,3 +1356,113 @@ def test_call_delay_spectrum_twice():
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()
+
+
+def test_readwrite_ds_object():
+    """Test a ds object can be written and read without chaning the object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    test_outfile = "test_out.h5"
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    ds.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    if os.path.exists(test_outfile):
+        os.remove(test_outfile)
+
+    ds.write(test_outfile)
+
+    ds_in = DelaySpectrum()
+    ds_in.read(test_outfile)
+
+    assert ds == ds_in
+
+    if os.path.exists(test_outfile):
+        os.remove(test_outfile)
+
+
+def test_readwrite_ds_object_power_units():
+    """Test a ds object can be written and read without chaning the object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    test_outfile = "test_out.h5"
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    ds.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    ds.calculate_delay_spectrum()
+
+    if os.path.exists(test_outfile):
+        os.remove(test_outfile)
+
+    uvtest.checkWarnings(
+        ds.write,
+        func_args=[test_outfile],
+        message="Cannot write DelaySpectrum objects to file when power ",
+        nwarnings=1,
+        category=UserWarning,
+    )
+
+    ds_in = DelaySpectrum()
+    ds_in.read(test_outfile)
+
+    assert ds == ds_in
+
+    if os.path.exists(test_outfile):
+        os.remove(test_outfile)
+
+
+def test_readwrite_custom_taper():
+    """Test a ds object can be written and read without chaning the object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    test_outfile = "test_out.h5"
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    ds.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    ds.set_taper(windows.cosine)
+
+    ds.delay_transform()
+
+    if os.path.exists(test_outfile):
+        os.remove(test_outfile)
+
+    uvtest.checkWarnings(
+        ds.write,
+        func_args=[test_outfile],
+        message="The given taper funtion has a different name than ",
+        nwarnings=1,
+        category=UserWarning,
+    )
+
+    ds_in = DelaySpectrum()
+    uvtest.checkWarnings(
+        ds_in.read,
+        func_args=[test_outfile],
+        message="Saved taper function has different name than",
+        nwarnings=1,
+        category=UserWarning,
+    )
+
+    assert ds != ds_in
+    ds_in.set_taper(windows.cosine)
+    assert ds == ds_in
+
+    if os.path.exists(test_outfile):
+        os.remove(test_outfile)
