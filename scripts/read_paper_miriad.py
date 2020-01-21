@@ -63,7 +63,6 @@ def read_paper_miriad(filename, antpos_file=None, **kwargs):
     }
 
     antpos = np.genfromtxt(antpos_file, **kwargs_genfromtxt)
-    print(antpos.shape)
 
     antpos_ecef = uvutils.ECEF_from_ENU(antpos, *uv.telescope_location_lat_lon_alt)
     antpos_itrf = antpos_ecef - uv.telescope_location
@@ -113,7 +112,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--outfmt",
         "-o",
-        destination="format",
+        dest="format",
         type=str,
         choices=["miriad", "uvfits", "uvh5"],
         default="miriad",
@@ -132,10 +131,10 @@ if __name__ == "__main__":
         usecols=[1, 2, 3],
     )
     if args.format == "miriad":
-        uv.write(args.filename, clobber=True)
+        uv.write_miriad(args.filename, clobber=True)
     elif args.format == "uvfits":
-        out_name = ".".join(args.filename.split(["."])[:-1]) + ".uvfits"
-        uv.write(out_name, clobber=True)
+        out_name = ".".join(args.filename.split(".")[:-1]) + ".uvfits"
+        uv.write_uvfits(out_name, clobber=True)
     elif args.format == "uvh5":
-        out_name = ".".join(args.filename.split(["."])[:-1]) + ".uvh5"
-        uv.write(out_name, clobber=True)
+        out_name = ".".join(args.filename.split(".")[:-1]) + ".uvh5"
+        uv.write_uvh5(out_name, clobber=True)
