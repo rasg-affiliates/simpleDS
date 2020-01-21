@@ -876,26 +876,9 @@ def test_cosmological_units():
 
 def test_delay_spectrum_power_units_input_kelvin_str():
     """Test the units on the output power are correct when input kelvin*str."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file_k_units.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file_k_units.uvh5")
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
@@ -916,26 +899,11 @@ def test_delay_spectrum_power_units_input_kelvin_str():
 
 def test_delay_spectrum_power_units_input_uncalib():
     """Test the units on the output power are correct if input uncalib."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file_uncalib_units.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
+    test_file = os.path.join(DATA_PATH, "paper_test_file_uncalib_units.uvh5")
 
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
+
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
@@ -976,30 +944,10 @@ def test_delay_spectrum_power_units_input_uncalib():
 
 def test_delay_spectrum_noise_power_units():
     """Test the units on the output noise power are correct."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
 
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
@@ -1007,28 +955,8 @@ def test_delay_spectrum_noise_power_units():
     uvb = UVBeam()
     uvb.read_beamfits(beam_file)
 
-    warn_message = [
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types"
-    ]
-    uvtest.checkWarnings(
-        test_uv_1.select,
-        func_args=[],
-        func_kwargs={"freq_chans": np.arange(95, 116)},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-
-    uvtest.checkWarnings(
-        test_uv_2.select,
-        func_args=[],
-        func_kwargs={"freq_chans": np.arange(95, 116)},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
 
     dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
 
@@ -1039,30 +967,10 @@ def test_delay_spectrum_noise_power_units():
 
 def test_delay_spectrum_thermal_power_units():
     """Test the units on the output thermal power are correct."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
 
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
@@ -1070,28 +978,8 @@ def test_delay_spectrum_thermal_power_units():
     uvb = UVBeam()
     uvb.read_beamfits(beam_file)
 
-    warn_message = [
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types"
-    ]
-    uvtest.checkWarnings(
-        test_uv_1.select,
-        func_args=[],
-        func_kwargs={"freq_chans": np.arange(95, 116)},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-
-    uvtest.checkWarnings(
-        test_uv_2.select,
-        func_args=[],
-        func_kwargs={"freq_chans": np.arange(95, 116)},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
 
     dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
 
@@ -1104,30 +992,10 @@ def test_delay_spectrum_thermal_power_units():
 
 def test_delay_spectrum_thermal_power_shape():
     """Test the shape of the output thermal power is correct."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
 
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
@@ -1135,28 +1003,8 @@ def test_delay_spectrum_thermal_power_shape():
     uvb = UVBeam()
     uvb.read_beamfits(beam_file)
 
-    warn_message = [
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types"
-    ]
-    uvtest.checkWarnings(
-        test_uv_1.select,
-        func_args=[],
-        func_kwargs={"freq_chans": np.arange(95, 116)},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-
-    uvtest.checkWarnings(
-        test_uv_2.select,
-        func_args=[],
-        func_kwargs={"freq_chans": np.arange(95, 116)},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
+    test_uv_1.select(freq_chans=np.arange(95, 116))
+    test_uv_2.select(freq_chans=np.arange(95, 116))
 
     dspec_object = DelaySpectrum(uv=[test_uv_1, test_uv_2])
 
@@ -1225,28 +1073,11 @@ def test_update_cosmology_error_if_not_cosmology_object():
 
 def test_update_cosmology_unit_and_shape_kelvin_sr():
     """Test the check function after changing cosmolgies, input visibility Kelvin * sr."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file_k_units.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
+    test_file = os.path.join(DATA_PATH, "paper_test_file_k_units.uvh5")
     test_cosmo = Planck15
 
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
@@ -1269,28 +1100,11 @@ def test_update_cosmology_unit_and_shape_kelvin_sr():
 
 def test_update_cosmology_unit_and_shape_uncalib():
     """Test the check function after changing cosmolgies, input visibility uncalibrated."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file_uncalib_units.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
+    test_file = os.path.join(DATA_PATH, "paper_test_file_uncalib_units.uvh5")
     test_cosmo = Planck15
 
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-
-    test_uv_1 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_uv_1 = UVData()
+    test_uv_1.read(test_file)
     test_uv_2 = copy.deepcopy(test_uv_1)
 
     beam_file = os.path.join(DATA_PATH, "test_paper_pI.beamfits")
