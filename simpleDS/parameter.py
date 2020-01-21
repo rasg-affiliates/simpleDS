@@ -6,8 +6,6 @@
 These objects extend the functionality of pyuvdata UVParameter objects to also
 include compatibility with Astropy Units and Quantity objects.
 """
-from __future__ import print_function, absolute_import, division
-
 import numpy as np
 import warnings
 import copy

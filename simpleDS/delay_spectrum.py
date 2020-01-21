@@ -2,13 +2,13 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Calculate Delay Spectrum from pyuvdata object."""
-from __future__ import print_function, absolute_import, division
-
+import os
 import copy
-
+import h5py
 import numpy as np
 import warnings
-from pyuvdata import UVData, UVBase, utils as uvutils
+from pyuvdata import UVData, utils as uvutils
+from pyuvdata.uvbase import UVBase
 import astropy.units as units
 from astropy import constants as const
 from astropy.cosmology.core import Cosmology as reference_cosmology_object
@@ -20,6 +20,37 @@ from . import utils, cosmo as simple_cosmo
 from .parameter import UnitParameter
 
 from collections.abc import Callable
+
+
+def _check_h5py_dtype(dtype):
+    """
+    Check that a specified custom datatype conforms to simpleDS save standards.
+
+    This function is adapted from pyuvdata.uvh5._check_uvh5_dtype
+
+    Parameters
+    ----------
+    dtype : numpy dtype object
+        numpy datatype with an 'r' field and an 'i' field
+
+    Returns
+    -------
+        None
+
+    """
+    if not isinstance(dtype, np.dtype):
+        raise ValueError("dtype in a simpleDS save file must be a numpy dtype")
+    if "r" not in dtype.names or "i" not in dtype.names:
+        raise ValueError(
+            "dtype must be a compound datatype with an 'r' field and an 'i' field"
+        )
+    rkind = dtype["r"].kind
+    ikind = dtype["i"].kind
+    if rkind != ikind:
+        raise ValueError(
+            "dtype must have the same kind ('i4', 'r8', etc.) for both real and imaginary fields"
+        )
+    return
 
 
 class DelaySpectrum(UVBase):
@@ -569,6 +600,9 @@ class DelaySpectrum(UVBase):
 
 
         """
+        if taper is None:
+            taper = windows.blackmanharris
+
         if not callable(taper):
             raise ValueError(
                 "Input spectral taper must be a function or "
@@ -1013,6 +1047,672 @@ class DelaySpectrum(UVBase):
                     setattr(self, p, parm)
         self.check(check_extra=False, run_check_acceptability=True)
 
+    def remove_cosmology(self):
+        """Remove cosmological conversion from any power spectrum estimates."""
+        if self.cosmology is None:
+            raise ValueError("Cannot remove cosmology of type {}".format(type(None)))
+
+        self.k_parallel = None
+        self.k_perpendicular = None
+        # If power spectrum estimation has already occurred, need to re-normalize
+        # in the new cosmological framework.
+        if self.power_array is not None:
+            if self.power_array.unit.is_equivalent(
+                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+            ):
+                self.power_array = self.power_array.to(
+                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                )
+                self.noise_power = self.noise_power.to(
+                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                )
+            # only divide by the conversion when power array is in cosmological units
+            # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
+            if (
+                self.unit_conversion is not None
+                and not self.power_array.unit.is_equivalent(
+                    (
+                        units.Jy ** 2 * units.Hz ** 2,
+                        units.K ** 2 * units.sr ** 2 * units.Hz ** 2,
+                    )
+                )
+            ):
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    self.power_array = self.power_array / self.unit_conversion.reshape(
+                        self.Nspws, self.Npols, 1, 1, 1, 1
+                    )
+                    self.noise_power = self.noise_power / self.unit_conversion.reshape(
+                        self.Nspws, self.Npols, 1, 1, 1, 1
+                    )
+
+        if self.thermal_power is not None:
+            if self.thermal_power.unit.is_equivalent(
+                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+            ):
+                self.thermal_power = self.thermal_power.to(
+                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                )
+            # only divide by the conversion when power array is in cosmological units
+            # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
+            if (
+                self.thermal_conversion is not None
+                and not self.thermal_power.unit.is_equivalent(
+                    (
+                        units.Jy ** 2 * units.Hz ** 2,
+                        units.K ** 2 * units.sr ** 2 * units.Hz ** 2,
+                    )
+                )
+            ):
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    self.thermal_power = (
+                        self.thermal_power
+                        / self.thermal_conversion.reshape(
+                            self.Nspws, self.Npols, 1, 1, 1
+                        )
+                    )
+
+        self.unit_conversion = None
+        self.thermal_conversion = None
+        return
+
+    def update_cosmology(self, cosmology=None, littleh_units=False):
+        """Update cosmological information with the assumed cosmology.
+
+        Parameters
+        ----------
+        cosmology : Astropy Cosmology Object, optional
+            input assumed cosmology. Must be an astropy cosmology object. Defaults to Planck15
+        littleh_units: Bool, default:False
+                       automatically convert to to mK^2 / (littleh / Mpc)^3.
+
+        Raises
+        ------
+        ValueError
+            If input cosomolgy is not an astropy cosmology object
+
+        """
+        # remove any previously applied cosmologies
+        self.remove_cosmology()
+
+        if cosmology is not None:
+            if not isinstance(cosmology, reference_cosmology_object):
+                raise ValueError(
+                    "Input cosmology must a sub-class of astropy.cosmology.core.Cosmology"
+                )
+            self.cosmology = cosmology
+        else:
+            self.cosmology = simple_cosmo.default_cosmology.get()
+        # find the mean redshift for each spectral window
+        self.redshift = simple_cosmo.calc_z(self.freq_array).mean(axis=1)
+        self.k_parallel = simple_cosmo.eta2kparr(
+            self.delay_array.reshape(1, self.Ndelays),
+            self.redshift.reshape(self.Nspws, 1),
+            cosmo=self.cosmology,
+        )
+
+        uvw_wave = np.linalg.norm(self.uvw.value) << self.uvw.unit
+        mean_freq = np.mean(self.freq_array.value, axis=1) << self.freq_array.unit
+        uvw_wave = uvw_wave / (const.c / mean_freq.to("1/s")).to("m")
+        self.k_perpendicular = simple_cosmo.u2kperp(
+            uvw_wave, self.redshift, cosmo=self.cosmology
+        )
+
+        # If power spectrum estimation has already occurred, need to re-normalize
+        # in the new cosmological framework.
+        if self.power_array is not None:
+
+            if self.power_array.unit.is_equivalent((units.Jy * units.Hz) ** 2):
+                # This additoinal units.sr term in the c/2*K_b expression may seem
+                # weird, however, the temperature to Jy conversion factor is defined
+                # such that there is a beam integral, or a sr factor, included.
+                # this helps the units work out.
+
+                # This is the full unit conversion integral.
+                # See liu et al 2014ab or write the visibility equation and convert to cosmological units without pulling anything outside the integral.
+                integration_array = (
+                    self.freq_array.reshape(self.Nspws, 1, self.Nfreqs) ** 4
+                    / simple_cosmo.X2Y(
+                        simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
+                    ).reshape(self.Nspws, 1, self.Nfreqs)
+                    * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
+                    * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
+                )
+                self.unit_conversion = (
+                    const.c ** 2 * units.sr / (2 * const.k_B)
+                ) ** 2 / integrate.trapz(
+                    integration_array.value,
+                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                    axis=-1,
+                ).reshape(
+                    self.Nspws, self.Npols
+                )
+                self.unit_conversion = self.unit_conversion / (
+                    integration_array.unit * self.freq_array.unit
+                )
+                self.unit_conversion = self.unit_conversion << units.Unit(
+                    "mK^2 Mpc^3 /( Jy^2 Hz^2)"
+                )
+            elif self.power_array.unit.is_equivalent(
+                (units.K * units.sr * units.Hz) ** 2
+            ):
+                integration_array = (
+                    1.0
+                    / simple_cosmo.X2Y(
+                        simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
+                    ).reshape(self.Nspws, 1, self.Nfreqs)
+                    * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
+                    * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
+                )
+                self.unit_conversion = 1.0 / integrate.trapz(
+                    integration_array.value,
+                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                    axis=-1,
+                ).reshape(self.Nspws, self.Npols)
+                self.unit_conversion = self.unit_conversion / (
+                    integration_array.unit * self.freq_array.unit
+                )
+                self.unit_conversion = self.unit_conversion << units.Unit(
+                    "mK^2 Mpc^3 /( K^2 sr^2 Hz^2)"
+                )
+            else:
+                self.unit_conversion = (
+                    np.ones((self.Npols, self.Nspws)) << units.dimensionless_unscaled
+                )
+
+            self.power_array = self.power_array * self.unit_conversion.reshape(
+                self.Nspws, self.Npols, 1, 1, 1, 1
+            )
+            self.noise_power = self.noise_power * self.unit_conversion.reshape(
+                self.Nspws, self.Npols, 1, 1, 1, 1
+            )
+            if not self.data_array.unit.is_equivalent(
+                units.dimensionless_unscaled * units.Hz
+            ):
+                self.power_array = self.power_array << units.Unit("mK^2 * Mpc^3")
+                self.noise_power = self.noise_power << units.Unit("mK^2 * Mpc^3")
+
+        if self.thermal_power is not None:
+
+            integration_array = (
+                1.0
+                / simple_cosmo.X2Y(
+                    simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
+                ).reshape(self.Nspws, 1, self.Nfreqs)
+                * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
+                * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
+            )
+            thermal_conversion = 1.0 / integrate.trapz(
+                integration_array.value,
+                x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                axis=-1,
+            ).reshape(self.Nspws, self.Npols)
+            thermal_conversion = thermal_conversion << 1.0 / (
+                integration_array.unit * self.freq_array.unit
+            )
+            self.thermal_conversion = thermal_conversion << units.Unit(
+                "mK^2 Mpc^3 /( K^2 sr^2 Hz^2)"
+            )
+            self.thermal_power = self.thermal_power * self.thermal_conversion.reshape(
+                self.Nspws, self.Npols, 1, 1, 1
+            )
+            self.thermal_power = self.thermal_power << units.Unit("mK^2 Mpc^3")
+
+        if littleh_units:
+            self.k_perpendicular = self.k_perpendicular.to(
+                "littleh/Mpc", units.with_H0(self.cosmology.H0)
+            )
+            self.k_parallel = self.k_parallel.to(
+                "littleh/Mpc", units.with_H0(self.cosmology.H0)
+            )
+            if self.power_array is not None:
+                self.power_array = self.power_array.to(
+                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                )
+                self.noise_power = self.noise_power.to(
+                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                )
+            if self.thermal_power is not None:
+                self.thermal_power = self.thermal_power.to(
+                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                )
+
+    def _read_header(self, header):
+        """Read DelaySpectrum object Header data from an hdf5 save file.
+
+        Parameters
+        ----------
+        header : hdf5 group object
+            The group object from a save file representing the header data.
+
+        """
+        self.Ntimes = int(header["Ntimes"][()])
+        self.Nbls = int(header["Nbls"][()])
+        self.Nfreqs = int(header["Nfreqs"][()])
+        self.Npols = int(header["Npols"][()])
+        if "Ndelays" in header:
+            self.Ndelays = int(header["Ndelays"][()])
+
+        self.Nuv = int(header["Nuv"][()])
+        self.Nspws = int(header["Nspws"][()])
+        self.data_type = header["data_type"][()]
+        self.vis_units = header["vis_units"][()]
+
+        self.lst_array = header["lst_array"][:] * units.Unit(
+            header["lst_array"].attrs["unit"]
+        )
+        self.ant_1_array = header["ant_1_array"][:]
+        self.ant_2_array = header["ant_2_array"][:]
+        self.baseline_array = header["baseline_array"][:]
+        self.freq_array = header["freq_array"][:, :] * units.Unit(
+            header["freq_array"].attrs["unit"]
+        )
+
+        if "delay_array" in header:
+            self.delay_array = header["delay_array"][:] * units.Unit(
+                header["delay_array"].attrs["unit"]
+            )
+
+        self.polarization_array = header["polarization_array"][:]
+
+        self.uvw = header["uvw"][:] * units.Unit(header["uvw"].attrs["unit"])
+        self.integration_time = header["integration_time"][:, :] * units.Unit(
+            header["integration_time"].attrs["unit"]
+        )
+        if "trcvr" in header:
+            print(header["trcvr"][:, :])
+            self.trcvr = header["trcvr"][:, :] * units.Unit(
+                header["trcvr"].attrs["unit"]
+            )
+        else:
+            self.trcvr = np.full_like(self.freq_array.value, np.Inf) * units.K
+
+        if "redshift" in header:
+            self.readshift = header["redshift"][()]
+
+        if "beam_area" in header:
+            self.beam_area = header["beam_area"][:, :] * units.Unit(
+                header["beam_area"].attrs["unit"]
+            )
+        if "beam_sq_area" in header:
+            self.beam_sq_area = header["beam_sq_area"][:, :] * units.Unit(
+                header["beam_sq_area"].attrs["unit"]
+            )
+
+        if header["taper"][()] != np.string_(self.taper.__name__):
+            warnings.warn(
+                "Saved taper function has a different name than "
+                "the default (blackmanharris).\n"
+                "Functions are not serializable and cannot be saved by hdf5. "
+                "Custom taper functions must be reassigned to the object "
+                "after reading. Here is some more information on your custom taper:\n"
+                "Name: {name}\nClass: {classname}\nModule: {module}".format(
+                    name=header["taper"][()],
+                    classname=header["taper"].attrs["class"],
+                    module=header["taper"].attrs["module"],
+                )
+            )
+            self.taper = None
+        else:
+            self.taper = windows.blackmanharris
+
+    def _get_data(self, dgrp, data_array_dtype):
+        """Take no action."""
+        from pyuvdata.uvh5 import _read_complex_astype
+
+        visdata_dtype = dgrp["visdata"].dtype
+        if visdata_dtype not in ("complex64", "complex128"):
+            _check_h5py_dtype(visdata_dtype)
+            if data_array_dtype not in (np.complex64, np.complex128):
+                raise ValueError(
+                    "data_array_dtype must be np.complex64 or np.complex128"
+                )
+            custom_dtype = True
+        else:
+            custom_dtype = False
+
+        # no select, read in all the data
+        if custom_dtype:
+            inds = (np.s_[:], np.s_[:], np.s_[:], np.s_[:])
+            self.data_array = _read_complex_astype(
+                dgrp["visdata"], inds, data_array_dtype
+            ) * units.Unit(dgrp["visdata"].attrs["unit"])
+
+            self.noise_array = _read_complex_astype(
+                dgrp["visnoise"], inds, data_array_dtype
+            ) * units.Unit(dgrp["visdata"].attrs["unit"])
+        else:
+            self.data_array = dgrp["visdata"][:, :, :, :] * units.Unit(
+                dgrp["visdata"].attrs["unit"]
+            )
+            self.noise_array = dgrp["visnoise"][:, :, :, :] * units.Unit(
+                dgrp["visdata"].attrs["unit"]
+            )
+
+        self.flag_array = dgrp["flags"][:, :, :, :]
+        self.nsample_array = dgrp["nsamples"][:, :, :, :]
+
+        if "data_power" in dgrp:
+            if custom_dtype:
+                inds = (np.s_[:], np.s_[:], np.s_[:], np.s_[:])
+                self.power_array = _read_complex_astype(
+                    dgrp["data_power"], inds, data_array_dtype
+                ) * units.Unit(dgrp["data_power"].attrs["unit"])
+
+                self.noise_power = _read_complex_astype(
+                    dgrp["noise_power"], inds, data_array_dtype
+                ) * units.Unit(dgrp["data_power"].attrs["unit"])
+
+            else:
+                self.power_array = dgrp["data_power"][:, :, :, :] * units.Unit(
+                    dgrp["data_power"].attrs["unit"]
+                )
+                self.noise_power = dgrp["noise_power"][:, :, :, :] * units.Unit(
+                    dgrp["data_power"].attrs["unit"]
+                )
+        if "thermal_power" in dgrp:
+            self.thermal_power = dgrp["thermal_power"][:, :, :, :, :] * units.Unit(
+                dgrp["thermal_power"].attrs["unit"]
+            )
+
+    def read(
+        self,
+        filename,
+        cosmology=None,
+        littleh_units=False,
+        run_check=True,
+        check_extra=True,
+        run_check_acceptability=True,
+        data_array_dtype=np.complex128,
+    ):
+        """Read a saved DelaySpectrum object from hdf5 file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of file to read
+        cosmology : Astropy Cosmology Object, optional
+            Input assumed cosmology. Must be an astropy cosmology object.
+            Cosmology objects cannot be serialized in hdf5 objects.
+            Input cosmology object is used to perform cosmological normalization when data is read.
+            Defaults to Planck15
+        littleh_units: Bool, default: False
+           automatically convert to to mK^2 / (littleh / Mpc)^3.
+        data_array_dtype : numpy dtype
+            Datatype to store the output data_array as. Must be either
+            np.complex64 (single-precision real and imaginary) or np.complex128 (double-
+            precision real and imaginary). Only used if the datatype of the visibility
+            data on-disk is not 'c8' or 'c16'.
+        run_check : bool
+            Option to check for the existence and proper shapes of parameters
+            after after reading in the file (the default is True,
+            meaning the check will be run). Ignored if read_data is False.
+        check_extra : bool
+            Option to check optional parameters as well as required ones (the
+            default is True, meaning the optional parameters will be checked).
+            Ignored if read_data is False.
+        run_check_acceptability : bool
+            Option to check acceptable range of the values of parameters after
+            reading in the file (the default is True, meaning the acceptable
+            range check will be done). Ignored if read_data is False.
+
+
+        """
+        if not os.path.exists(filename):
+            raise IOError(filename + " not found")
+
+        with h5py.File(filename, "r") as f:
+            # extract header information
+            header = f["/Header"]
+            self._read_header(header)
+
+            # Now read in the data
+            dgrp = f["/Data"]
+            self._get_data(dgrp, data_array_dtype=data_array_dtype)
+
+        self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
+
+        return
+
+    def _write_header(self, header):
+        """Write all metadata to the given hdf5 header.
+
+        Parameters
+        ----------
+        header : hdf5 Group object
+
+        """
+        header["Ntimes"] = self.Ntimes
+        header["Nbls"] = self.Nbls
+        header["Nfreqs"] = self.Nfreqs
+        header["Npols"] = self.Npols
+        if self.Ndelays is not None:
+            header["Ndelays"] = self.Ndelays
+
+        header["Nuv"] = self.Nuv
+        header["Nspws"] = self.Nspws
+        header["data_type"] = self.data_type
+        header["vis_units"] = self.vis_units
+
+        header["lst_array"] = self.lst_array.value
+        header["lst_array"].attrs["unit"] = self.lst_array.unit.to_string()
+        header["ant_1_array"] = self.ant_1_array
+        header["ant_2_array"] = self.ant_2_array
+        header["baseline_array"] = self.baseline_array
+        header["freq_array"] = self.freq_array.value
+        header["freq_array"].attrs["unit"] = self.freq_array.unit.to_string()
+
+        if self.delay_array is not None:
+            header["delay_array"] = self.delay_array.value
+            header["delay_array"].attrs["unit"] = self.delay_array.unit.to_string()
+
+        header["polarization_array"] = self.polarization_array
+
+        header["uvw"] = self.uvw.value
+        header["uvw"].attrs["unit"] = self.uvw.unit.to_string()
+
+        header["integration_time"] = self.integration_time.value
+        header["integration_time"].attrs[
+            "unit"
+        ] = self.integration_time.unit.to_string()
+
+        if self.trcvr is not None:
+            if np.all(np.isfinite(self.trcvr)):
+                header["trcvr"] = self.trcvr.value
+                header["trcvr"].attrs["unit"] = self.trcvr.unit.to_string()
+
+        if self.redshift is not None:
+            header["redshift"] = self.redshift
+
+        if self.beam_area is not None:
+            header["beam_area"] = self.beam_area.value
+            header["beam_area"].attrs["unit"] = self.beam_area.unit.to_string()
+        if self.beam_sq_area is not None:
+            header["beam_sq_area"] = self.beam_sq_area.value
+            header["beam_sq_area"].attrs["unit"] = self.beam_sq_area.unit.to_string()
+
+        # Objects are not serializable by hdf5.
+        # For now save the name and module and issue a print/warning/error
+        # on read if it is not the default?
+        if np.string_(self.taper.__name__) != np.string_(
+            windows.blackmanharris.__name__
+        ):
+            warnings.warn(
+                "The given taper function has a different name than "
+                "the default (blackmanharris). "
+                "Functions are not serializable and cannot be saved by hdf5 but "
+                "information will be stored to help readers re-initialize the taper function."
+            )
+        header["taper"] = np.string_(self.taper.__name__)
+        header["taper"].attrs["module"] = np.string_(self.taper.__module__)
+        header["taper"].attrs["class"] = np.string_(self.taper.__class__)
+
+    def write(
+        self,
+        filename,
+        overwrite=False,
+        run_check=True,
+        check_extra=True,
+        run_check_acceptability=True,
+        data_compression=None,
+        flags_compression="lzf",
+        nsample_compression="lzf",
+        data_write_dtype=None,
+    ):
+        """Write the DelaySpectrum object out to an hdf5 file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of file to write.
+        overwrite : bool
+            If True will overwrite the file if it already exsits.
+        run_check : bool
+            Option to check for the existence and proper shapes of parameters
+            before writing the file. Default is True.
+        check_extra : bool
+            Option to check optional parameters as well as required ones.
+            Default is True.
+        run_check_acceptability : bool
+            Option to check acceptable range of the values of parameters
+            before writing the file. Default is True.
+        data_compression : str
+            HDF5 filter to apply when writing the data_array. Default is None
+            (no filter/compression).
+        flags_compression : str
+            HDF5 filter to apply when writing the flags_array.
+            Default is the LZF filter.
+        nsample_compression : str
+            HDF5 filter to apply when writing the nsample_array.
+            Default is the LZF filter.
+         data_write_dtype : str
+            datatype of output visibility data. If 'None', then the same datatype
+            as data_array will be used. Otherwise, a numpy dtype object must be specified with
+            an 'r' field and an 'i' field for real and imaginary parts, respectively. See
+            uvh5.py for an example of defining such a datatype. Default is None.
+
+        """
+        from pyuvdata.uvh5 import _write_complex_astype
+
+        if run_check:
+            self.check(
+                check_extra=check_extra, run_check_acceptability=run_check_acceptability
+            )
+
+        if os.path.exists(filename):
+            if overwrite:
+                print("File exists; overwriting file")
+            else:
+                raise IOError("File exists; skipping")
+
+        if self.power_array is not None and self.power_array.unit.is_equivalent(
+            self._power_array.expected_units
+        ):
+            warnings.warn(
+                "Cannot write DelaySpectrum objects to file when power is in "
+                "cosmological units. Removing cosmological conversion factors.",
+                UserWarning,
+            )
+            self.remove_cosmology()
+
+        with h5py.File(filename, "w") as h5file:
+            header = h5file.create_group("Header")
+            self._write_header(header)
+
+            dgrp = h5file.create_group("Data")
+            if data_write_dtype is None:
+                if self.data_array.dtype == "complex64":
+                    data_write_dtype = "c8"
+                else:
+                    data_write_dtype = "c16"
+
+            for _name, _data in zip(
+                ["visdata", "visnoise"], [self.data_array, self.noise_array]
+            ):
+                if data_write_dtype not in ("c8", "c16"):
+                    _check_h5py_dtype(data_write_dtype)
+                    visdata = dgrp.create_dataset(
+                        _name,
+                        _data.shape,
+                        chunks=True,
+                        compression=data_compression,
+                        dtype=data_write_dtype,
+                    )
+                    indices = (
+                        np.s_[:],
+                        np.s_[:],
+                        np.s_[:],
+                        np.s_[:],
+                        np.s_[:],
+                        np.s_[:],
+                    )
+                    _write_complex_astype(_data.value4, visdata, indices)
+                else:
+                    visdata = dgrp.create_dataset(
+                        _name,
+                        chunks=True,
+                        data=_data.value,
+                        compression=data_compression,
+                        dtype=data_write_dtype,
+                    )
+                visdata.attrs["unit"] = _data.unit.to_string()
+
+            dgrp.create_dataset(
+                "flags",
+                chunks=True,
+                data=self.flag_array,
+                compression=flags_compression,
+            )
+            dgrp.create_dataset(
+                "nsamples",
+                chunks=True,
+                data=self.nsample_array.astype(np.float32),
+                compression=nsample_compression,
+            )
+
+            if self.power_array is not None:
+                for _name, _data in zip(
+                    ["data_power", "noise_power"], [self.power_array, self.noise_power]
+                ):
+                    if data_write_dtype not in ("c8", "c16"):
+                        _check_h5py_dtype(data_write_dtype)
+                        visdata = dgrp.create_dataset(
+                            _name,
+                            _data.shape,
+                            chunks=True,
+                            compression=data_compression,
+                            dtype=data_write_dtype,
+                        )
+                        indices = (
+                            np.s_[:],
+                            np.s_[:],
+                            np.s_[:],
+                            np.s_[:],
+                            np.s_[:],
+                            np.s_[:],
+                        )
+                        _write_complex_astype(_data.value, visdata, indices)
+                    else:
+                        visdata = dgrp.create_dataset(
+                            _name,
+                            chunks=True,
+                            data=_data.value,
+                            compression=data_compression,
+                            dtype=data_write_dtype,
+                        )
+                    visdata.attrs["unit"] = _data.unit.to_string()
+
+            if self.thermal_power is not None:
+                tpower = dgrp.create_dataset(
+                    "thermal_power",
+                    chunks=True,
+                    data=self.thermal_power.value.astype(np.float32),
+                    compression=nsample_compression,
+                    dtype=np.float32,
+                )
+                tpower.attrs["unit"] = self.thermal_power.unit.to_string()
+        self.update_cosmology()
+        return
+
     def select_spectral_windows(self, spectral_windows=None, freqs=None, inplace=True):
         """Select the spectral windows from loaded data.
 
@@ -1162,210 +1862,6 @@ class DelaySpectrum(UVBase):
         noise_power = self.calculate_noise_power()
         self.noise_array = utils.generate_noise(noise_power)
 
-    def update_cosmology(self, cosmology=None, littleh_units=False):
-        """Update cosmological information with the assumed cosmology.
-
-        Parameters
-        ----------
-        cosmology : Astropy Cosmology Object, optional
-            input assumed cosmology. Must be an astropy cosmology object. Defualts to self.cosmology
-        littleh_units: Bool, default:False
-                       automatically convert to to mK^2 / (littleh / Mpc)^3. Only applies in python 3.
-
-        Raises
-        ------
-        ValueError
-            If input cosomolgy is not an astropy cosmology object
-
-        """
-        if cosmology is not None:
-            if not isinstance(cosmology, reference_cosmology_object):
-                raise ValueError(
-                    "Input cosmology must a sub-class of astropy.cosmology.core.Cosmology"
-                )
-            self.cosmology = cosmology
-        # find the mean redshift for each spectral window
-        self.redshift = simple_cosmo.calc_z(self.freq_array).mean(axis=1)
-        self.k_parallel = simple_cosmo.eta2kparr(
-            self.delay_array.reshape(1, self.Ndelays),
-            self.redshift.reshape(self.Nspws, 1),
-            cosmo=self.cosmology,
-        )
-
-        uvw_wave = np.linalg.norm(self.uvw.value) << self.uvw.unit
-        mean_freq = np.mean(self.freq_array.value, axis=1) << self.freq_array.unit
-        uvw_wave = uvw_wave / (const.c / mean_freq.to("1/s")).to("m")
-        self.k_perpendicular = simple_cosmo.u2kperp(
-            uvw_wave, self.redshift, cosmo=self.cosmology
-        )
-        # If power spectrum estimation has already occurred, need to re-normalize
-        # in the new cosmological framework.
-        if self.power_array is not None:
-            if self.power_array.unit.is_equivalent(
-                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
-            ):
-                self.power_array = self.power_array.to(
-                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
-                )
-                self.noise_power = self.noise_power.to(
-                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
-                )
-            # only divide by the conversion when power array is in cosmological units
-            # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
-            if (
-                self.unit_conversion is not None
-                and not self.power_array.unit.is_equivalent(
-                    (
-                        units.Jy ** 2 * units.Hz ** 2,
-                        units.K ** 2 * units.sr ** 2 * units.Hz ** 2,
-                    )
-                )
-            ):
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    self.power_array = self.power_array / self.unit_conversion.reshape(
-                        self.Nspws, self.Npols, 1, 1, 1, 1
-                    )
-                    self.noise_power = self.noise_power / self.unit_conversion.reshape(
-                        self.Nspws, self.Npols, 1, 1, 1, 1
-                    )
-            if self.power_array.unit.is_equivalent((units.Jy * units.Hz) ** 2):
-                # This additoinal units.sr term in the c/2*K_b expression may seem
-                # weird, however, the temperature to Jy conversion factor is defined
-                # such that there is a beam integral, or a sr factor, included.
-                # this helps the units work out.
-
-                # This is the full unit conversion integral.
-                # See liu et al 2014ab or write the visibility equation and convert to cosmological units without pulling anything outside the integral.
-                integration_array = (
-                    self.freq_array.reshape(self.Nspws, 1, self.Nfreqs) ** 4
-                    / simple_cosmo.X2Y(
-                        simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
-                    ).reshape(self.Nspws, 1, self.Nfreqs)
-                    * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
-                    * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
-                )
-                self.unit_conversion = (
-                    const.c ** 2 * units.sr / (2 * const.k_B)
-                ) ** 2 / integrate.trapz(
-                    integration_array.value,
-                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                    axis=-1,
-                ).reshape(
-                    self.Nspws, self.Npols
-                )
-                self.unit_conversion = self.unit_conversion / (
-                    integration_array.unit * self.freq_array.unit
-                )
-                self.unit_conversion = self.unit_conversion << units.Unit(
-                    "mK^2 Mpc^3 /( Jy^2 Hz^2)"
-                )
-            elif self.power_array.unit.is_equivalent(
-                (units.K * units.sr * units.Hz) ** 2
-            ):
-                integration_array = (
-                    1.0
-                    / simple_cosmo.X2Y(
-                        simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
-                    ).reshape(self.Nspws, 1, self.Nfreqs)
-                    * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
-                    * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
-                )
-                self.unit_conversion = 1.0 / integrate.trapz(
-                    integration_array.value,
-                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                    axis=-1,
-                ).reshape(self.Nspws, self.Npols)
-                self.unit_conversion = self.unit_conversion / (
-                    integration_array.unit * self.freq_array.unit
-                )
-                self.unit_conversion = self.unit_conversion << units.Unit(
-                    "mK^2 Mpc^3 /( K^2 sr^2 Hz^2)"
-                )
-            else:
-                self.unit_conversion = (
-                    np.ones((self.Npols, self.Nspws)) << units.dimensionless_unscaled
-                )
-
-            self.power_array = self.power_array * self.unit_conversion.reshape(
-                self.Nspws, self.Npols, 1, 1, 1, 1
-            )
-            self.noise_power = self.noise_power * self.unit_conversion.reshape(
-                self.Nspws, self.Npols, 1, 1, 1, 1
-            )
-            if not self.data_array.unit.is_equivalent(
-                units.dimensionless_unscaled * units.Hz
-            ):
-                self.power_array = self.power_array << units.Unit("mK^2 * Mpc^3")
-                self.noise_power = self.noise_power << units.Unit("mK^2 * Mpc^3")
-
-        if self.thermal_power is not None:
-            if self.thermal_power.unit.is_equivalent(
-                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
-            ):
-                self.thermal_power = self.thermal_power.to(
-                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
-                )
-            # only divide by the conversion when power array is in cosmological units
-            # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
-            if (
-                self.thermal_conversion is not None
-                and not self.thermal_power.unit.is_equivalent(
-                    (
-                        units.Jy ** 2 * units.Hz ** 2,
-                        units.K ** 2 * units.sr ** 2 * units.Hz ** 2,
-                    )
-                )
-            ):
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    self.thermal_power = (
-                        self.thermal_power
-                        / self.thermal_conversion.reshape(
-                            self.Nspws, self.Npols, 1, 1, 1
-                        )
-                    )
-            integration_array = (
-                1.0
-                / simple_cosmo.X2Y(
-                    simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
-                ).reshape(self.Nspws, 1, self.Nfreqs)
-                * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
-                * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
-            )
-            thermal_conversion = 1.0 / integrate.trapz(
-                integration_array.value,
-                x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                axis=-1,
-            ).reshape(self.Nspws, self.Npols)
-            thermal_conversion = thermal_conversion << 1.0 / (
-                integration_array.unit * self.freq_array.unit
-            )
-            self.thermal_conversion = thermal_conversion << units.Unit(
-                "mK^2 Mpc^3 /( K^2 sr^2 Hz^2)"
-            )
-            self.thermal_power = self.thermal_power * self.thermal_conversion.reshape(
-                self.Nspws, self.Npols, 1, 1, 1
-            )
-            self.thermal_power = self.thermal_power << units.Unit("mK^2 Mpc^3")
-
-        if littleh_units:
-            self.k_perpendicular = self.k_perpendicular.to(
-                "littleh/Mpc", units.with_H0(self.cosmology.H0)
-            )
-            self.k_parallel = self.k_parallel.to(
-                "littleh/Mpc", units.with_H0(self.cosmology.H0)
-            )
-            if self.power_array is not None:
-                self.power_array = self.power_array.to(
-                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
-                )
-                self.noise_power = self.noise_power.to(
-                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
-                )
-            if self.thermal_power is not None:
-                self.thermal_power = self.thermal_power.to(
-                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
-                )
-
     def add_uvbeam(
         self,
         uvb,
@@ -1502,31 +1998,6 @@ class DelaySpectrum(UVBase):
         else:
             self.trcvr = trcvr
 
-    def delay_transform(self):
-        """Perform a delay transform on the stored data array.
-
-        If data is set to frequency domain, fourier transforms to delay space.
-        If data is set to delay domain, inverse fourier transform to frequency space.
-        """
-        if self.data_array.unit == units.dimensionless_unscaled:
-            warnings.warn(
-                "Fourier Transforming uncalibrated data. Units will "
-                "not have physical meaning. "
-                "Data will be arbitrarily scaled.",
-                UserWarning,
-            )
-        if self.data_type == "frequency":
-            self.normalized_fourier_transform()
-            self.set_delay()
-        elif self.data_type == "delay":
-            self.normalized_fourier_transform(inverse=True)
-            self.set_frequency()
-        else:
-            raise ValueError(
-                "Unknown data type: {dt}. Unable to perform "
-                "delay transformation.".format(dt=self.data_type)
-            )
-
     def normalized_fourier_transform(self, inverse=False):
         """Perform a normalized Fourier Transform along frequency dimension.
 
@@ -1558,6 +2029,31 @@ class DelaySpectrum(UVBase):
             taper=self.taper,
             inverse=inverse,
         )
+
+    def delay_transform(self):
+        """Perform a delay transform on the stored data array.
+
+        If data is set to frequency domain, fourier transforms to delay space.
+        If data is set to delay domain, inverse fourier transform to frequency space.
+        """
+        if self.data_array.unit == units.dimensionless_unscaled:
+            warnings.warn(
+                "Fourier Transforming uncalibrated data. Units will "
+                "not have physical meaning. "
+                "Data will be arbitrarily scaled.",
+                UserWarning,
+            )
+        if self.data_type == "frequency":
+            self.normalized_fourier_transform()
+            self.set_delay()
+        elif self.data_type == "delay":
+            self.normalized_fourier_transform(inverse=True)
+            self.set_frequency()
+        else:
+            raise ValueError(
+                "Unknown data type: {dt}. Unable to perform "
+                "delay transformation.".format(dt=self.data_type)
+            )
 
     def calculate_noise_power(self):
         """Use the radiometry equation to generate the expected noise power."""

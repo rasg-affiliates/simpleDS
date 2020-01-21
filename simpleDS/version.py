@@ -2,8 +2,6 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Version info for simpleDS repo."""
-from __future__ import absolute_import, division, print_function
-
 import os
 import subprocess
 import json
