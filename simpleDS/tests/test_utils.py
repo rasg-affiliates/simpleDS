@@ -9,8 +9,7 @@ import copy
 import numpy as np
 import pytest
 from scipy.signal import windows
-from pyuvdata import utils as uvutils
-import pyuvdata.tests as uvtest
+from pyuvdata import utils as uvutils, UVData
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from astropy import constants as const
@@ -19,29 +18,9 @@ from astropy import units
 
 def test_get_data_array():
     """Test data is stored into the array the same."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     data_array = utils.get_data_array(test_uv, reds=baseline_array)
@@ -62,29 +41,9 @@ def test_get_data_array():
 
 def test_get_data_no_squeeze():
     """Test data is stored into the array the same with no squeezing."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     data_array = utils.get_data_array(test_uv, reds=baseline_array, squeeze=False)
@@ -104,29 +63,9 @@ def test_get_data_no_squeeze():
 
 def test_get_nsamples_array():
     """Test nsamples is returned the same."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array)
@@ -147,29 +86,9 @@ def test_get_nsamples_array():
 
 def test_get_nsamples_no_squeeze():
     """Test nsamples is returned the same with no squeeze."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array, squeeze=False)
@@ -189,29 +108,9 @@ def test_get_nsamples_no_squeeze():
 
 def test_get_flag_array():
     """Test nsamples is returned the same."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     flag_array = utils.get_flag_array(test_uv, reds=baseline_array)
@@ -232,29 +131,9 @@ def test_get_flag_array():
 
 def test_get_flag_array_no_squeeze():
     """Test nsamples is returned the same with no squeeze."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     flag_array = utils.get_flag_array(test_uv, reds=baseline_array, squeeze=False)
@@ -366,29 +245,10 @@ def test_noise_amplitude():
 
 def test_align_lst_error():
     """Test lst_align enforces same sampling rate."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
+
     test_uv_2 = copy.deepcopy(test_uv)
     test_uv_2.time_array = 2 * test_uv_2.time_array
 
@@ -397,146 +257,33 @@ def test_align_lst_error():
 
 def test_align_lst_shapes_equal():
     """Test the shape of the time_arrays are equal after lst_align."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
+
     test_uv_2 = copy.deepcopy(test_uv)
     ra_range = [0, 12]
 
-    warn_message = [
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types"
-    ] * 2
-
-    test_uv_out, test_uv_2_out = uvtest.checkWarnings(
-        utils.lst_align,
-        func_args=[test_uv, test_uv_2],
-        func_kwargs={"ra_range": ra_range, "inplace": False},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
+    test_uv_out, test_uv_2_out = utils.lst_align(
+        test_uv, test_uv_2, ra_range=ra_range, inplace=False,
     )
+
     assert test_uv_out.time_array.shape == test_uv_out.time_array.shape
 
 
 def test_align_lst_shapes_equal_uv_2_longer():
     """Test shape of time_array are equal after lst_align: 2nd uv longer."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_miriad_2 = os.path.join(DATA_PATH, "paper_test_file_2nd_time.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_file_2 = os.path.join(DATA_PATH, "paper_test_file_2nd_time.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
+    test_uv_2 = UVData()
+    test_uv_2.read([test_file, test_file_2])
 
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
-
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-    ]
-    warn_category = [
-        UserWarning,
-        UserWarning,
-        UserWarning,
-        UserWarning,
-        DeprecationWarning,
-    ] * 2
-    warn_category += [UserWarning, DeprecationWarning] * 4
-    test_uv_2 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[[test_miriad, test_miriad_2], test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=warn_category,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
     ra_range = [0, 12]
 
-    warn_message = [
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types"
-    ] * 2
-
-    test_uv_out, test_uv_2_out = uvtest.checkWarnings(
-        utils.lst_align,
-        func_args=[test_uv, test_uv_2],
-        func_kwargs={"ra_range": ra_range, "inplace": False},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
+    test_uv_out, test_uv_2_out = utils.lst_align(
+        test_uv, test_uv_2, ra_range=ra_range, inplace=False,
     )
 
     assert test_uv_out.time_array.shape == test_uv_out.time_array.shape
@@ -544,128 +291,25 @@ def test_align_lst_shapes_equal_uv_2_longer():
 
 def test_align_lst_shapes_equal_uv_1_longer():
     """Test shape of time_array are equal after lst_align: 1st uv longer."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_miriad_2 = os.path.join(DATA_PATH, "paper_test_file_2nd_time.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5",
-    ]
-    warn_category = [
-        UserWarning,
-        UserWarning,
-        UserWarning,
-        UserWarning,
-        DeprecationWarning,
-    ] * 2
-    warn_category += [UserWarning, DeprecationWarning] * 4
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[[test_miriad, test_miriad_2], test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=warn_category,
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv_2 = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_file_2 = os.path.join(DATA_PATH, "paper_test_file_2nd_time.uvh5")
+    test_uv = UVData()
+    test_uv.read([test_file, test_file_2])
+    test_uv_2 = UVData()
+    test_uv_2.read(test_file)
     ra_range = [0, 12]
 
-    warn_message = [
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types"
-    ] * 2
-
-    test_uv_out, test_uv_2_out = uvtest.checkWarnings(
-        utils.lst_align,
-        func_args=[test_uv, test_uv_2],
-        func_kwargs={"ra_range": ra_range, "inplace": False},
-        category=UserWarning,
-        nwarnings=len(warn_message),
-        message=warn_message,
+    test_uv_out, test_uv_2_out = utils.lst_align(
+        test_uv, test_uv_2, ra_range=ra_range, inplace=False,
     )
     assert test_uv_out.time_array.shape == test_uv_out.time_array.shape
 
 
 def test_get_integration_time_shape():
     """Test the shape of the integration_time array is correct."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array)
@@ -675,29 +319,9 @@ def test_get_integration_time_shape():
 
 def test_get_integration_time_vals():
     """Test the values of the integration_time array is correct."""
-    test_miriad = os.path.join(DATA_PATH, "paper_test_file.uv")
-    test_antpos_file = os.path.join(DATA_PATH, "paper_antpos.txt")
-    warn_message = [
-        "Antenna positions are not present in the file.",
-        "Antenna positions are not present in the file.",
-        "Ntimes does not match the number of unique " "times in the data",
-        "Xantpos in extra_keywords is a list, array or dict, "
-        "which will raise an error when writing uvfits "
-        "or miriad file types",
-    ]
-    pend_dep_message = [
-        "antenna_positions are not defined. "
-        "antenna_positions will be a required parameter in "
-        "version 1.5"
-    ]
-    test_uv = uvtest.checkWarnings(
-        utils.read_paper_miriad,
-        func_args=[test_miriad, test_antpos_file],
-        func_kwargs={"skip_header": 3, "usecols": [1, 2, 3]},
-        category=[UserWarning] * len(warn_message) + [DeprecationWarning],
-        nwarnings=len(warn_message) + 1,
-        message=warn_message + pend_dep_message,
-    )
+    test_file = os.path.join(DATA_PATH, "paper_test_file.uvh5")
+    test_uv = UVData()
+    test_uv.read(test_file)
 
     baseline_array = np.array(list(set(test_uv.baseline_array)))
     inttime_array = utils.get_integration_time(test_uv, reds=baseline_array)
