@@ -4,6 +4,9 @@ codecov:
     - travis-ci  # with travis-ci.com execution is faster, can keep
     - circleci
 
+ignore:
+  - 'scripts/*'
+
 coverage:
   precision: 2
   round: down
