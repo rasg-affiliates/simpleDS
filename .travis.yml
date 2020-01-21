@@ -3,10 +3,12 @@ dist: trusty
 os:
   - 'osx'
 env:
+  ENV_NAME: tests
+  WITH_SUDO: true
   matrix:
-    - PYTHON_VERSION=3.6
-    - PYTHON_VERSION=3.7
-    - PYTHON_VERSION=3.8
+    - PYTHON=3.6
+    - PYTHON=3.7
+    - PYTHON=3.8
 
 install:
   # ensure that we have the full tag information available for version.py
@@ -19,34 +21,11 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-
-  - conda create -q -n testenv python=$PYTHON_VERSION
-  - source activate testenv
-  - conda install -c defaults -y libgfortran libgfortran-ng
-
-  - conda config --add channels conda-forge
-  # - conda config --remove channels defaults
-  # Useful for debugging any issues with conda
-  - conda info -a
-
-  # install dependencies
-
-  - conda install numpy scipy pytest-cov pip coverage astropy astropy-healpix h5py coverage flake8 flake8-docstrings codecov
-  - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
-  - conda list
-  - python --version
-  # check that the python version matches the desired one; exit immediately if not
-  - PYVER=`python -c "from __future__ import print_function; import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-  - if [[ $PYVER != $PYTHON_VERSION ]]; then
-      exit 1;
-    fi
+  - ./ci/install_conda.sh
 
 script:
-  - python setup.py build_ext --force --inplace
-  - python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml -v simpleDS
-  - flake8 simpleDS
+  - pip install -e .[all]
+  - python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:coverage.xml simpleDS
 
 after_success:
   - codecov
