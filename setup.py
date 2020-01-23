@@ -6,20 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 from setuptools import setup
 import glob
-import os
-import json
 import io
-
-from simpleDS import version  # noqa
-
-data = [
-    version.git_origin,
-    version.git_hash,
-    version.git_description,
-    version.git_branch,
-]
-with open(os.path.join("simpleDS", "GIT_INFO"), "w") as outfile:
-    json.dump(data, outfile)
+from pygitversion import branch_scheme
 
 with io.open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
@@ -34,9 +22,8 @@ setup_args = {
     "package_dir": {"simpleDS": "simpleDS"},
     "packages": ["simpleDS", "simpleDS.tests"],
     "scripts": glob.glob("scripts/*"),
-    "version": version.version,
+    "use_scm_version": {"local_scheme": branch_scheme},
     "include_package_data": True,
-    "setup_requires": ["pytest-runner", "numpy>=1.17"],
     "install_requires": ["numpy>1.17", "astropy>=4.0", "scipy", "pyuvdata>=1.5"],
     "extras_require": {"all": ["astropy-healpix"]},
     "tests_require": ["pytest"],
