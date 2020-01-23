@@ -49,7 +49,7 @@ First install dependencies.
 * astropy >= 4.0
 * h5py (for uvh5 compatibility with pyuvdata, optional)
 * astropy-healpix used for UVBeam interpolations through pyuvdata (optional, only used with `use_exact` keyword for `add_uvbeam`)
-* pyuvdata >=1.5 (conda install -c conda-forge pyuvdata, `pip install pyuvdata`, or use the [development version](https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git))
+* pyuvdata >=1.4.2 (conda install -c conda-forge pyuvdata, `pip install pyuvdata`, or use the [development version](https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git))
 
 For anaconda users, we suggest using conda to install astropy, numpy and scipy.
 
