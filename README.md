@@ -44,7 +44,7 @@ and one minor cosmological conversion module:
 ## Dependencies
 First install dependencies.
 
-* numpy >= 1.10
+* numpy >= 1.17
 * scipy
 * astropy >= 4.0
 * h5py (for uvh5 compatibility with pyuvdata, optional)
