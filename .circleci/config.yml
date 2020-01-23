@@ -48,7 +48,7 @@ jobs:
           name: install
           command: |
             source activate ${ENV_NAME}
-            python setup.py build_ext --force --inplace
+            pip install -e .[all]
       - run:
           name: run simpleDS tests
           command: |
@@ -84,7 +84,8 @@ jobs:
             name: install
             command: |
               source activate ${ENV_NAME}
-              python setup.py build_ext --force --inplace
+              pip install -e .[all]
+
         - run:
             name: run tutorial tests
             command: |
@@ -114,8 +115,8 @@ jobs:
           name: install
           command: |
             source activate ${ENV_NAME}
-            python setup.py build_ext --force --inplace
-            python setup.py install
+            pip install -e .[all]
+
       - run:
           name: run tutorial notebook
           command: |
