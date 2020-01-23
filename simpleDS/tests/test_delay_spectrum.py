@@ -151,6 +151,13 @@ def test_custom_taper():
     assert test_win == dspec.taper
 
 
+def test_no_taper():
+    """Test default setting of set_taper."""
+    dspec = DelaySpectrum()
+    dspec.set_taper()
+    assert dspec.taper == windows.blackmanharris
+
+
 class TestBasicFunctions(unittest.TestCase):
     """Test basic equality functions."""
 
@@ -1362,7 +1369,7 @@ def test_readwrite_ds_object():
     """Test a ds object can be written and read without chaning the object."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
     test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = "test_out.h5"
+    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
 
     uvd = UVData()
     uvd.read(testfile)
@@ -1371,6 +1378,7 @@ def test_readwrite_ds_object():
     uvb = UVBeam()
     uvb.read_beamfits(test_uvb_file)
     ds.add_uvbeam(uvb=uvb)
+    ds.add_trcvr(9 * units.K)
 
     if os.path.exists(test_outfile):
         os.remove(test_outfile)
@@ -1390,7 +1398,7 @@ def test_readwrite_ds_object_power_units():
     """Test a ds object can be written and read without chaning the object."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
     test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = "test_out.h5"
+    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
 
     uvd = UVData()
     uvd.read(testfile)
@@ -1426,7 +1434,7 @@ def test_readwrite_custom_taper():
     """Test a ds object can be written and read without chaning the object."""
     testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
     test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = "test_out.h5"
+    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
 
     uvd = UVData()
     uvd.read(testfile)
@@ -1466,3 +1474,57 @@ def test_readwrite_custom_taper():
 
     if os.path.exists(test_outfile):
         os.remove(test_outfile)
+
+
+def test_read_bad_file():
+    """Test error raised when reading non-existant file."""
+    ds = DelaySpectrum()
+    with pytest.raises(IOError) as cm:
+        ds.read("bad_file")
+    assert str(cm.value).startswith("bad_file not found")
+
+
+def test_file_exists():
+    """Test error when file exists."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    ds.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    ds.write(test_outfile)
+    with pytest.raises(IOError) as cm:
+        ds.write(test_outfile)
+    assert str(cm.value).startswith("File exists")
+
+
+def test_overwrite_file():
+    """Test file can be overwritten."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
+
+    with open(test_outfile, "w") as f:
+        f.write("")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    ds.select_spectral_windows([(1, 3), (4, 6)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    ds.delay_transform()
+    ds.write(test_outfile, overwrite=True)
+
+    ds_in = DelaySpectrum()
+    ds_in.read(test_outfile)
+
+    assert ds == ds_in
