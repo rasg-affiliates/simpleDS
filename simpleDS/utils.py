@@ -538,11 +538,6 @@ def normalized_fourier_transform(
         If `delta_x` is not a Quantity object.
 
     """
-    if isinstance(data_array, units.Quantity):
-        unit = data_array.unit
-    else:
-        unit = 1.0
-
     if not isinstance(delta_x, units.Quantity):
         raise ValueError(
             "delta_x must be an astropy Quantity object. "
@@ -561,11 +556,11 @@ def normalized_fourier_transform(
     if not inverse:
         fourier_array = np.fft.fft(data_array * win, axis=axis)
         fourier_array = np.fft.fftshift(fourier_array, axes=axis)
-        fourier_array = fourier_array * delta_x.si * unit
+        fourier_array = fourier_array * delta_x.si
     else:
         fourier_array = np.fft.ifft(data_array, axis=axis)
         fourier_array = np.fft.ifftshift(fourier_array, axes=axis)
-        fourier_array = fourier_array / win * delta_x.si * unit
+        fourier_array = fourier_array / win * delta_x.si
 
     return fourier_array
 
