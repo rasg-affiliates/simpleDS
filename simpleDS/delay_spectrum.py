@@ -22,37 +22,6 @@ from .parameter import UnitParameter
 from collections.abc import Callable
 
 
-def _check_h5py_dtype(dtype):
-    """
-    Check that a specified custom datatype conforms to simpleDS save standards.
-
-    This function is adapted from pyuvdata.uvh5._check_uvh5_dtype
-
-    Parameters
-    ----------
-    dtype : numpy dtype object
-        numpy datatype with an 'r' field and an 'i' field
-
-    Returns
-    -------
-        None
-
-    """
-    if not isinstance(dtype, np.dtype):
-        raise ValueError("dtype in a simpleDS save file must be a numpy dtype")
-    if "r" not in dtype.names or "i" not in dtype.names:
-        raise ValueError(
-            "dtype must be a compound datatype with an 'r' field and an 'i' field"
-        )
-    rkind = dtype["r"].kind
-    ikind = dtype["i"].kind
-    if rkind != ikind:
-        raise ValueError(
-            "dtype must have the same kind ('i4', 'r8', etc.) for both real and imaginary fields"
-        )
-    return
-
-
 class DelaySpectrum(UVBase):
     """A Delay Spectrum object to hold relevant data.
 
@@ -1355,60 +1324,41 @@ class DelaySpectrum(UVBase):
         else:
             self.taper = windows.blackmanharris
 
-    def _get_data(self, dgrp, data_array_dtype):
-        """Take no action."""
-        from pyuvdata.uvh5 import _read_complex_astype
+    def _get_data(self, dgrp):
+        """Read the data like arrays from disk.
 
-        visdata_dtype = dgrp["visdata"].dtype
-        if visdata_dtype not in ("complex64", "complex128"):
-            _check_h5py_dtype(visdata_dtype)
-            if data_array_dtype not in (np.complex64, np.complex128):
-                raise ValueError(
-                    "data_array_dtype must be np.complex64 or np.complex128"
-                )
-            custom_dtype = True
-        else:
-            custom_dtype = False
+        Parameters
+        ----------
+        drgp : h5py dataset
+            The dataset object on disk to read
+        data_array_dtype : numpy dtype object
+            the custom dtype to read data as.
 
-        # no select, read in all the data
-        if custom_dtype:
-            inds = (np.s_[:], np.s_[:], np.s_[:], np.s_[:])
-            self.data_array = _read_complex_astype(
-                dgrp["visdata"], inds, data_array_dtype
-            ) * units.Unit(dgrp["visdata"].attrs["unit"])
+        Returns
+        -------
+            None
 
-            self.noise_array = _read_complex_astype(
-                dgrp["visnoise"], inds, data_array_dtype
-            ) * units.Unit(dgrp["visdata"].attrs["unit"])
-        else:
-            self.data_array = dgrp["visdata"][:, :, :, :] * units.Unit(
-                dgrp["visdata"].attrs["unit"]
-            )
-            self.noise_array = dgrp["visnoise"][:, :, :, :] * units.Unit(
-                dgrp["visdata"].attrs["unit"]
-            )
+        """
+        self.data_array = dgrp["visdata"][:, :, :, :, :, :] * units.Unit(
+            dgrp["visdata"].attrs["unit"]
+        )
+        self.noise_array = dgrp["visnoise"][:, :, :, :, :, :] * units.Unit(
+            dgrp["visnoise"].attrs["unit"]
+        )
 
-        self.flag_array = dgrp["flags"][:, :, :, :]
-        self.nsample_array = dgrp["nsamples"][:, :, :, :]
+        self.flag_array = dgrp["flags"][:, :, :, :, :, :]
+        self.nsample_array = dgrp["nsamples"][:, :, :, :, :, :]
 
         if "data_power" in dgrp:
-            if custom_dtype:
-                inds = (np.s_[:], np.s_[:], np.s_[:], np.s_[:])
-                self.power_array = _read_complex_astype(
-                    dgrp["data_power"], inds, data_array_dtype
-                ) * units.Unit(dgrp["data_power"].attrs["unit"])
+            self.power_array = dgrp["data_power"][:, :, :, :, :, :] * units.Unit(
+                dgrp["data_power"].attrs["unit"]
+            )
 
-                self.noise_power = _read_complex_astype(
-                    dgrp["noise_power"], inds, data_array_dtype
-                ) * units.Unit(dgrp["data_power"].attrs["unit"])
+        if "noise_power" in dgrp:
+            self.noise_power = dgrp["noise_power"][:, :, :, :, :, :] * units.Unit(
+                dgrp["noise_power"].attrs["unit"]
+            )
 
-            else:
-                self.power_array = dgrp["data_power"][:, :, :, :] * units.Unit(
-                    dgrp["data_power"].attrs["unit"]
-                )
-                self.noise_power = dgrp["noise_power"][:, :, :, :] * units.Unit(
-                    dgrp["data_power"].attrs["unit"]
-                )
         if "thermal_power" in dgrp:
             self.thermal_power = dgrp["thermal_power"][:, :, :, :, :] * units.Unit(
                 dgrp["thermal_power"].attrs["unit"]
@@ -1422,7 +1372,6 @@ class DelaySpectrum(UVBase):
         run_check=True,
         check_extra=True,
         run_check_acceptability=True,
-        data_array_dtype=np.complex128,
     ):
         """Read a saved DelaySpectrum object from hdf5 file.
 
@@ -1436,12 +1385,8 @@ class DelaySpectrum(UVBase):
             Input cosmology object is used to perform cosmological normalization when data is read.
             Defaults to Planck15
         littleh_units: Bool, default: False
-           automatically convert to to mK^2 / (littleh / Mpc)^3.
-        data_array_dtype : numpy dtype
-            Datatype to store the output data_array as. Must be either
-            np.complex64 (single-precision real and imaginary) or np.complex128 (double-
-            precision real and imaginary). Only used if the datatype of the visibility
-            data on-disk is not 'c8' or 'c16'.
+           automatically convert to to mK^2 / (littleh / Mpc)^3 if power type arrays
+           are present in the data
         run_check : bool
             Option to check for the existence and proper shapes of parameters
             after after reading in the file (the default is True,
@@ -1467,7 +1412,7 @@ class DelaySpectrum(UVBase):
 
             # Now read in the data
             dgrp = f["/Data"]
-            self._get_data(dgrp, data_array_dtype=data_array_dtype)
+            self._get_data(dgrp)
 
         self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
 
@@ -1556,7 +1501,6 @@ class DelaySpectrum(UVBase):
         data_compression=None,
         flags_compression="lzf",
         nsample_compression="lzf",
-        data_write_dtype=None,
     ):
         """Write the DelaySpectrum object out to an hdf5 file.
 
@@ -1584,15 +1528,8 @@ class DelaySpectrum(UVBase):
         nsample_compression : str
             HDF5 filter to apply when writing the nsample_array.
             Default is the LZF filter.
-         data_write_dtype : str
-            datatype of output visibility data. If 'None', then the same datatype
-            as data_array will be used. Otherwise, a numpy dtype object must be specified with
-            an 'r' field and an 'i' field for real and imaginary parts, respectively. See
-            uvh5.py for an example of defining such a datatype. Default is None.
 
         """
-        from pyuvdata.uvh5 import _write_complex_astype
-
         if run_check:
             self.check(
                 check_extra=check_extra, run_check_acceptability=run_check_acceptability
@@ -1604,6 +1541,7 @@ class DelaySpectrum(UVBase):
             else:
                 raise IOError("File exists; skipping")
 
+        restore_cosmo = False
         if self.power_array is not None and self.power_array.unit.is_equivalent(
             self._power_array.expected_units
         ):
@@ -1613,47 +1551,20 @@ class DelaySpectrum(UVBase):
                 UserWarning,
             )
             self.remove_cosmology()
+            restore_cosmo = True
 
         with h5py.File(filename, "w") as h5file:
             header = h5file.create_group("Header")
             self._write_header(header)
 
             dgrp = h5file.create_group("Data")
-            if data_write_dtype is None:
-                if self.data_array.dtype == "complex64":
-                    data_write_dtype = "c8"
-                else:
-                    data_write_dtype = "c16"
 
             for _name, _data in zip(
                 ["visdata", "visnoise"], [self.data_array, self.noise_array]
             ):
-                if data_write_dtype not in ("c8", "c16"):
-                    _check_h5py_dtype(data_write_dtype)
-                    visdata = dgrp.create_dataset(
-                        _name,
-                        _data.shape,
-                        chunks=True,
-                        compression=data_compression,
-                        dtype=data_write_dtype,
-                    )
-                    indices = (
-                        np.s_[:],
-                        np.s_[:],
-                        np.s_[:],
-                        np.s_[:],
-                        np.s_[:],
-                        np.s_[:],
-                    )
-                    _write_complex_astype(_data.value4, visdata, indices)
-                else:
-                    visdata = dgrp.create_dataset(
-                        _name,
-                        chunks=True,
-                        data=_data.value,
-                        compression=data_compression,
-                        dtype=data_write_dtype,
-                    )
+                visdata = dgrp.create_dataset(
+                    _name, chunks=True, data=_data.value, compression=data_compression,
+                )
                 visdata.attrs["unit"] = _data.unit.to_string()
 
             dgrp.create_dataset(
@@ -1673,33 +1584,13 @@ class DelaySpectrum(UVBase):
                 for _name, _data in zip(
                     ["data_power", "noise_power"], [self.power_array, self.noise_power]
                 ):
-                    if data_write_dtype not in ("c8", "c16"):
-                        _check_h5py_dtype(data_write_dtype)
-                        visdata = dgrp.create_dataset(
-                            _name,
-                            _data.shape,
-                            chunks=True,
-                            compression=data_compression,
-                            dtype=data_write_dtype,
-                        )
-                        indices = (
-                            np.s_[:],
-                            np.s_[:],
-                            np.s_[:],
-                            np.s_[:],
-                            np.s_[:],
-                            np.s_[:],
-                        )
-                        _write_complex_astype(_data.value, visdata, indices)
-                    else:
-                        visdata = dgrp.create_dataset(
-                            _name,
-                            chunks=True,
-                            data=_data.value,
-                            compression=data_compression,
-                            dtype=data_write_dtype,
-                        )
-                    visdata.attrs["unit"] = _data.unit.to_string()
+                    power_data = dgrp.create_dataset(
+                        _name,
+                        chunks=True,
+                        data=_data.value,
+                        compression=data_compression,
+                    )
+                    power_data.attrs["unit"] = _data.unit.to_string()
 
             if self.thermal_power is not None:
                 tpower = dgrp.create_dataset(
@@ -1710,7 +1601,11 @@ class DelaySpectrum(UVBase):
                     dtype=np.float32,
                 )
                 tpower.attrs["unit"] = self.thermal_power.unit.to_string()
-        self.update_cosmology()
+
+        # restore old cosmology if there was one
+        if restore_cosmo:
+            self.update_cosmology()
+
         return
 
     def select_spectral_windows(self, spectral_windows=None, freqs=None, inplace=True):
