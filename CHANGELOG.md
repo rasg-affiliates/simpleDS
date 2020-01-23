@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - basic I/O capabilities
 
 ### Changed
+- specifies minimum dependency for pyuvdata >= 1.4.2
 - Removed `version.py`. Instead use `pygitversion` to do versioning. This also improves the install-ability of the code. Does not rely on having dependencies previously installed.
 - Removed active python 2.7 support. Python 2.7 support frozen in version 1.0.2
 
