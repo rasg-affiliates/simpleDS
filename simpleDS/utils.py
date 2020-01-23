@@ -770,13 +770,6 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
     _errors = np.stack([pos_errors, neg_errors], axis=0)
     _weights = np.stack([pos_weights, neg_weights], axis=0)
 
-    if _array.unit is None:
-        _array = _array.value << array.unit
-    if _errors.unit is None:
-        _errors = _errors.value << uncertainty.unit
-    if _weights.unit is None:
-        _weights = _weights.value << weights.unit
-
     if not _array.imag.value.any():
         out_array, out_errors = weighted_average(
             _array.real, _errors.real, weights=_weights, axis=0
