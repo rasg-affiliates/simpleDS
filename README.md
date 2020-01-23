@@ -57,8 +57,9 @@ For anaconda users, we suggest using conda to install astropy, numpy and scipy.
 Clone the repo using
 `git clone https://github.com/rasg-affiliates/simpleDS.git`
 
-Navigate into the directory and run `python setup.py install` or `pip install .`
-To also install the optional `astropy-healpix` use `pip install .[all]`
+Navigate into the directory and run `pip install .`
+To also install the optional `astropy-healpix` use `pip install .[healpix]`.
+For all packages necessary for the testing suite use `pip install .[all]`
 
 ## Running Tests
 We use `pytest` to execute the tests for this pacakge.
