@@ -366,7 +366,10 @@ def test_normalized_fourier_transform():
     fake_data = np.zeros((1, 13, 21))
     fake_data[0, 7, 11] += 1
     fake_corr = utils.normalized_fourier_transform(
-        fake_data, 1 * units.dimensionless_unscaled, taper=windows.boxcar, axis=2
+        np.arange(2) * 1 * units.dimensionless_unscaled,
+        fake_data,
+        taper=windows.boxcar,
+        axis=2,
     )
     test_corr = np.fft.fft(fake_data, axis=-1)
     test_corr = np.fft.fftshift(test_corr, axes=-1)
@@ -379,7 +382,10 @@ def test_ft_with_pols():
     fake_data = np.zeros((3, 2, 13, 31))
     fake_data[:, 0, 7, 11] += 1.0
     fake_corr = utils.normalized_fourier_transform(
-        fake_data, 1 * units.dimensionless_unscaled, taper=windows.boxcar, axis=3
+        np.arange(2) * 1 * units.dimensionless_unscaled,
+        fake_data,
+        taper=windows.boxcar,
+        axis=3,
     )
     assert (3, 2, 13, 31) == fake_corr.shape
 
@@ -389,7 +395,10 @@ def test_delay_vals_with_pols():
     fake_data = np.zeros((3, 2, 13, 31))
     fake_data[:, 0, 7, 11] += 1.0
     fake_corr = utils.normalized_fourier_transform(
-        fake_data, 1 * units.dimensionless_unscaled, taper=windows.boxcar, axis=3
+        np.arange(2) * 1 * units.dimensionless_unscaled,
+        fake_data,
+        taper=windows.boxcar,
+        axis=3,
     )
     test_corr = np.fft.fft(fake_data, axis=-1)
     test_corr = np.fft.fftshift(test_corr, axes=-1)
@@ -402,7 +411,7 @@ def test_units_normalized_fourier_transform():
     fake_data = np.zeros((1, 13, 21)) * units.m
     fake_data[0, 7, 11] += 1 * units.m
     fake_corr = utils.normalized_fourier_transform(
-        fake_data, 1 * units.Hz, taper=windows.boxcar, axis=2
+        np.arange(2) * 1 * units.Hz, fake_data, taper=windows.boxcar, axis=2
     )
     test_units = units.m * units.Hz
     assert test_units == fake_corr.unit
@@ -413,18 +422,37 @@ def test_units_normalized_inverse_fourier_transform():
     fake_data = np.zeros((1, 13, 21)) * units.Jy * units.Hz
     fake_data[0, 7, 11] += 1 * units.Jy * units.Hz
     fake_corr = utils.normalized_fourier_transform(
-        fake_data, 1 * units.s, taper=windows.boxcar, axis=2, inverse=True
+        np.arange(2) * 1 * units.s,
+        fake_data,
+        taper=windows.boxcar,
+        axis=2,
+        inverse=True,
     )
     test_units = units.Jy
     assert test_units == fake_corr.unit
 
 
-def test_delta_x_unitless():
-    """Test delta_x is unitless raises exception."""
+def test_x_unitless():
+    """Test x is unitless raises exception."""
     fake_data = np.zeros((1, 13, 21)) * units.m
     fake_data[0, 7, 11] += 1 * units.m
-    pytest.raises(
-        ValueError, utils.normalized_fourier_transform, fake_data, delta_x=2.0, axis=2
+    x = np.arange(21)
+    with pytest.raises(ValueError) as cm:
+        utils.normalized_fourier_transform(x, fake_data, axis=2)
+    assert str(cm.value).startswith("x must be an astropy Quantity object")
+
+
+def test_fft_flag_array_shape():
+    """Test error is raised if flags have bad shape."""
+    with pytest.raises(ValueError) as cm:
+        utils.normalized_fourier_transform(
+            np.arange(2) * 2.0 * units.Hz,
+            np.ones((3, 4, 5)),
+            flag_array=np.ones((4, 5, 6)),
+            axis=1,
+        )
+    assert str(cm.value).startswith(
+        "Input data_array and flag_array have incompatible shapes"
     )
 
 
@@ -749,3 +777,64 @@ def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
     )
     test_errs_array[:, :, 0] = 1 + 0j
     assert np.allclose(test_errs_array, errs_out.value)
+
+
+def test_lomb_scargle_transform_quantity():
+    """Test the lomb scargle transform puts power at the same fourier modes as FFT."""
+    x = np.linspace(0, 2 * np.pi, 4001) << units.rad
+    sine_wave = np.sin(x * np.pi * 4)
+    ls_out = utils.normalized_fourier_transform(x, sine_wave, use_lombscargle=True)
+    fft_out = utils.normalized_fourier_transform(x, sine_wave, use_lombscargle=False)
+    # want to at least be in adjoining frequency bins
+    assert np.allclose(
+        np.argmax(np.abs(ls_out)[:2001]), np.argmax(np.abs(fft_out)[:2001]), atol=1
+    )
+    assert np.allclose(
+        np.argmax(np.abs(ls_out)[2000:]), np.argmax(np.abs(fft_out)[2000:]), atol=1
+    )
+    assert ls_out.unit == fft_out.unit
+
+
+def test_lomb_scargle_transform_array():
+    """Test the lomb scargle transform puts power at the same fourier modes as FFT."""
+    x = np.linspace(0, 2 * np.pi, 4001) << units.rad
+    sine_wave = np.sin(x * np.pi * 4).value
+    ls_out = utils.normalized_fourier_transform(x, sine_wave, use_lombscargle=True)
+    fft_out = utils.normalized_fourier_transform(x, sine_wave, use_lombscargle=False)
+    # want to at least be in adjoining frequency bins
+    assert np.allclose(
+        np.argmax(np.abs(ls_out)[:2001]), np.argmax(np.abs(fft_out)[:2001]), atol=1
+    )
+    assert np.allclose(
+        np.argmax(np.abs(ls_out)[2000:]), np.argmax(np.abs(fft_out)[2000:]), atol=1
+    )
+
+
+def test_lomb_scargle_transform_2d():
+    """Test the lomb scargle transform puts power at the same fourier modes as FFT."""
+    x = np.linspace(0, 2 * np.pi, 4001) << units.rad
+    sine_wave = np.sin(x * np.pi * 4).value.reshape(1, 4001)
+    ls_out = utils.normalized_fourier_transform(x, sine_wave, use_lombscargle=True)
+    fft_out = utils.normalized_fourier_transform(x, sine_wave, use_lombscargle=False)
+    # want to at least be in adjoining frequency bins
+    assert np.allclose(
+        np.argmax(np.abs(ls_out)[0, :2001]),
+        np.argmax(np.abs(fft_out)[0, :2001]),
+        atol=1,
+    )
+    assert np.allclose(
+        np.argmax(np.abs(ls_out)[0, 2000:]),
+        np.argmax(np.abs(fft_out)[0, 2000:]),
+        atol=1,
+    )
+
+
+def test_lomb_scargle_not_implemented():
+    """Test error for not implemented code."""
+    x = np.linspace(0, 2 * np.pi, 4001) << units.rad
+    sine_wave = np.sin(x * np.pi * 4).value
+    with pytest.raises(NotImplementedError) as cm:
+        utils.normalized_fourier_transform(
+            x, sine_wave, use_lombscargle=True, inverse=True
+        )
+    assert str(cm.value).startswith("This feature does not yet exist.")

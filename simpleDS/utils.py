@@ -8,7 +8,7 @@ import numpy as np
 from astropy import constants as const
 from astropy import units
 from pyuvdata import utils as uvutils
-from scipy.signal import windows
+from scipy.signal import windows, lombscargle
 
 
 def get_data_array(uv, reds, squeeze=True):
@@ -506,7 +506,13 @@ def generate_noise(noise_power):
 
 
 def normalized_fourier_transform(
-    data_array, delta_x, axis=-1, taper=windows.blackmanharris, inverse=False
+    x,
+    data_array,
+    flag_array=None,
+    axis=-1,
+    taper=windows.blackmanharris,
+    inverse=False,
+    use_lombscargle=False,
 ):
     """Perform the Fourier transform over specified axis.
 
@@ -515,52 +521,131 @@ def normalized_fourier_transform(
 
     Parameters
     ----------
+    x : Astropy Quantity
+        The values corresponding to the axis over which the fourier transform is taken.
+        (e.g. For a frequency fourier transform these are the frequencies.)
     data_array : array_like
         N-dimenaional array of data to Fourier Transform
     delta_x : Astropy Quantity
         The difference between channels in the data over the axis of transformation.
         This is used to properly normalize the Fourier Transform.
+    flag_array : array_like
+        The boolean flags corresponding to the input data_array.
+        If None assumed to be unflagged everywhere.
+        If flags exist and Lomb Scargle periodogram is not used, the flags are
+        multiplied as floats onto the so flagged data is 0.
+        (e.g. Data *= (1 - float(flag)))
     taper : callable
         Spectral taper function used in Fourier transform.
         Default is scipy.signal.windows.blackmanharris
-    inverse: (bool; Default False)
+        Not used in Lomb Scargle periodogram estimation.
+    inverse : (bool; Default False)
         Perform the inverse Fourier Transform with np.fft.ifft
+    use_lombscargle : (bool; Default False)
+        Use a Lomb Scargle periodogram to estimate Fourier Modes.
+        This estimation technique is O(Nfreqs^2) and will take significantly more time
+        as it must be computed seprately for each timestep.
 
     Returns
     -------
-    fourier_arry : array_like complex
+    fourier_array : array_like complex
         N-Dimenaional array of the Fourier transform along
         specified axis, and normalized by the `provided delta_x`.
 
     Raises
     ------
     ValueError
-        If `delta_x` is not a Quantity object.
+        If `x` is not a Quantity object.
 
     """
-    if not isinstance(delta_x, units.Quantity):
+    if not isinstance(x, units.Quantity):
         raise ValueError(
-            "delta_x must be an astropy Quantity object. "
-            "value was : {df}".format(df=delta_x)
+            "x must be an astropy Quantity object. value was : {df}".format(df=x)
+        )
+    if flag_array is not None and flag_array.shape != data_array.shape:
+        raise ValueError(
+            "Input data_array and flag_array have incompatible shapes. "
+            "data_array has shape {0} but flag_array has shape {1}".format(
+                data_array.shape, flag_array.shape
+            )
         )
 
-    n_axis = data_array.shape[axis]
-    data_shape = np.ones_like(data_array.shape)
-    data_shape[axis] = n_axis
-    # win = taper(n_axis).reshape(1, n_axis)
-    win = np.broadcast_to(taper(n_axis), data_shape)
+    delta_x = np.diff(x).item(0)
 
-    # Fourier Transforms should have a delta_x term multiplied
-    # This is the proper normalization of the FT but is not
-    # accounted for in an fft.
-    if not inverse:
-        fourier_array = np.fft.fft(data_array * win, axis=axis)
-        fourier_array = np.fft.fftshift(fourier_array, axes=axis)
-        fourier_array = fourier_array * delta_x.si
+    if not use_lombscargle:
+        n_axis = data_array.shape[axis]
+        data_shape = np.ones_like(data_array.shape)
+        data_shape[axis] = n_axis
+        # win = taper(n_axis).reshape(1, n_axis)
+        win = np.broadcast_to(taper(n_axis), data_shape)
+        if flag_array is None:
+            flag_array = np.zeros(data_array.shape, dtype=np.complex128)
+        float_flags = np.logical_not(flag_array).astype(float)
+
+        # Fourier Transforms should have a delta_x term multiplied
+        # This is the proper normalization of the FT but is not
+        # accounted for in an fft.
+        if not inverse:
+            fourier_array = np.fft.fft(data_array * float_flags * win, axis=axis)
+            fourier_array = np.fft.fftshift(fourier_array, axes=axis)
+            fourier_array = fourier_array * delta_x.si
+        else:
+            fourier_array = np.fft.ifft(data_array, axis=axis)
+            fourier_array = np.fft.ifftshift(fourier_array, axes=axis)
+            fourier_array = fourier_array / win * delta_x.si
     else:
-        fourier_array = np.fft.ifft(data_array, axis=axis)
-        fourier_array = np.fft.ifftshift(fourier_array, axes=axis)
-        fourier_array = fourier_array / win * delta_x.si
+        if inverse:
+            raise NotImplementedError("This feature does not yet exist.")
+        else:
+
+            freqs = np.fft.fftshift(np.fft.fftfreq(n=x.shape[-1], d=np.diff(x).item(0)))
+            was1d = False
+            if data_array.ndim == 1:
+                was1d = True
+                data_array = np.atleast_2d(data_array)
+
+            fourier_array = np.zeros(data_array.shape, dtype=np.complex128)
+            # move the fourier transform axis to the end
+            # this will make iteration easier later
+            if axis != -1 or axis != np.ndim(data_array) - 1:
+                data_array = np.moveaxis(data_array, axis, -1)
+
+            if isinstance(data_array, units.Quantity):
+                quick_fft = np.fft.fftshift(
+                    np.fft.fft(data_array.value, axis=-1), axes=-1
+                )
+            else:
+                quick_fft = np.fft.fftshift(np.fft.fft(data_array, axis=-1), axes=-1)
+
+            for index in np.ndindex(*data_array.shape[:-1]):
+                fourier_array[index] = lombscargle(
+                    x,
+                    data_array[index].real,
+                    2 * np.pi * freqs + 1e-5 * np.diff(freqs).item(0),
+                )
+                +1.0j * lombscargle(
+                    x,
+                    data_array[index].imag,
+                    2 * np.pi * freqs + 1e-5 * np.diff(freqs).item(0),
+                )
+
+            # return the axes to where we got them
+            # this will do nothing if axis=-1
+            fourier_array = np.moveaxis(fourier_array, -1, axis)
+            data_array = np.moveaxis(data_array, -1, axis)
+
+            fourier_array = (
+                np.abs(fourier_array)
+                * delta_x.si
+                * np.exp(2.0j * np.pi * np.angle(quick_fft))
+            )
+
+            if isinstance(data_array, units.Quantity):
+                fourier_array *= data_array.unit
+
+            if was1d:
+                data_array = data_array.squeeze()
+                fourier_array = fourier_array.squeeze()
 
     return fourier_array
 

@@ -1906,20 +1906,22 @@ class DelaySpectrum(UVBase):
 
         """
         if inverse is True:
-            delta_x = np.diff(self.delay_array)[0]
+            x = self.delay_array
         else:
-            delta_x = np.diff(self.freq_array[0])[0]
-        float_flags = np.logical_not(self.flag_array).astype(float)
+            x = self.freq_array
+
         self.data_array = utils.normalized_fourier_transform(
-            (self.data_array * float_flags),
-            delta_x=delta_x,
+            x,
+            self.data_array,
+            flag_array=self.flag_array,
             axis=-1,
             taper=self.taper,
             inverse=inverse,
         )
         self.noise_array = utils.normalized_fourier_transform(
-            (self.noise_array * float_flags),
-            delta_x=delta_x,
+            x,
+            self.noise_array,
+            flag_array=self.flag_array,
             axis=-1,
             taper=self.taper,
             inverse=inverse,
