@@ -24,7 +24,7 @@ setup_args = {
     "scripts": glob.glob("scripts/*"),
     "use_scm_version": {"local_scheme": branch_scheme},
     "include_package_data": True,
-    "install_requires": ["numpy>1.17", "astropy>=4.0", "scipy", "pyuvdata>=1.4.2"],
+    "install_requires": ["numpy>1.18", "astropy>=4.0", "scipy", "pyuvdata>=1.4.2"],
     "extras_require": {
         "healpix": ["astropy-healpix"],
         "all": ["astropy-healpix", "pytest", "pytest-cov"],
