@@ -1933,11 +1933,18 @@ class DelaySpectrum(UVBase):
             use_lombscargle=use_lombscargle,
         )
 
-    def delay_transform(self):
+    def delay_transform(self, use_lombscargle=False):
         """Perform a delay transform on the stored data array.
 
         If data is set to frequency domain, fourier transforms to delay space.
         If data is set to delay domain, inverse fourier transform to frequency space.
+
+        Parameters
+        ----------
+        use_lombscargle : bool, default False
+            Use the Lomb Scargle periodogram to perform Fourier Transform
+            This estimation technique is O(Nfreqs^2) and will take significantly more time
+            as it must be computed seprately for each timestep/spectral window/polarization/baseline.
         """
         if self.data_array.unit == units.dimensionless_unscaled:
             warnings.warn(
@@ -1947,7 +1954,7 @@ class DelaySpectrum(UVBase):
                 UserWarning,
             )
         if self.data_type == "frequency":
-            self.normalized_fourier_transform()
+            self.normalized_fourier_transform(use_lombscargle=use_lombscargle)
             self.set_delay()
         elif self.data_type == "delay":
             self.normalized_fourier_transform(inverse=True)
@@ -2005,6 +2012,7 @@ class DelaySpectrum(UVBase):
         run_check_acceptability=True,
         cosmology=None,
         littleh_units=False,
+        use_lombscargle=False,
     ):
         """Perform Delay tranform and cross multiplication of datas.
 
@@ -2019,6 +2027,10 @@ class DelaySpectrum(UVBase):
             Setting this value will overwrite the cosmology set on the DelaySpectrum Object.
         littleh_units: Bool, default:False
                        automatically convert to to mK^2 / (littleh / Mpc)^3. Only applies in python 3.
+        use_lombscargle : bool, default False
+            Use the Lomb Scargle periodogram to perform Fourier Transform
+            This estimation technique is O(Nfreqs^2) and will take significantly more time
+            as it must be computed seprately for each timestep/spectral window/polarization/baseline.
 
         Raises
         ------
@@ -2032,7 +2044,7 @@ class DelaySpectrum(UVBase):
                 "calling calculate_delay_spectrum."
             )
         if self.data_type == "frequency":
-            self.delay_transform()
+            self.delay_transform(use_lombscargle=use_lombscargle)
 
         if self.Nuv == 1:
             self.power_array = utils.cross_multiply_array(
