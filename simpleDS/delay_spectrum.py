@@ -1893,7 +1893,7 @@ class DelaySpectrum(UVBase):
         else:
             self.trcvr = trcvr
 
-    def normalized_fourier_transform(self, inverse=False):
+    def normalized_fourier_transform(self, inverse=False, use_lombscargle=False):
         """Perform a normalized Fourier Transform along frequency dimension.
 
         Local wrapper for function normalized_fourier_transform.
@@ -1903,6 +1903,10 @@ class DelaySpectrum(UVBase):
         ----------
         inverse: bool, default False
                  perform the inverse Fourier Transform with np.fft.ifft
+        use_lombscargle : bool, default False
+            Use the Lomb Scargle periodogram to perform Fourier Transform
+            This estimation technique is O(Nfreqs^2) and will take significantly more time
+            as it must be computed seprately for each timestep/spectral window/polarization/baseline.
 
         """
         if inverse is True:
@@ -1917,6 +1921,7 @@ class DelaySpectrum(UVBase):
             axis=-1,
             taper=self.taper,
             inverse=inverse,
+            use_lombscargle=use_lombscargle,
         )
         self.noise_array = utils.normalized_fourier_transform(
             x,
@@ -1925,6 +1930,7 @@ class DelaySpectrum(UVBase):
             axis=-1,
             taper=self.taper,
             inverse=inverse,
+            use_lombscargle=use_lombscargle,
         )
 
     def delay_transform(self):
