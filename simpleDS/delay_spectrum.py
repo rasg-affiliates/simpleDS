@@ -1914,24 +1914,25 @@ class DelaySpectrum(UVBase):
         else:
             x = self.freq_array
 
-        self.data_array = utils.normalized_fourier_transform(
-            x,
-            self.data_array,
-            flag_array=self.flag_array,
-            axis=-1,
-            taper=self.taper,
-            inverse=inverse,
-            use_lombscargle=use_lombscargle,
-        )
-        self.noise_array = utils.normalized_fourier_transform(
-            x,
-            self.noise_array,
-            flag_array=self.flag_array,
-            axis=-1,
-            taper=self.taper,
-            inverse=inverse,
-            use_lombscargle=use_lombscargle,
-        )
+        for spw_cnt in range(self.Nspws):
+            self.data_array[spw_cnt] = utils.normalized_fourier_transform(
+                x[spw_cnt],
+                self.data_array[spw_cnt],
+                flag_array=self.flag_array[spw_cnt],
+                axis=-1,
+                taper=self.taper,
+                inverse=inverse,
+                use_lombscargle=use_lombscargle,
+            )
+            self.noise_array[spw_cnt] = utils.normalized_fourier_transform(
+                x[spw_cnt],
+                self.noise_array[spw_cnt],
+                flag_array=self.flag_array[spw_cnt],
+                axis=-1,
+                taper=self.taper,
+                inverse=inverse,
+                use_lombscargle=use_lombscargle,
+            )
 
     def delay_transform(self, use_lombscargle=False):
         """Perform a delay transform on the stored data array.
