@@ -598,11 +598,13 @@ def normalized_fourier_transform(
             raise NotImplementedError("This feature does not yet exist.")
         else:
 
-            freqs = np.fft.fftshift(np.fft.fftfreq(n=x.shape[-1], d=np.diff(x).item(0)))
             was1d = False
             if data_array.ndim == 1:
                 was1d = True
                 data_array = np.atleast_2d(data_array)
+            x = np.atleast_2d(x)
+
+            freqs = np.fft.fftshift(np.fft.fftfreq(n=x.shape[-1], d=np.diff(x).item(0)))
 
             fourier_array = np.zeros(data_array.shape, dtype=np.complex128)
             # move the fourier transform axis to the end
@@ -617,17 +619,18 @@ def normalized_fourier_transform(
             else:
                 quick_fft = np.fft.fftshift(np.fft.fft(data_array, axis=-1), axes=-1)
 
-            for index in np.ndindex(*data_array.shape[:-1]):
-                fourier_array[index] = lombscargle(
-                    x,
-                    data_array[index].real,
-                    2 * np.pi * freqs + 1e-5 * np.diff(freqs).item(0),
-                )
-                +1.0j * lombscargle(
-                    x,
-                    data_array[index].imag,
-                    2 * np.pi * freqs + 1e-5 * np.diff(freqs).item(0),
-                )
+            for spw in range(x.shape[0]):
+                for index in np.ndindex(*data_array[spw].shape[:-1]):
+                    fourier_array[spw][index] = lombscargle(
+                        x[spw],
+                        data_array[spw][index].real,
+                        2 * np.pi * freqs + 1e-5 * np.diff(freqs).item(0),
+                    )
+                    +1.0j * lombscargle(
+                        x[spw],
+                        data_array[spw][index].imag,
+                        2 * np.pi * freqs + 1e-5 * np.diff(freqs).item(0),
+                    )
 
             # return the axes to where we got them
             # this will do nothing if axis=-1
@@ -644,8 +647,9 @@ def normalized_fourier_transform(
                 fourier_array *= data_array.unit
 
             if was1d:
-                data_array = data_array.squeeze()
-                fourier_array = fourier_array.squeeze()
+                x = x.squeeze(0)
+                data_array = data_array.squeeze(0)
+                fourier_array = fourier_array.squeeze(0)
 
     return fourier_array
 
