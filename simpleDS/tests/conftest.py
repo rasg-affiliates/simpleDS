@@ -14,6 +14,7 @@ from simpleDS.data import DATA_PATH
 def setup_and_teardown_package():
     """Make data/test directory to put test output files in."""
     testdir = os.path.join(DATA_PATH, "test_data/")
+    pytest.testdir = testdir
     if not os.path.exists(testdir):
         print("making test directory")
         os.mkdir(testdir)
