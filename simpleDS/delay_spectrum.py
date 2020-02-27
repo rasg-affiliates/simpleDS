@@ -2050,51 +2050,280 @@ class DelaySpectrum(UVBase):
         else:
             self.taper = windows.blackmanharris
 
-    def _get_data(self, dgrp):
+    def _get_data(
+        self,
+        dgrp,
+        antenna_nums,
+        bls,
+        spws,
+        frequencies,
+        freq_chans,
+        delays,
+        delay_chans,
+        lsts,
+        lst_range,
+        polarizations,
+        cosmology,
+        littleh_units,
+    ):
         """Read the data like arrays from disk.
+
+        This is an internal function used to read data from a save file.
+        This is separated from the full read to allow for patial I/O and metadata only reads.
 
         Parameters
         ----------
         drgp : h5py dataset
             The dataset object on disk to read
-        data_array_dtype : numpy dtype object
-            the custom dtype to read data as.
 
         Returns
         -------
             None
 
         """
-        self.data_array = dgrp["visdata"][:, :, :, :, :, :] * units.Unit(
-            dgrp["visdata"].attrs["unit"]
+        (
+            spw_inds,
+            freq_inds,
+            delay_inds,
+            bl_inds,
+            lst_inds,
+            pol_inds,
+        ) = self._select_preprocess(
+            antenna_nums,
+            bls,
+            spws,
+            frequencies,
+            freq_chans,
+            delays,
+            delay_chans,
+            lsts,
+            lst_range,
+            polarizations,
         )
-        self.noise_array = dgrp["visnoise"][:, :, :, :, :, :] * units.Unit(
-            dgrp["visnoise"].attrs["unit"]
-        )
 
-        self.flag_array = dgrp["flags"][:, :, :, :, :, :]
-        self.nsample_array = dgrp["nsamples"][:, :, :, :, :, :]
+        if spw_inds is not None:
+            spw_frac = len(spw_inds) / float(self.Nspws)
+        else:
+            spw_frac = 1
 
-        if "data_power" in dgrp:
-            self.power_array = dgrp["data_power"][:, :, :, :, :, :] * units.Unit(
-                dgrp["data_power"].attrs["unit"]
+        if freq_inds is not None:
+            freq_frac = len(freq_inds[0]) / float(self.Nfreqs)
+        else:
+            freq_frac = 1
+
+        if delay_inds is not None:
+            delay_frac = len(delay_inds) / float(self.Ndelays)
+        else:
+            delay_frac = 1
+
+        if bl_inds is not None:
+            bl_frac = len(bl_inds) / float(self.Nbls)
+        else:
+            bl_frac = 1
+
+        if lst_inds is not None:
+            lst_frac = len(lst_inds) / float(self.Ntimes)
+        else:
+            lst_frac = 1
+
+        if pol_inds is not None:
+            pol_frac = len(pol_inds) / float(self.Npols)
+        else:
+            pol_frac = 1
+
+        select_fracs = [spw_frac, freq_frac, delay_frac, bl_frac, lst_frac, pol_frac]
+        min_frac = np.min(select_fracs)
+
+        if min_frac == 1:
+            self.data_array = dgrp["visdata"][:, :, :, :, :, :] * units.Unit(
+                dgrp["visdata"].attrs["unit"]
+            )
+            self.noise_array = dgrp["visnoise"][:, :, :, :, :, :] * units.Unit(
+                dgrp["visnoise"].attrs["unit"]
             )
 
-        if "noise_power" in dgrp:
-            self.noise_power = dgrp["noise_power"][:, :, :, :, :, :] * units.Unit(
-                dgrp["noise_power"].attrs["unit"]
+            self.flag_array = dgrp["flags"][:, :, :, :, :, :]
+            self.nsample_array = dgrp["nsamples"][:, :, :, :, :, :]
+
+            if "data_power" in dgrp:
+                self.power_array = dgrp["data_power"][:, :, :, :, :, :] * units.Unit(
+                    dgrp["data_power"].attrs["unit"]
+                )
+
+            if "noise_power" in dgrp:
+                self.noise_power = dgrp["noise_power"][:, :, :, :, :, :] * units.Unit(
+                    dgrp["noise_power"].attrs["unit"]
+                )
+
+            if "thermal_power" in dgrp:
+                self.thermal_power = dgrp["thermal_power"][:, :, :, :, :] * units.Unit(
+                    dgrp["thermal_power"].attrs["unit"]
+                )
+        else:
+            self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
+            self._select_metadata(
+                spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds,
             )
 
-        if "thermal_power" in dgrp:
-            self.thermal_power = dgrp["thermal_power"][:, :, :, :, :] * units.Unit(
-                dgrp["thermal_power"].attrs["unit"]
+            # open references to datasets
+            visdata_dset = dgrp["visdata"]
+            visnoise_dset = dgrp["visnoise"]
+            flags_dset = dgrp["flags"]
+            nsamples_dset = dgrp["nsamples"]
+
+            # iterate over smallest frac first then grab remaining
+            visdata_ind_set = [spw_inds, pol_inds, bl_inds, lst_inds, freq_inds]
+            visdata_axes = [0, 2, 3, 4, 5]
+            visdata_inds = np.argsort(
+                [spw_frac, pol_frac, bl_frac, lst_frac, freq_frac]
             )
+
+            for count, axis_ind in enumerate(visdata_inds):
+                if (
+                    visdata_axes[axis_ind] == 5
+                    and visdata_ind_set[axis_ind] is not None
+                ):
+                    for fq_inds in visdata_ind_set[axis_ind]:
+                        slice = tuple(
+                            np.s_[:] if _cnt != visdata_axes[axis_ind] else fq_inds
+                            for _cnt in range(len(visdata_dset.shape))
+                        )
+                        if count == 0:
+                            visdata = visdata_dset[slice] * units.Unit(
+                                visdata_dset.attrs["unit"]
+                            )
+                            visnoise = visnoise_dset[slice] * units.Unit(
+                                visnoise_dset.attrs["unit"]
+                            )
+                            flags = flags_dset[slice]
+                            nsamples = nsamples_dset[slice]
+                        else:
+                            visdata = visdata[slice]
+                            visnoise = visnoise[slice]
+                            flags = flags[slice]
+                            nsamples = nsamples[slice]
+                else:
+                    slice = tuple(
+                        np.s_[:]
+                        if _cnt != visdata_axes[axis_ind]
+                        else (visdata_ind_set[axis_ind] or np.s_[:])
+                        for _cnt in range(len(visdata_dset.shape))
+                    )
+                    if count == 0:
+                        visdata = visdata_dset[slice] * units.Unit(
+                            visdata_dset.attrs["unit"]
+                        )
+                        visnoise = visnoise_dset[slice] * units.Unit(
+                            visnoise_dset.attrs["unit"]
+                        )
+                        flags = flags_dset[slice]
+                        nsamples = nsamples_dset[slice]
+                    else:
+                        visdata = visdata[slice]
+                        visnoise = visnoise[slice]
+                        flags = flags[slice]
+                        nsamples = nsamples[slice]
+
+            self.data_array = visdata
+            self.noise_array = visnoise
+            self.flag_array = flags
+            self.nsample_array = nsamples
+
+            # iterate over smallest frac first then grab remaining
+            power_ind_set = [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds, delay_inds]
+            power_axes = [0, 1, 2, 3, 4, 5]
+            power_inds = np.argsort(
+                [spw_frac, pol_frac, bl_frac, bl_frac, lst_frac, delay_frac]
+            )
+
+            for count, axis_ind in enumerate(power_inds):
+                if "data_power" in dgrp:
+                    power_dset = dgrp["data_power"]
+                    _power = True
+                else:
+                    _power = False
+
+                if "noise_power" in dgrp:
+                    noise_power_dset = dgrp["noise_power"]
+                    _noise = True
+                else:
+                    _noise = False
+
+                if _power:
+                    slice = tuple(
+                        np.s_[:]
+                        if _cnt != power_axes[axis_ind]
+                        else (power_ind_set[axis_ind] or np.s_[:])
+                        for _cnt in range(len(power_dset.shape))
+                    )
+                    if count == 0:
+                        power_data = power_dset[slice] * units.Unit(
+                            power_dset.attrs["unit"]
+                        )
+                    else:
+                        power_data = power_data[slice]
+
+                if _noise:
+                    slice = tuple(
+                        np.s_[:]
+                        if _cnt != power_axes[axis_ind]
+                        else (power_ind_set[axis_ind] or np.s_[:])
+                        for _cnt in range(len(noise_power_dset.shape))
+                    )
+                    if count == 0:
+                        power_noise = noise_power_dset[slice] * units.Unit(
+                            noise_power_dset.attrs["unit"]
+                        )
+                    else:
+                        power_noise = power_noise[slice]
+
+            if _power:
+                self.power_array = power_data
+            if _noise:
+                self.noise_power = power_noise
+
+            if "thermal_power" in dgrp:
+                thermal_dset = dgrp["thermal_power"]
+
+                # iterate over smallest frac first then grab remaining
+                power_ind_set = [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds]
+                power_axes = [0, 1, 2, 3, 4]
+                power_inds = np.argsort(
+                    [spw_frac, pol_frac, bl_frac, bl_frac, lst_frac]
+                )
+
+                for count, axis_ind in enumerate(power_inds):
+                    slice = tuple(
+                        np.s_[:]
+                        if _cnt != power_axes[axis_ind]
+                        else (power_ind_set[axis_ind] or np.s_[:])
+                        for _cnt in range(len(thermal_dset.shape))
+                    )
+                    if count == 0:
+                        thermal_data = thermal_dset[slice] * units.Unit(
+                            thermal_dset.attrs["unit"]
+                        )
+                    else:
+                        thermal_data = thermal_data[slice]
+
+                self.thermal_power = thermal_data
 
     def read(
         self,
         filename,
         cosmology=None,
         littleh_units=False,
+        antenna_nums=None,
+        bls=None,
+        spws=None,
+        frequencies=None,
+        freq_chans=None,
+        delays=None,
+        delay_chans=None,
+        lsts=None,
+        lst_range=None,
+        polarizations=None,
+        read_data=True,
         run_check=True,
         check_extra=True,
         run_check_acceptability=True,
@@ -2110,9 +2339,42 @@ class DelaySpectrum(UVBase):
             Cosmology objects cannot be serialized in hdf5 objects.
             Input cosmology object is used to perform cosmological normalization when data is read.
             Defaults to Planck15
-        littleh_units: Bool, default: False
+        littleh_units: bool, default: False
            automatically convert to to mK^2 / (littleh / Mpc)^3 if power type arrays
            are present in the data
+        antenna_nums : array_like of int, optional
+            The antennas numbers to keep in the object.
+        bls : array_like of tuple or int, optional
+            The baselines to keep in the object.
+            Can either be a tuple of antenna numbers (e.g. (0, 1)) the baseline number or a combination of both.
+        spectral_windows : array_like of int
+            The spectral windows to keep in the object.
+        frequencies : Astropy Quantity object, optional
+            The frequencies to keep in the object.
+            Values must match frequencies which already exist in the object.
+            Only available when in 'frequency' mode
+        freq_chans : array_like of int, optional
+            The frequency channel numbers to keep in the object.
+            When multiple spectral windows are present, this will apply to all.
+            Only available when in 'frequency' mode
+        delays : Astropy Quantity object, optional
+            The delays to keep in the object.
+            Values must match delays which already exist in the object.
+            Only available when in 'delay' mode.
+        delay_chans : array_like of int, optional
+            The delays channel numbers to keep in the object.
+            When multiple spectral windows are present, this will apply to all.
+            Only available when in 'delay' mode.
+        lsts : Astropy Quantity object, optional
+            The time to keep in the object.
+            Values must match times which already exist in the object.
+        lst_range : list of Astropy Quantity, optional
+            A list of length 2 with start and end times to select.
+            All time values which fall in this range will be selected.
+        polarizations : array_like of int, optional
+            The polarizations to keep in the object.
+        read_data : bool, default: True
+            Whether to read the data or return a metadata only object.
         run_check : bool
             Option to check for the existence and proper shapes of parameters
             after after reading in the file (the default is True,
@@ -2136,11 +2398,31 @@ class DelaySpectrum(UVBase):
             header = f["/Header"]
             self._read_header(header)
 
-            # Now read in the data
-            dgrp = f["/Data"]
-            self._get_data(dgrp)
+            if read_data:
+                # Now read in the data
+                dgrp = f["/Data"]
+                self._get_data(
+                    dgrp,
+                    antenna_nums,
+                    bls,
+                    spws,
+                    frequencies,
+                    freq_chans,
+                    delays,
+                    delay_chans,
+                    lsts,
+                    lst_range,
+                    polarizations,
+                    cosmology,
+                    littleh_units,
+                )
 
         self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
+
+        if run_check:
+            self.check(
+                check_extra=check_extra, run_check_acceptability=run_check_acceptability
+            )
 
         return
 
@@ -2338,6 +2620,14 @@ class DelaySpectrum(UVBase):
             self.update_cosmology()
 
         return
+
+    def initialize_save_file():
+        """Initialize the full hdf5 file onto disk to allow for partial writing."""
+        pass
+
+    def write_partial():
+        """Write section of data into an alrady initialized hdf5 file."""
+        pass
 
     def select_spectral_windows(self, spectral_windows=None, freqs=None, inplace=True):
         """Select the spectral windows from loaded data.
@@ -2543,19 +2833,19 @@ class DelaySpectrum(UVBase):
                     _beam = uvb.select(frequencies=freqs.to("Hz").value, inplace=False)
 
                 for pol_cnt, pol in enumerate(self.polarization_array):
-                    self.beam_area[spw, pol_cnt, :] = (
-                        _beam.get_beam_area(pol=pol) << units.sr
+                    self.beam_area[spw, pol_cnt, :] = units.Quantity(
+                        _beam.get_beam_area(pol=pol), unit=units.sr
                     )
-                    self.beam_sq_area[spw, pol_cnt, :] = (
-                        _beam.get_beam_sq_area(pol=pol) << units.sr
+                    self.beam_sq_area[spw, pol_cnt, :] = units.Quantity(
+                        _beam.get_beam_sq_area(pol=pol), unit=units.sr
                     )
 
                     if (
                         _beam.receiver_temperature_array is not None
                         and not no_read_trcvr
                     ):
-                        self.trcvr[spw, :] = (
-                            _beam.receiver_temperature_array[0] << units.K
+                        self.trcvr[spw, :] = units.Quantity(
+                            _beam.receiver_temperature_array[0], unit=units.K
                         )
         else:
             for pol_cnt, pol in enumerate(self.polarization_array):
@@ -2583,17 +2873,17 @@ class DelaySpectrum(UVBase):
                     )
 
                 for spw, freqs in enumerate(self.freq_array):
-                    self.beam_area[spw, pol_cnt, :] = (
-                        beam_area_interp(freqs.to_value("Hz")) << units.sr
+                    self.beam_area[spw, pol_cnt, :] = units.Quantity(
+                        beam_area_interp(freqs.to_value("Hz")), unit=units.sr
                     )
 
-                    self.beam_sq_area[spw, pol_cnt, :] = (
-                        beam_sq_interp(freqs.to_value("Hz")) << units.sr
+                    self.beam_sq_area[spw, pol_cnt, :] = units.Quantity(
+                        beam_sq_interp(freqs.to_value("Hz")), unit=units.sr
                     )
 
                     if uvb.receiver_temperature_array is not None and not no_read_trcvr:
-                        self.trcvr[spw, :] = (
-                            trcvr_interp(freqs.to_value("Hz")) << units.K
+                        self.trcvr[spw, :] = units.Quantity(
+                            trcvr_interp(freqs.to_value("Hz")), unit=units.K
                         )
 
     @units.quantity_input(trcvr=units.K)
