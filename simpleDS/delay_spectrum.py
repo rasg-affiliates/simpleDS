@@ -5,13 +5,16 @@
 import os
 import copy
 import h5py
-import numpy as np
 import warnings
-from pyuvdata import UVData, utils as uvutils
-from pyuvdata.uvbase import UVBase
+import numpy as np
+from itertools import chain
+
 import astropy.units as units
 from astropy import constants as const
 from astropy.cosmology.core import Cosmology as reference_cosmology_object
+
+from pyuvdata.uvbase import UVBase
+from pyuvdata import UVData, utils as uvutils
 
 from scipy.signal import windows
 import scipy.integrate as integrate
@@ -74,9 +77,27 @@ class DelaySpectrum(UVBase):
             value_not_quantity=True,
             expected_type=int,
         )
-        # self._Nblts = UnitParameter('Nblts', description='Number of baseline-times '
-        #                            '(i.e. number of spectra). Not necessarily '
-        #                            'equal to Nbls * Ntimes', expected_type=int)
+
+        desc = (
+            "Number of antennas with data present (i.e. number of unique"
+            "entries in ant_1_array and ant_2_array). May be smaller"
+            "than the number of antennas in the array"
+        )
+        self._Nants_data = UnitParameter(
+            "Nants_data", description=desc, expected_type=int, value_not_quantity=True
+        )
+
+        desc = (
+            "Number of antennas in the array. May be larger "
+            "than the number of antennas with data"
+        )
+        self._Nants_telescope = UnitParameter(
+            "Nants_telescope",
+            description=desc,
+            expected_type=int,
+            value_not_quantity=True,
+        )
+
         desc = "Number of frequency channels per spectral window"
         self._Nfreqs = UnitParameter(
             "Nfreqs", description=desc, value_not_quantity=True, expected_type=int
@@ -532,6 +553,20 @@ class DelaySpectrum(UVBase):
             value_not_quantity=True,
         )
 
+        desc = (
+            "Orientation of the physical dipole corresponding to what is"
+            "labelled as the x polarization. Options are 'east'"
+            "(indicating east/west orientation) and 'north' (indicating"
+            "north/south orientation)"
+        )
+        self._x_orientation = UnitParameter(
+            "x_orientation",
+            description=desc,
+            required=False,
+            expected_type=str,
+            acceptable_vals=["east", "north"],
+        )
+
         super(DelaySpectrum, self).__init__()
 
         if uv is not None:
@@ -550,6 +585,71 @@ class DelaySpectrum(UVBase):
 
         if taper is not None:
             self.set_taper(taper=taper)
+
+    @property
+    def _visdata_params(self):
+        """List of strings giving the visdata-like parameters."""
+        return ["data_array", "nsample_array", "flag_array", "noise_array"]
+
+    @property
+    def visdata_like_parameters(self):
+        """Iterate through defined parameters which are visdata-like (not metadata-like or power-like)."""
+        for key in self._visdata_params:
+            if hasattr(self, key):
+                yield getattr(self, key)
+
+    @property
+    def _power_params(self):
+        """List of strings giving the power-like parameters."""
+        return ["power_array", "noise_power"]
+
+    @property
+    def power_like_parameters(self):
+        """Iterate through defined parameters which are power-like (not metadata-like or power-like)."""
+        for key in self._power_params:
+            if hasattr(self, key):
+                yield getattr(self, key)
+
+    @property
+    def _thermal_params(self):
+        """List of thermal_power  like params."""
+        return ["thermal_power"]
+
+    @property
+    def thermal_like_parameters(self):
+        """Iterate through the parameters which are themal-like."""
+        for key in self._thermal_params:
+            if hasattr(self, key):
+                yield getattr(self, key)
+
+    @property
+    def metadata_only(self):
+        """
+        Property that determines whether this is a metadata only object.
+
+        An object is metadata only if data_array, nsample_array and flag_array
+        are all None.
+        """
+        metadata_only = all(
+            d is None
+            for d in chain(
+                self.visdata_like_parameters,
+                self.power_like_parameters,
+                self.thermal_like_parameters,
+            )
+        )
+
+        for param_name in self._visdata_params:
+            getattr(self, "_" + param_name).required = not metadata_only
+
+        if not metadata_only and any(
+            d is not None
+            for d in chain(self.power_like_parameters, self.thermal_like_parameters)
+        ):
+            for param_name in chain(self._power_params, self._thermal_params):
+                getattr(self, "_" + param_name).required = not metadata_only
+
+        return metadata_only
 
     def set_taper(self, taper=None):
         """Set spectral taper function used during Fourier Transform.
@@ -643,10 +743,11 @@ class DelaySpectrum(UVBase):
             If any parameter values are inconsistent with expected types, shapes, or ranges of values.
 
         """
-        if self.data_type == "delay":
-            self.set_delay()
-        else:
-            self.set_frequency()
+        if not self.metadata_only:
+            if self.data_type == "delay":
+                self.set_delay()
+            else:
+                self.set_frequency()
 
         if self.Nbls != len(np.unique(self.baseline_array)):
             raise ValueError(
@@ -798,6 +899,9 @@ class DelaySpectrum(UVBase):
         this.Ntimes = uv.Ntimes
         this.Nbls = uv.Nbls
         this.Nfreqs = uv.Nfreqs
+        this.Nants_data = uv.Nants_data
+        this.Nants_telescope = uv.Nants_telescope
+        this.x_orientation = uv.x_orientation
         this.vis_units = uv.vis_units
         this.Npols = uv.Npols
         this.Nspws = 1
@@ -1113,6 +1217,7 @@ class DelaySpectrum(UVBase):
             self.cosmology = simple_cosmo.default_cosmology.get()
         # find the mean redshift for each spectral window
         self.redshift = simple_cosmo.calc_z(self.freq_array).mean(axis=1)
+
         self.k_parallel = simple_cosmo.eta2kparr(
             self.delay_array.reshape(1, self.Ndelays),
             self.redshift.reshape(self.Nspws, 1),
@@ -1245,6 +1350,598 @@ class DelaySpectrum(UVBase):
                     "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
                 )
 
+    @units.quantity_input(
+        frequencies=units.Hz, delays=units.s, lsts=units.rad, lst_range=units.rad,
+    )
+    def _select_preprocess(
+        self,
+        antenna_nums=None,
+        bls=None,
+        spws=None,
+        frequencies=None,
+        freq_chans=None,
+        delays=None,
+        delay_chans=None,
+        lsts=None,
+        lst_range=None,
+        polarizations=None,
+    ):
+        """Gather all the indices necessary to make selections on metadata and data.
+
+        Parameters
+        ----------
+        antenna_nums : array_like of int, optional
+            The antennas numbers to keep in the object.
+        bls : array_like of tuple or int, optional
+            The baselines to keep in the object.
+            Can either be a tuple of antenna numbers (e.g. (0, 1)) the baseline number or a combination of both.
+        spectral_windows : array_like of int
+            The spectral windows to keep in the object.
+        frequencies : Astropy Quantity object, optional
+            The frequencies to keep in the object.
+            Values must match frequencies which already exist in the object.
+            Only available when in 'frequency' mode
+        freq_chans : array_like of int, optional
+            The frequency channel numbers to keep in the object.
+            When multiple spectral windows are present, this will apply to all.
+            Only available when in 'frequency' mode
+        delays : Astropy Quantity object, optional
+            The delays to kee in the object.
+            Values must match delays which already exist in the object.
+            Only available when in 'delay' mode.
+        delay_chans : array_like of int, optional
+            The delays channel numbers to keep in the object.
+            When multiple spectral windows are present, this will apply to all.
+            Only available when in 'delay' mode.
+        lsts : Astropy Quantity object, optional
+            The time to keep in the object.
+            Values must match times which already exist in the object.
+        lst_range : list of Astropy Quantity, optional
+            A list of length 2 with start and end times to select.
+            All time values which fall in this range will be selected.
+        polarizations : array_like of int, optional
+            The polarizations to keep in the object.
+
+        Returns
+        -------
+        spw_inds : list of ints
+            list of indices for spectral windows to keep. Can be None (keep all)
+        freq_inds : list of ints
+            list of indices into each frequency axis to keep. Can be None (keep all)
+        delay_inds : list of ints
+            list of indices into the delay axis to keep. Can be None (keep all)
+        bl_inds : list of ints
+            list of indices into the baseline array to keep. Can be None (keep all)
+        time_inds : list of ints
+            list of indices into the lst_array to keep. Can be None (keep all)
+        pol_inds : list of ints
+            list of indices into the polarization_array to keep. Can be None (keep all)
+
+        """
+        spw_inds = set()
+        freq_inds = [set() for spw in range(self.Nspws)]
+        delay_inds = set()
+        bl_inds = set()
+        lst_inds = set()
+        pol_inds = set()
+
+        if antenna_nums is not None:
+            inds1, inds2 = set(), set()
+            for ant in uvutils._get_iterable(antenna_nums):
+                if not (ant in self.ant_1_array or ant in self.ant_2_array):
+                    raise ValueError(
+                        f"Antenna {ant:d} is not present in either ant_1_array "
+                        f"or ant_2_array."
+                    )
+                wh1 = np.nonzero(self.ant_1_array == ant)[0]
+                inds1.update(wh1)
+
+                wh2 = np.nonzero(self.ant_2_array == ant)[0]
+                inds2.update(wh2)
+            # only keep baseline indices if both the antennas were present
+            # in the antenna_numbers
+            bl_inds.update(inds1.intersection(inds2))
+
+        if bls is not None:
+            tmp_bl_inds = set()
+            if isinstance(bls, tuple) and (len(bls) == 2 or len(bls) == 3):
+                bls = [bls]
+            if len(bls) == 0 or not all(isinstance(item, tuple) for item in bls):
+                if any(isinstance(bl, (int, np.int, np.int_, np.intc)) for bl in bls):
+                    warnings.warn(
+                        "Input baseline array is a mix of integers and tuples of "
+                        "integers. Assuming all integers not in a tuple as baseline "
+                        "numbers and converting to antenna pairs."
+                    )
+                    bls = [
+                        uvutils.baseline_to_antnums(bl, self.Nants_telescope)
+                        if isinstance(bl, (int, np.int_, np.intc))
+                        else bl
+                        for bl in bls
+                    ]
+                else:
+                    raise ValueError(
+                        "bls must be a list of tuples of antenna numbers (optionally with polarization)."
+                    )
+            if not all(
+                [isinstance(item[0], (int, np.integer,)) for item in bls]
+                + [isinstance(item[1], (int, np.integer,)) for item in bls]
+            ):
+                raise ValueError(
+                    "bls must be a list of tuples of antenna numbers (optionally with polarization)."
+                )
+            if all([len(item) == 3 for item in bls]):
+                if polarizations is not None:
+                    raise ValueError(
+                        "Cannot provide length-3 tuples and also specify polarizations."
+                    )
+                if not all([isinstance(item[2], str) for item in bls]):
+                    raise ValueError(
+                        "The third element in each bl must be a polarization string"
+                    )
+
+            bl_pols = set()
+            for bl in bls:
+                wh1 = np.where(
+                    np.logical_and(self.ant_1_array == bl[0], self.ant_2_array == bl[1])
+                )[0]
+                wh2 = np.where(
+                    np.logical_and(self.ant_1_array == bl[1], self.ant_2_array == bl[0])
+                )[0]
+
+                if len(wh1) > 0:
+                    tmp_bl_inds.update(wh1)
+                    if len(bl) == 3:
+                        bl_pols.add(bl[2])
+                elif len(wh2) > 0:
+                    tmp_bl_inds.update(wh2)
+                    if len(bl) == 3:
+                        bl_pols.add(bl[2][::-1])
+                else:
+                    raise ValueError(f"Baseline {bl} has no data associated with it.")
+
+            if len(bl_pols) > 0:
+                polarizations = bl_pols
+
+            # bool of a set is True if it is not-empty
+            if bool(bl_inds):
+                # if non-empty only keep the intersection
+                bl_inds.intersection_update(tmp_bl_inds)
+            else:
+                bl_inds.update(tmp_bl_inds)
+
+        if spws is not None:
+            spws = uvutils._get_iterable(spws)
+            if any(not isinstance(spw, (int, np.int_, np.int_)) for spw in spws):
+                raise ValueError(
+                    "Input spws must be an array_like of integers corresponding "
+                    "to spectral windows."
+                )
+            if any(spw >= self.Nspws for spw in spws):
+                raise ValueError(
+                    "Input spectral window values must be less than the number "
+                    "of spectral windows currently on the object."
+                )
+            spw_inds.update(spws)
+
+        if freq_chans is not None:
+            freq_chans = uvutils._get_iterable(freq_chans)
+            if np.array(freq_chans).ndim > 1:
+                freq_chans = np.array(freq_chans).flatten()
+
+            if frequencies is None:
+                frequencies = units.Quantity(
+                    sorted(set(self.freq_array[:, freq_chans].flatten()))
+                )
+            else:
+                frequencies = units.Quantity(
+                    sorted(
+                        set(frequencies.flatten()).intersection(
+                            self.freq_array[:, freq_chans].flatten()
+                        )
+                    )
+                )
+
+        if frequencies is not None:
+            if self.power_array is not None:
+                warnings.warn(
+                    "This object has already been converted to a power spectrum "
+                    "and a frequency selection is being performed. This will result "
+                    "in an inconsistent data_array and power_array. Moreover all "
+                    "parameters with shape Ndelay will retain their old shape "
+                    "if a delay selection is not also performed."
+                )
+            frequencies = frequencies.flatten()
+            for spw, fq_array in enumerate(self.freq_array):
+                for f in frequencies:
+                    if f not in self.freq_array.flatten():
+                        raise ValueError(
+                            f"Frequency {f} not present in the frequency array."
+                        )
+                    freq_inds[spw].update(np.nonzero(fq_array == f)[0])
+            # if we are also making selections on spectral windows, take intersection
+            # otherwise the frequencies will define new spectral windows
+            if bool(spw_inds):
+                spw_inds.intersection_update(
+                    set([ind for ind, t in enumerate(freq_inds) if len(t) > 0])
+                )
+            else:
+                spw_inds.update([ind for ind, t in enumerate(freq_inds) if len(t) > 0])
+
+            freq_inds = [freq_inds[spw] for spw in spw_inds]
+            lens = np.unique([len(t) for t in freq_inds])
+            lens = lens[lens != 0]
+
+            if lens.size > 1:
+                raise ValueError(
+                    "Frequencies provided for selection will result in a non-rectangular "
+                    "frequency array. Please ensure that all remaining spectral windows will "
+                    "have the same number of frequencies."
+                )
+
+        if delay_chans is not None:
+            delay_chans = uvutils._get_iterable(delay_chans)
+            if np.array(delay_chans).ndim > 1:
+                delay_chans = np.array(delay_chans).flatten()
+            if delays is None:
+                delays = units.Quantity(sorted(set(self.delay_array[delay_chans])))
+            else:
+                delays = units.Quantity(
+                    sorted(
+                        set(delays.flatten()).intersection(
+                            self.delay_array[delay_chans]
+                        )
+                    )
+                )
+                if not bool(set(delays)):
+                    raise ValueError(
+                        "The intersection of the input delays and delay_chans "
+                        "is empty. This will result in an object with no data."
+                    )
+
+        if delays is not None:
+            delays = delays.flatten()
+            for d in delays:
+                if d not in self.delay_array:
+                    raise ValueError(
+                        f"The input delay {d} is not present in the delay_array."
+                    )
+                delay_inds.update(np.nonzero(self.delay_array == d)[0])
+
+        if lsts is not None:
+            lsts = lsts.flatten()
+            for l in lsts:
+                if l not in self.lst_array:
+                    raise ValueError(
+                        f"The input lst {l} is not present in the lst_array."
+                    )
+                lst_inds.update(np.nonzero(self.lst_array == l)[0])
+
+        if lst_range is not None:
+            lst_range = lst_range.flatten()
+            if lst_range.size != 2:
+                raise ValueError(
+                    "Parameter lst_range must be an Astropy "
+                    "Quantity object with size 2 (e.g. [start_lst, end_lst] * units.rad)"
+                )
+
+            tmp_inds = np.nonzero(
+                np.logical_and(
+                    lst_range[0] <= self.lst_array, self.lst_array <= lst_range[1]
+                )
+            )[0]
+
+            if bool(lst_inds):
+                lst_inds.intersection_update(tmp_inds)
+            else:
+                lst_inds.update(tmp_inds)
+
+        if polarizations is not None:
+            polarizations = uvutils._get_iterable(polarizations)
+
+            if np.array(polarizations).ndim > 1:
+                polarizations = np.array(polarizations).flatten()
+
+            for p in polarizations:
+                if isinstance(p, str):
+                    p_num = uvutils.polstr2num(p, x_orientation=self.x_orientation)
+                else:
+                    p_num = p
+
+                if p_num not in self.polarization_array:
+                    raise ValueError(
+                        f"Polarization {p_num} not present in polarization_array."
+                    )
+
+                pol_inds.update(np.nonzero(self.polarization_array == p_num)[0])
+
+        # any empty sets will be replaced with None
+        spw_inds = sorted(spw_inds) or None
+        freq_inds = [sorted(fq) or None for fq in freq_inds]
+        if all(fq is None for fq in freq_inds):
+            freq_inds = None
+        delay_inds = sorted(delay_inds) or None
+        bl_inds = sorted(bl_inds) or None
+        lst_inds = sorted(lst_inds) or None
+        pol_inds = sorted(pol_inds) or None
+
+        return spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds
+
+    def _select_metadata(
+        self,
+        spw_inds=None,
+        freq_inds=None,
+        delay_inds=None,
+        bl_inds=None,
+        lst_inds=None,
+        pol_inds=None,
+    ):
+        """Perform select on everything but data- and power-sized arrays.
+
+        Parameters
+        ----------
+        spw_inds : list of ints
+            list of indices for spectral windows to keep. Can be None (keep all)
+        freq_inds : list of ints
+            list of indices into each frequency axis to keep. Can be None (keep all)
+        delay_inds : list of ints
+            list of indices into the delay axis to keep. Can be None (keep all)
+        bl_inds : list of ints
+            list of indices into the baseline array to keep. Can be None (keep all)
+        time_inds : list of ints
+            list of indices into the lst_array to keep. Can be None (keep all)
+        pol_inds : list of ints
+            list of indices into the polarization_array to keep. Can be None (keep all)
+
+        """
+        if spw_inds is not None:
+            self.Nspws = len(spw_inds)
+            self.freq_array = np.take(self.freq_array, spw_inds, axis=0)
+            self.beam_area = np.take(self.beam_area, spw_inds, axis=0)
+            self.beam_sq_area = np.take(self.beam_sq_area, spw_inds, axis=0)
+            self.trcvr = np.take(self.trcvr, spw_inds, axis=0)
+
+            if self.k_parallel is not None:
+                self.k_parallel = np.take(self.k_parallel, spw_inds, axis=0)
+
+            if self.k_perpendicular is not None:
+                self.k_perpendicular = np.take(self.k_perpendicular, spw_inds, axis=0)
+
+            if self.redshift is not None:
+                self.redshift = np.take(self.redshift, spw_inds, axis=0)
+
+            if self.unit_conversion is not None:
+                self.unit_conversion = np.take(self.unit_conversion, spw_inds, axis=0)
+
+            if self.thermal_conversion is not None:
+                self.thermal_conversion = np.take(
+                    self.thermal_conversion, spw_inds, axis=0
+                )
+
+        if freq_inds is not None:
+            self.Nfreqs = len(freq_inds[0])
+            tmp_freqs = np.zeros((self.Nspws, self.Nfreqs)) * self.freq_array.unit
+            tmp_trcvr = np.zeros((self.Nspws, self.Nfreqs)) * self.trcvr.unit
+            tmp_beam = (
+                np.zeros((self.Nspws, self.Npols, self.Nfreqs)) * self.beam_area.unit
+            )
+            tmp_sq_beam = (
+                np.zeros((self.Nspws, self.Npols, self.Nfreqs)) * self.beam_sq_area.unit
+            )
+            for spw, inds in enumerate(freq_inds):
+                tmp_freqs[spw] = np.take(self.freq_array[spw], inds, axis=0)
+                tmp_trcvr[spw] = np.take(self.trcvr[spw], inds, axis=0)
+                tmp_beam[spw] = np.take(self.beam_area[spw], inds, axis=1)
+                tmp_sq_beam[spw] = np.take(self.beam_sq_area[spw], inds, axis=1)
+
+            self.freq_array = tmp_freqs
+            self.trcvr = tmp_trcvr
+            self.beam_area = tmp_beam
+            self.beam_sq_area = tmp_sq_beam
+
+        if delay_inds is not None:
+            self.Ndelays = len(delay_inds)
+            self.k_parallel = np.take(self.k_parallel, delay_inds)
+            self.delay_array = np.take(self.delay_array, delay_inds)
+
+        if bl_inds is not None:
+            self.Nbls = len(bl_inds)
+            self.baseline_array = np.take(self.baseline_array, bl_inds, axis=0)
+            self.ant_1_array = np.take(self.ant_1_array, bl_inds, axis=0)
+            self.ant_2_array = np.take(self.ant_2_array, bl_inds, axis=0)
+            self.integration_time = np.take(self.integration_time, bl_inds, axis=0)
+            self.Nants_data = len(set(self.ant_1_array).union(self.ant_2_array))
+
+        if lst_inds is not None:
+            self.Ntimes = len(lst_inds)
+            self.lst_array = np.take(self.lst_array, lst_inds, axis=0)
+            self.integration_time = np.take(self.integration_time, lst_inds, axis=1)
+
+        if pol_inds is not None:
+            self.Npols = len(pol_inds)
+            self.polarization_array = np.take(self.polarization_array, pol_inds)
+            self.beam_area = np.take(self.beam_area, pol_inds, axis=1)
+            self.beam_sq_area = np.take(self.beam_sq_area, pol_inds, axis=1)
+
+            if self.unit_conversion is not None:
+                self.unit_conversion = np.take(self.unit_conversion, pol_inds, axis=1)
+
+            if self.thermal_conversion is not None:
+                self.thermal_conversion = np.take(
+                    self.thermal_conversion, pol_inds, axis=1
+                )
+
+    def select(
+        self,
+        antenna_nums=None,
+        bls=None,
+        spws=None,
+        frequencies=None,
+        freq_chans=None,
+        delays=None,
+        delay_chans=None,
+        lsts=None,
+        lst_range=None,
+        polarizations=None,
+        inplace=False,
+        run_check=True,
+        check_extra=True,
+        run_check_acceptability=True,
+    ):
+        """Downselect data to keep on the object along various axes.
+
+        Axes that can be selected along include antenna names or numbers,
+        antenna pairs, frequencies, times and polarizations. Specific
+        baseline-time indices can also be selected, but this is not commonly
+        used.
+        The history attribute on the object will be updated to identify the
+        operations performed.
+
+        Parameters
+        ----------
+        antenna_nums : array_like of int, optional
+            The antennas numbers to keep in the object.
+        bls : array_like of tuple or int, optional
+            The baselines to keep in the object.
+            Can either be a tuple of antenna numbers (e.g. (0, 1)) the baseline number or a combination of both.
+        spws : array_like of int
+            The spectral windows to keep in the object.
+        frequencies : Astropy Quantity object, optional
+            The frequencies to keep in the object.
+            Values must match frequencies which already exist in the object.
+            Only available when in 'frequency' mode
+        freq_chans : array_like of int, optional
+            The frequency channel numbers to keep in the object.
+            When multiple spectral windows are present, this will apply to all.
+            Only available when in 'frequency' mode
+        delays : Astropy Quantity object, optional
+            The delays to kee in the object.
+            Values must match delays which already exist in the object.
+            Only available when in 'delay' mode.
+        delay_chans : array_like of int, optional
+            The delays channel numbers to keep in the object.
+            When multiple spectral windows are present, this will apply to all.
+            Only available when in 'delay' mode.
+        lsts : Astropy Quantity object, optional
+            The time to keep in the object.
+            Values must match times which already exist in the object.
+        lst_range : list of Astropy Quantity, optional
+            A list of length 2 with start and end times to select.
+            All time values which fall in this range will be selected.
+        polarizations : array_like of int, optional
+            The polarizations to keep in the object.
+        run_check : bool
+            Option to check for the existence and proper shapes of parameters
+            after downselecting data on this object (the default is True,
+            meaning the check will be run).
+        check_extra : bool
+            Option to check optional parameters as well as required ones (the
+            default is True, meaning the optional parameters will be checked).
+        run_check_acceptability : bool
+            Option to check acceptable range of the values of parameters after
+            downselecting data on this object (the default is True, meaning the
+            acceptable range check will be done).
+        inplace : bool
+            Option to perform the select directly on self or return a new DelaySpectrum
+            object with just the selected data (the default is True, meaning the
+            select will be done on self).
+
+        """
+        if inplace:
+            ds_object = self
+        else:
+            ds_object = copy.deepcopy(self)
+
+        (
+            spw_inds,
+            freq_inds,
+            delay_inds,
+            bl_inds,
+            lst_inds,
+            pol_inds,
+        ) = ds_object._select_preprocess(
+            antenna_nums,
+            bls,
+            spws,
+            frequencies,
+            freq_chans,
+            delays,
+            delay_chans,
+            lsts,
+            lst_range,
+            polarizations,
+        )
+        # do select operations on everything except data_array, flag_array and nsample_array
+        # noise_array, power_array, noise_power, and thermal_power
+        ds_object._select_metadata(
+            spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds,
+        )
+
+        littleh = self.k_perpendicular.unit == units.Unit("littleh/Mpc")
+        ds_object.update_cosmology(littleh_units=littleh)
+
+        if not self.metadata_only:
+
+            for inds, axis in zip(
+                [spw_inds, pol_inds, bl_inds, lst_inds], [0, 2, 3, 4]
+            ):
+                if inds is not None:
+                    for param_name, param in zip(
+                        ds_object._visdata_params, ds_object.visdata_like_parameters
+                    ):
+                        setattr(ds_object, param_name, np.take(param, inds, axis=axis))
+
+            # handle the frequencies for each remaining spectral window
+            if freq_inds is not None:
+                for param_name, param in zip(
+                    ds_object._visdata_params, ds_object.visdata_like_parameters
+                ):
+                    tmp = np.zeros(
+                        getattr(ds_object, "_" + param_name).expected_shape(ds_object),
+                        dtype=getattr(ds_object, param_name).dtype,
+                    )
+
+                    if isinstance(param, units.Quantity):
+                        tmp <<= param.unit
+
+                    for spw, inds in enumerate(freq_inds):
+                        tmp[spw] = np.take(param[spw], inds, axis=4)
+                    setattr(ds_object, param_name, tmp)
+
+            for inds, axis in zip(
+                [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds, delay_inds],
+                [0, 1, 2, 3, 4, 5],
+            ):
+                if inds is not None:
+                    for param_name, param in zip(
+                        ds_object._power_params, ds_object.power_like_parameters
+                    ):
+                        if param is not None:
+                            setattr(
+                                ds_object, param_name, np.take(param, inds, axis=axis)
+                            )
+
+            for inds, axis in zip(
+                [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds], [0, 1, 2, 3, 4]
+            ):
+                if inds is not None:
+                    for param_name, param in zip(
+                        ds_object._thermal_params, ds_object.thermal_like_parameters
+                    ):
+                        if param is not None:
+                            setattr(
+                                ds_object, param_name, np.take(param, inds, axis=axis),
+                            )
+
+        # check if object is uv_object-consistent
+        if run_check:
+            ds_object.check(
+                check_extra=check_extra, run_check_acceptability=run_check_acceptability
+            )
+
+        if not inplace:
+            return ds_object
+
     def _read_header(self, header):
         """Read DelaySpectrum object Header data from an hdf5 save file.
 
@@ -1258,6 +1955,36 @@ class DelaySpectrum(UVBase):
         self.Nbls = int(header["Nbls"][()])
         self.Nfreqs = int(header["Nfreqs"][()])
         self.Npols = int(header["Npols"][()])
+
+        if "Nants_data" in header:
+            self.Nants_data = int(header["Nants_data"][()])
+        else:
+            self.Nants_data = len(
+                set(header["ant_1_array"][()]).union(header["ant_2_array"][()])
+            )
+
+        if "Nants_telescope" in header:
+            self.Nants_telescope = int(header["Nants_telescope"][()])
+        else:
+            warnings.warn(
+                "Nants_telescope is not present in the header of this save file. "
+                "This Delay Spectrum object was created by an old version of simpleDS. "
+                "Assuming Nants_telescope is the equivalend to Nants_data. "
+                "Please update this parameter with its true value."
+            )
+            self.Nants_telescope = self.Nants_data
+
+        if "x_orientation" in header:
+            self.x_orientation = header["x_orientation"][()]
+        else:
+            warnings.warn(
+                "The parameter x_orientation is not present in the header of this "
+                "save file. This Delay Spectrum object was created by an old version "
+                "of simpleDS. x_orientation will be set to None. This can make some "
+                "polarization conversion difficult."
+            )
+            self.x_orientation = None
+
         if "Ndelays" in header:
             self.Ndelays = int(header["Ndelays"][()])
 
@@ -1269,9 +1996,9 @@ class DelaySpectrum(UVBase):
         self.lst_array = header["lst_array"][:] * units.Unit(
             header["lst_array"].attrs["unit"]
         )
-        self.ant_1_array = header["ant_1_array"][:]
-        self.ant_2_array = header["ant_2_array"][:]
-        self.baseline_array = header["baseline_array"][:]
+        self.ant_1_array = header["ant_1_array"][()]
+        self.ant_2_array = header["ant_2_array"][()]
+        self.baseline_array = header["baseline_array"][()]
         self.freq_array = header["freq_array"][:, :] * units.Unit(
             header["freq_array"].attrs["unit"]
         )
@@ -1281,14 +2008,13 @@ class DelaySpectrum(UVBase):
                 header["delay_array"].attrs["unit"]
             )
 
-        self.polarization_array = header["polarization_array"][:]
+        self.polarization_array = header["polarization_array"][()]
 
         self.uvw = header["uvw"][:] * units.Unit(header["uvw"].attrs["unit"])
         self.integration_time = header["integration_time"][:, :] * units.Unit(
             header["integration_time"].attrs["unit"]
         )
         if "trcvr" in header:
-            print(header["trcvr"][:, :])
             self.trcvr = header["trcvr"][:, :] * units.Unit(
                 header["trcvr"].attrs["unit"]
             )
@@ -1430,6 +2156,11 @@ class DelaySpectrum(UVBase):
         header["Nbls"] = self.Nbls
         header["Nfreqs"] = self.Nfreqs
         header["Npols"] = self.Npols
+        header["Nants_data"] = self.Nants_data
+        header["Nants_telescope"] = self.Nants_telescope
+        if self.x_orientation is not None:
+            header["x_orientation"] = self.x_orientation
+
         if self.Ndelays is not None:
             header["Ndelays"] = self.Ndelays
 

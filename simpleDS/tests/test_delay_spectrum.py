@@ -9,6 +9,7 @@ import numpy as np
 import copy
 import pytest
 import unittest
+from itertools import chain
 
 from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
@@ -20,6 +21,43 @@ from simpleDS import DelaySpectrum
 from simpleDS import utils
 from simpleDS.data import DATA_PATH
 from pyuvdata.data import DATA_PATH as UVDATA_PATH
+
+
+@pytest.fixture()
+def ds_from_uvfits():
+    """Fixture to initialize a DS object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    ds.select_spectral_windows([(0, 10), (10, 20)])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    yield ds
+
+    del ds, uvd, uvb
+
+
+@pytest.fixture()
+def ds_uvfits_and_uvb():
+    """Fixture to also return the UVBeam object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    ds = DelaySpectrum(uv=[uvd])
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    yield ds, uvd, uvb
+
+    del ds, uvd, uvb
 
 
 class DummyClass(object):
@@ -60,6 +98,8 @@ class TestDelaySpectrumInit(unittest.TestCase):
             "_beam_area",
             "_beam_sq_area",
             "_taper",
+            "_Nants_telescope",
+            "_Nants_data",
         ]
 
         self.required_properties = [
@@ -87,6 +127,8 @@ class TestDelaySpectrumInit(unittest.TestCase):
             "beam_area",
             "beam_sq_area",
             "taper",
+            "Nants_telescope",
+            "Nants_data",
         ]
         self.extra_parameters = ["_power_array"]
         self.extra_properties = ["power_array"]
@@ -96,8 +138,29 @@ class TestDelaySpectrumInit(unittest.TestCase):
         """Test teardown: delete object."""
         del self.dspec_object
 
-    def test_required_parameter_iter(self):
+    def test_required_parameter_iter_metadata_only(self):
         """Test expected required parameters."""
+        required = []
+        for prop in self.dspec_object.required():
+            required.append(prop)
+        for a in self.required_parameters:
+            if a.lstrip("_") not in chain(
+                self.dspec_object._visdata_params,
+                self.dspec_object._power_params,
+                self.dspec_object._thermal_params,
+            ):
+                assert a in required, (
+                    "expected attribute " + a + " not returned in required iterator"
+                )
+
+    def test_required_parameter(self):
+        """Test expected required parameters with data."""
+        testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+
+        uvd = UVData()
+        uvd.read(testfile)
+        self.dspec_object = DelaySpectrum(uv=[uvd])
+
         required = []
         for prop in self.dspec_object.required():
             required.append(prop)
@@ -1365,166 +1428,274 @@ def test_call_delay_spectrum_twice():
     assert dspec_object.check()
 
 
-def test_readwrite_ds_object():
-    """Test a ds object can be written and read without chaning the object."""
-    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
-    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
+@pytest.mark.parametrize(
+    "input,err_type,err_message",
+    [
+        ({"antenna_nums": [-1]}, ValueError, "Antenna -1 is not present in either"),
+        ({"bls": []}, ValueError, "bls must be a list of tuples of antenna numbers"),
+        (
+            {"bls": [(0, 44), "test"]},
+            ValueError,
+            "bls must be a list of tuples of antenna numbers",
+        ),
+        (
+            {"bls": [(1, "2")]},
+            ValueError,
+            "bls must be a list of tuples of antenna numbers",
+        ),
+        (
+            {"bls": [("1", 2)]},
+            ValueError,
+            "bls must be a list of tuples of antenna numbers",
+        ),
+        (
+            {"bls": [(1, 2, "xx")], "polarizations": "yy"},
+            ValueError,
+            "Cannot provide length-3 tuples and also",
+        ),
+        (
+            {"bls": [(1, 2, 3)]},
+            ValueError,
+            "The third element in each bl must be a polarization",
+        ),
+        ({"bls": [(2, 3)]}, ValueError, "Baseline (2, 3) has no data associate"),
+        ({"spws": ["pi"]}, ValueError, "Input spws must be an array_like of integers"),
+        ({"spws": [5]}, ValueError, "Input spectral window values must be less"),
+        (
+            {"frequencies": [12] * units.Hz},
+            ValueError,
+            "Frequency 12.0 Hz not present in the frequency array.",
+        ),
+        (
+            {"frequencies": [146798030.15625, 147290641.0, 151724138.59375] * units.Hz},
+            ValueError,
+            "Frequencies provided for selection will result in a non-rectangular",
+        ),
+        (
+            {"delays": [12] * units.ns},
+            ValueError,
+            "The input delay 12.0 ns is not present in the delay_array.",
+        ),
+        (
+            {"lsts": [7] * units.rad},
+            ValueError,
+            "The input lst 7.0 rad is not present in the lst_array.",
+        ),
+        (
+            {"lst_range": [0, 2, 3] * units.rad},
+            ValueError,
+            "Parameter lst_range must be an Astropy Quantity object with size 2 ",
+        ),
+        (
+            {"polarizations": ["pU"]},
+            ValueError,
+            "Polarization 3 not present in polarization_array.",
+        ),
+        (
+            {"delay_chans": np.arange(11).tolist(), "delays": -96.66666543 * units.ns},
+            ValueError,
+            "The intersection of the input delays and delay_chans ",
+        ),
+    ],
+)
+def test_select_preprocess_errors(ds_from_uvfits, input, err_type, err_message):
+    """Test Errors raised by _select_preprocess."""
+    ds = ds_from_uvfits
 
-    uvd = UVData()
-    uvd.read(testfile)
-    ds = DelaySpectrum(uv=[uvd])
-    ds.select_spectral_windows([(1, 3), (4, 6)])
-    uvb = UVBeam()
-    uvb.read_beamfits(test_uvb_file)
-    ds.add_uvbeam(uvb=uvb)
-    ds.add_trcvr(9 * units.K)
+    ds.delay_transform()
 
-    if os.path.exists(test_outfile):
-        os.remove(test_outfile)
-
-    ds.write(test_outfile)
-
-    ds_in = DelaySpectrum()
-    ds_in.read(test_outfile)
-
-    assert ds == ds_in
-
-    if os.path.exists(test_outfile):
-        os.remove(test_outfile)
+    with pytest.raises(err_type) as cm:
+        ds.select(**input)
+    assert str(cm.value).startswith(err_message)
 
 
-def test_readwrite_ds_object_power_units():
-    """Test a ds object can be written and read without chaning the object."""
-    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
-    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
+@pytest.mark.parametrize(
+    "input",
+    [
+        {"antenna_nums": [0, 44]},
+        {"bls": (0, 26)},  # if statement looking for just one input that is a tuple
+        {"bls": (26, 0)},  # reverse the baseline to see if it is taken
+        {"bls": [(0, 26), (1, 4)]},
+        {"bls": [(0, 26), 69637]},
+        {"bls": [(0, 26, "pI"), (1, 4, "pI")]},
+        {"antenna_nums": [0, 44], "bls": [157697]},  # Mix bls and antenna_nums
+        {"freq_chans": np.arange(11).tolist()},
+        {"freq_chans": [np.arange(11).tolist()]},
+        {"frequencies": [146798030.15625, 147290641.0, 147783251.84375] * units.Hz},
+        {
+            "freq_chans": np.arange(3).tolist(),
+            "frequencies": [146798030.15625, 147290641.0, 147783251.84375] * units.Hz,
+        },
+        {"polarizations": ["pI"]},
+        {"polarizations": [[1]]},
+    ],
+)
+@pytest.mark.filterwarnings(
+    "ignore:This object has already been converted to a power spectrum"
+)
+def test_select(ds_uvfits_and_uvb, input):
+    """Test select befoe or after making a delay spectrum object is consistent."""
+    ds, uvd, uvb = ds_uvfits_and_uvb
+    uvd_input = {
+        key: val.value if isinstance(val, units.Quantity) else val
+        for key, val in input.items()
+    }
+    if "bls" in uvd_input and not isinstance(uvd_input["bls"], tuple):
+        uvd_input["bls"] = [
+            uvd.baseline_to_antnums(bl)
+            if isinstance(bl, (int, np.int_, np.intc))
+            else bl
+            for bl in uvd_input["bls"]
+        ]
 
-    uvd = UVData()
-    uvd.read(testfile)
-    ds = DelaySpectrum(uv=[uvd])
-    ds.select_spectral_windows([(1, 3), (4, 6)])
-    uvb = UVBeam()
-    uvb.read_beamfits(test_uvb_file)
-    ds.add_uvbeam(uvb=uvb)
-
+    uvd.select(**uvd_input)
     ds.calculate_delay_spectrum()
 
-    if os.path.exists(test_outfile):
-        os.remove(test_outfile)
+    if (
+        "bls" in input
+        and isinstance(input["bls"], list)
+        and any(isinstance(b, (int, np.intc, np.int_)) for b in input["bls"])
+    ):
+        with pytest.warns(UserWarning) as cm:
+            ds.select(**input, inplace=True)
+        assert len(cm) == 1
+        assert str(cm[0].message).startswith(
+            "Input baseline array is a mix of integers and tuples of integers."
+        )
+    else:
+        ds.select(**input, inplace=True)
 
-    uvtest.checkWarnings(
-        ds.write,
-        func_args=[test_outfile],
-        message="Cannot write DelaySpectrum objects to file when power ",
-        nwarnings=1,
-        category=UserWarning,
-    )
+    ds2 = DelaySpectrum(uvd, uvb=uvb)
+    ds2.calculate_delay_spectrum()
+    # the uvw and k_perp will be different because of how the redundant group
+    # is calculated
+    if not units.allclose(ds2.uvw, ds.uvw):
+        ds2.uvw = ds.uvw
+    if ds2.k_perpendicular != ds.k_perpendicular:
+        ds2.k_perpendicular = ds.k_perpendicular
 
-    ds_in = DelaySpectrum()
-    ds_in.read(test_outfile)
+    if "freq_chans" in input or "frequencies" in input:
+        # changing frequencies will alter how the data is tapered
+        for param1, param2 in zip(ds.power_like_parameters, ds2.power_like_parameters):
+            assert param1.shape != param2.shape
 
-    assert ds == ds_in
+        assert ds._data_array != ds2._data_array
+        assert ds.Ndelays != ds2.Ndelays
+        assert ds._delay_array != ds2._delay_array
+        assert ds._k_parallel != ds2._k_parallel
 
-    if os.path.exists(test_outfile):
-        os.remove(test_outfile)
+        # force equality though for the rest of the check
+        for name in ds._power_params:
+            setattr(ds2, name, getattr(ds, name))
+        ds2.Ndelays = ds.Ndelays
+        ds2.k_parallel = ds.k_parallel
+        ds2.delay_array = ds.delay_array
+        ds2.data_array = ds.data_array
 
-
-def test_readwrite_custom_taper():
-    """Test a ds object can be written and read without chaning the object."""
-    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
-    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
-
-    uvd = UVData()
-    uvd.read(testfile)
-    ds = DelaySpectrum(uv=[uvd])
-    ds.select_spectral_windows([(1, 3), (4, 6)])
-    uvb = UVBeam()
-    uvb.read_beamfits(test_uvb_file)
-    ds.add_uvbeam(uvb=uvb)
-
-    ds.set_taper(windows.cosine)
-
-    ds.delay_transform()
-
-    if os.path.exists(test_outfile):
-        os.remove(test_outfile)
-
-    uvtest.checkWarnings(
-        ds.write,
-        func_args=[test_outfile],
-        message="The given taper funtion has a different name than ",
-        nwarnings=1,
-        category=UserWarning,
-    )
-
-    ds_in = DelaySpectrum()
-    uvtest.checkWarnings(
-        ds_in.read,
-        func_args=[test_outfile],
-        message="Saved taper function has different name than",
-        nwarnings=1,
-        category=UserWarning,
-    )
-
-    assert ds != ds_in
-    ds_in.set_taper(windows.cosine)
-    assert ds == ds_in
-
-    if os.path.exists(test_outfile):
-        os.remove(test_outfile)
+    assert ds == ds2
 
 
-def test_read_bad_file():
-    """Test error raised when reading non-existant file."""
-    ds = DelaySpectrum()
-    with pytest.raises(IOError) as cm:
-        ds.read("bad_file")
-    assert str(cm.value).startswith("bad_file not found")
+@pytest.mark.parametrize(
+    "input,ndelays",
+    [
+        ({"delay_chans": np.arange(11).tolist()}, 11),
+        ({"delay_chans": [np.arange(11).tolist()]}, 11),
+        (
+            {
+                "delay_chans": np.arange(11).tolist(),
+                "delays": -483.333327140625 * units.ns,
+            },
+            1,
+        ),
+    ],
+)
+def test_select_delay_chans(ds_uvfits_and_uvb, input, ndelays):
+    """Test selection along delay axis."""
+    ds, uvd, uvb = ds_uvfits_and_uvb
+    ds.calculate_delay_spectrum()
+
+    ds_out = ds.select(**input)
+    assert ds_out.Ndelays == ndelays
+    if "delay_chans" in input and "delays" not in input:
+        print("ds_out", ds_out.delay_array)
+        print("original", ds.delay_array[np.squeeze(input["delay_chans"])])
+        expected = ds.delay_array[np.squeeze(input["delay_chans"])]
+    elif "delays" in input and "delay_chans" not in input:
+        expected = input["delays"]
+    else:
+        expected = units.Quantity(
+            sorted(
+                set(input["delays"].flatten()).intersection(
+                    ds.delay_array[np.squeeze(input["delay_chans"])]
+                )
+            )
+        )
+    assert units.allclose(ds_out.delay_array, expected)
 
 
-def test_file_exists():
-    """Test error when file exists."""
-    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
-    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
+@pytest.mark.parametrize(
+    "input,ntimes",
+    [
+        ({"lsts": [1.9681493255346292, 1.9712812654619116] * units.rad}, 2),
+        ({"lst_range": [2, 3] * units.rad}, 9),
+        (
+            {
+                "lsts": [1.9681493255346292, 1.9712812654619116] * units.rad,
+                "lst_range": [1.9, 3] * units.rad,
+            },
+            2,
+        ),
+    ],
+)
+def test_select_lsts(ds_uvfits_and_uvb, input, ntimes):
+    """Test time/lst selection."""
+    ds, uvd, uvb = ds_uvfits_and_uvb
+    ds.calculate_delay_spectrum()
 
-    uvd = UVData()
-    uvd.read(testfile)
-    ds = DelaySpectrum(uv=[uvd])
-    ds.select_spectral_windows([(1, 3), (4, 6)])
-    uvb = UVBeam()
-    uvb.read_beamfits(test_uvb_file)
-    ds.add_uvbeam(uvb=uvb)
+    ds_out = ds.select(**input)
+    assert ds_out.Ntimes == ntimes
+    if "lst_range" in input and "lsts" not in input:
+        inds = np.logical_and(
+            input["lst_range"][0] <= ds.lst_array, ds.lst_array <= input["lst_range"][1]
+        )
+        expected = ds.lst_array[inds]
+    elif "lsts" in input and "lst_range" not in input:
+        expected = input["lsts"]
+    else:
+        inds = np.logical_and(
+            input["lst_range"][0] <= ds.lst_array, ds.lst_array <= input["lst_range"][1]
+        )
+        expected = units.Quantity(
+            sorted(set(input["lsts"].flatten()).intersection(ds.lst_array[inds]))
+        )
+    assert units.allclose(ds_out.lst_array, expected)
 
-    ds.write(test_outfile)
-    with pytest.raises(IOError) as cm:
-        ds.write(test_outfile)
-    assert str(cm.value).startswith("File exists")
+
+def test_select_spws(ds_from_uvfits):
+    """Test various selections with spectral windows input."""
+    ds = ds_from_uvfits
+    ds_copy = copy.deepcopy(ds)
+
+    ds.select_spectral_windows([(0, 10), (5, 15), (10, 20)])
+    ds_out1 = ds.select(spws=0, inplace=False)
+
+    ds_expected = copy.deepcopy(ds_copy)
+    ds_expected.select_spectral_windows((0, 10))
+    assert ds_out1 == ds_expected
+
+    ds_expected = copy.deepcopy(ds_copy)
+    ds_expected.select_spectral_windows([(5, 15), (10, 20)])
+    ds_out2 = ds.select(spws=[1, 2], inplace=False)
+    assert ds_out2 == ds_expected
 
 
-def test_overwrite_file():
-    """Test file can be overwritten."""
-    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
-    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
-    test_outfile = os.path.join(DATA_PATH, "test_data", "test_out.h5")
+def test_select_spws_and_freqs(ds_from_uvfits):
+    """Test selection of spectral windows and frequencies."""
+    ds = ds_from_uvfits
+    freqs = copy.deepcopy(ds.freq_array)
+    expected = freqs[0, 0:11]
+    ds.select_spectral_windows([(0, 10), (5, 15), (10, 20)])
 
-    with open(test_outfile, "w") as f:
-        f.write("")
+    ds_out = ds.select(spws=0, frequencies=freqs[0, 0:20])
 
-    uvd = UVData()
-    uvd.read(testfile)
-    ds = DelaySpectrum(uv=[uvd])
-    ds.select_spectral_windows([(1, 3), (4, 6)])
-    uvb = UVBeam()
-    uvb.read_beamfits(test_uvb_file)
-    ds.add_uvbeam(uvb=uvb)
-
-    ds.delay_transform()
-    ds.write(test_outfile, overwrite=True)
-
-    ds_in = DelaySpectrum()
-    ds_in.read(test_outfile)
-
-    assert ds == ds_in
+    assert units.allclose(ds_out.freq_array.flatten(), expected)
