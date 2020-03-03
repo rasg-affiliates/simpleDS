@@ -47,6 +47,22 @@ def ds_from_uvfits():
 
 
 @pytest.fixture()
+def ds_from_polfile():
+    """Fixture to return DS object with multipols."""
+    testfile = os.path.join(UVDATA_PATH, "mwa_integration_time.uvh5")
+
+    uvd = UVData()
+    uvd.read(testfile)
+
+    ds = DelaySpectrum(uv=[uvd])
+    ds.beam_sq_area = np.ones_like(ds.beam_sq_area)
+    ds.beam_area = np.ones_like(ds.beam_area)
+    yield ds
+
+    del ds, uvd
+
+
+@pytest.fixture()
 def test_outfile():
     """Fixture to get the outfile."""
     filename = os.path.join(pytest.testdir, "test_out.h5")
@@ -303,6 +319,39 @@ def test_initialize_file(ds_from_uvfits, test_outfile):
     assert ds_in == ds
 
 
+def test_initialize_file_name_error(ds_from_uvfits, test_outfile):
+    """Test initializing file onto disk."""
+    ds = ds_from_uvfits
+    with h5py.File(test_outfile, "w"):
+        pass
+    with pytest.raises(IOError) as cm:
+        ds.initialize_save_file(test_outfile)
+    assert str(cm.value).startswith("File exists; skipping")
+
+
+def test_initialize_file_overwrite(ds_from_uvfits, test_outfile):
+    """Test initializing file onto disk."""
+    ds = ds_from_uvfits
+    with h5py.File(test_outfile, "w"):
+        pass
+    ds.initialize_save_file(test_outfile, overwrite=True)
+    ds.data_array = None
+    ds.flag_array = None
+    ds.nsample_array = None
+    ds.noise_array = None
+    ds_in = DelaySpectrum()
+    ds_in.read(test_outfile, read_data=False)
+    assert ds_in == ds
+
+
+def test_write_partial_error(ds_from_uvfits, test_outfile):
+    """Test error is raised if file does not exist."""
+    ds = ds_from_uvfits
+    with pytest.raises(AssertionError) as cm:
+        ds.write_partial(test_outfile)
+    assert str(cm.value).startswith(f"{test_outfile} does not exists; please first")
+
+
 def test_partial_write_bls(ds_from_uvfits, test_outfile):
     """Test writing in parts to a file."""
     ds = ds_from_uvfits
@@ -372,6 +421,36 @@ def test_partial_write_bls_non_regular(ds_from_uvfits, test_outfile):
     assert ds2 == ds
 
 
+def test_partial_write_bls_one_select(ds_from_uvfits, test_outfile):
+    """Test writing in parts to a file."""
+    ds = ds_from_uvfits
+    ds.initialize_save_file(test_outfile)
+    bl_list = [
+        (i, j)
+        for i, j in zip(
+            *uvutils.baseline_to_antnums(ds.baseline_array, ds.Nants_telescope)
+        )
+    ]
+    for bls in bl_list:
+        ds1 = ds.select(bls=bls, inplace=False)
+        ds1.write_partial(test_outfile)
+
+    with h5py.File(test_outfile, "r") as h5:
+        print("test", h5["/Data/thermal_power"].attrs["unit"])
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+
+    assert ds2 != ds
+    ds2.thermal_power = None
+    ds2.power_array = None
+    ds2.noise_power = None
+    ds2.update_cosmology()
+
+    assert ds2 == ds
+
+
 def test_partial_write_freqs(ds_from_uvfits, test_outfile):
     """Test partial writing along frequency axis."""
     ds = ds_from_uvfits
@@ -402,6 +481,27 @@ def test_partial_write_freqs_non_reg(ds_from_uvfits, test_outfile):
     np.random.shuffle(freqs)
     assert np.unique(np.diff(freqs)).size > 1
     for fqs in np.array_split(freqs, 3):
+        ds1 = ds.select(frequencies=fqs, inplace=False)
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+
+    assert ds2 != ds
+    ds2.thermal_power = None
+    ds2.power_array = None
+    ds2.noise_power = None
+    ds2.update_cosmology()
+
+    assert ds2 == ds
+
+
+def test_partial_write_freqs_one_select(ds_from_uvfits, test_outfile):
+    """Test partial writing along frequency axis."""
+    ds = ds_from_uvfits
+    ds.initialize_save_file(test_outfile)
+    for fqs in ds.freq_array.flatten():
         ds1 = ds.select(frequencies=fqs, inplace=False)
         ds1.write_partial(test_outfile)
 
@@ -461,8 +561,28 @@ def test_partial_write_lsts_non_reg(ds_from_uvfits, test_outfile):
     assert ds2 == ds
 
 
+def test_partial_write_lsts_one_select(ds_from_uvfits, test_outfile):
+    """Test partial writing along lst axis with regular spacing."""
+    np.random.seed(0)
+    ds = ds_from_uvfits
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+    lsts = ds.lst_array.flatten()
+    for lst in lsts:
+        ds1 = ds.select(lsts=lst, inplace=False)
+        ds1.calculate_delay_spectrum()
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+    ds.calculate_delay_spectrum()
+
+    assert ds2 == ds
+
+
 @pytest.mark.skip
-def test_partial_write_pols(ds_from_uvfits, test_outfile):
+def test_partial_write_pols(ds_from_polfile, test_outfile):
     """Test partial writing along pol axis with regular spacing."""
     np.random.seed(0)
     ds = ds_from_uvfits
@@ -480,7 +600,7 @@ def test_partial_write_pols(ds_from_uvfits, test_outfile):
 
 
 @pytest.mark.skip
-def test_partial_write_pols_non_reg(ds_from_uvfits, test_outfile):
+def test_partial_write_pols_non_reg(ds_from_polfile, test_outfile):
     """Test partial writing along pol axis with non regular spacing."""
     np.random.seed(0)
     ds = ds_from_uvfits
@@ -496,6 +616,103 @@ def test_partial_write_pols_non_reg(ds_from_uvfits, test_outfile):
     ds2 = DelaySpectrum()
     ds2.read(test_outfile)
     ds2.update_cosmology()
+
+    assert ds2 == ds
+
+
+@pytest.mark.skip
+def test_partial_write_pols_one_select(ds_from_polfile, test_outfile):
+    """Test partial writing along pol axis with regular spacing."""
+    np.random.seed(0)
+    ds = ds_from_uvfits
+    ds.initialize_save_file(test_outfile)
+    pols = ds._polarization_array
+    for pol in pols:
+        ds1 = ds.select(polarizations=pol, inplace=False)
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+
+    assert ds2 == ds
+
+
+def test_write_partial_spws_one_select(ds_from_uvfits, test_outfile):
+    """Test partial writing one spectral window at a time."""
+    ds = ds_from_uvfits
+    ds.select_spectral_windows([(0, 3), (4, 7), (8, 11), (12, 15), (16, 19)])
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+    for spw in range(ds.Nspws):
+        ds1 = ds.select(spws=spw, inplace=False)
+        ds1.calculate_delay_spectrum()
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+    ds.calculate_delay_spectrum()
+
+    assert ds2 == ds
+
+
+def test_write_partial_delays(ds_from_uvfits, test_outfile):
+    """Test partial write along delay axis."""
+    ds = ds_from_uvfits
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+    ds.calculate_delay_spectrum()
+    for delay in np.array_split(ds.delay_array, 3):
+        ds1 = ds.select(delays=delay, inplace=False)
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+    ds.calculate_delay_spectrum()
+
+    assert ds2 == ds
+
+
+def test_write_partial_delays_irregular(ds_from_uvfits, test_outfile):
+    """Test partial write along delay axis with non regular spacing."""
+    np.random.seed()
+    ds = ds_from_uvfits
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+
+    delay_chans = list(range(ds.Ndelays))
+    np.random.shuffle(delay_chans)
+    delay_chans = [np.sort(d) for d in np.array_split(delay_chans, 3)]
+    assert np.unique(np.diff(delay_chans, axis=1), axis=1).shape[1] > 1
+    ds.calculate_delay_spectrum()
+    for delay_chan in delay_chans:
+        ds1 = ds.select(delay_chans=delay_chan, inplace=False)
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+
+    assert ds2 == ds
+
+
+def test_write_partial_delays_one_select(ds_from_uvfits, test_outfile):
+    """Test partial write along delay axis."""
+    ds = ds_from_uvfits
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+
+    ds.calculate_delay_spectrum()
+    for delay in ds.delay_array:
+        ds1 = ds.select(delays=delay, inplace=False)
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+    ds.calculate_delay_spectrum()
 
     assert ds2 == ds
 
