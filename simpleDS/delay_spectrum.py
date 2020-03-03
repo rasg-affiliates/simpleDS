@@ -381,7 +381,8 @@ class DelaySpectrum(UVBase):
         _power_units = (
             (units.mK ** 2 * units.Mpc ** 3),
             (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
-            (units.Hz ** 2),
+            (units.Jy * units.Hz) ** 2,
+            (units.Hz) ** 2,
         )
 
         desc = (
@@ -428,6 +429,7 @@ class DelaySpectrum(UVBase):
         _thermal_power_units = (
             (units.mK ** 2 * units.Mpc ** 3),
             (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
+            (units.K * units.sr * units.Hz) ** 2,
         )
         desc = (
             "The predicted thermal variance of the input data averaged over "
@@ -648,6 +650,9 @@ class DelaySpectrum(UVBase):
         ):
             for param_name in chain(self._power_params, self._thermal_params):
                 getattr(self, "_" + param_name).required = not metadata_only
+        elif not metadata_only:
+            for param_name in chain(self._power_params, self._thermal_params):
+                getattr(self, "_" + param_name).required = metadata_only
 
         return metadata_only
 
@@ -1510,6 +1515,9 @@ class DelaySpectrum(UVBase):
             else:
                 bl_inds.update(tmp_bl_inds)
 
+        if bl_inds == set(np.arange(self.Nbls)):
+            bl_inds = set()
+
         if spws is not None:
             spws = uvutils._get_iterable(spws)
             if any(not isinstance(spw, (int, np.int_, np.int_)) for spw in spws):
@@ -1569,6 +1577,13 @@ class DelaySpectrum(UVBase):
                 spw_inds.update([ind for ind, t in enumerate(freq_inds) if len(t) > 0])
 
             freq_inds = [freq_inds[spw] for spw in spw_inds]
+
+            if all(set(fq) == set(np.arange(self.Nfreqs)) for fq in freq_inds):
+                freq_inds = [set() for spw in range(self.Nspws)]
+
+            if spw_inds == set(np.arange(self.Nspws)):
+                spw_inds = set()
+
             lens = np.unique([len(t) for t in freq_inds])
             lens = lens[lens != 0]
 
@@ -1608,14 +1623,8 @@ class DelaySpectrum(UVBase):
                     )
                 delay_inds.update(np.nonzero(self.delay_array == d)[0])
 
-        if lsts is not None:
-            lsts = lsts.flatten()
-            for l in lsts:
-                if l not in self.lst_array:
-                    raise ValueError(
-                        f"The input lst {l} is not present in the lst_array."
-                    )
-                lst_inds.update(np.nonzero(self.lst_array == l)[0])
+            if delay_inds == set(np.arange(self.Ndelays)):
+                delay_inds = set()
 
         if lst_range is not None:
             lst_range = lst_range.flatten()
@@ -1630,11 +1639,24 @@ class DelaySpectrum(UVBase):
                     lst_range[0] <= self.lst_array, self.lst_array <= lst_range[1]
                 )
             )[0]
-
-            if bool(lst_inds):
-                lst_inds.intersection_update(tmp_inds)
+            if lsts is None:
+                lsts = units.Quantity(sorted(set(self.lst_array[tmp_inds])))
             else:
-                lst_inds.update(tmp_inds)
+                lsts = units.Quantity(
+                    sorted(set(self.lst_array[tmp_inds]).intersection(lsts.flatten()))
+                )
+
+        if lsts is not None:
+            lsts = lsts.flatten()
+            for l in lsts:
+                if l not in self.lst_array:
+                    raise ValueError(
+                        f"The input lst {l} is not present in the lst_array."
+                    )
+                lst_inds.update(np.nonzero(self.lst_array == l)[0])
+
+            if lst_inds == set(np.arange(self.Ntimes)):
+                lst_inds = set()
 
         if polarizations is not None:
             polarizations = uvutils._get_iterable(polarizations)
@@ -1654,6 +1676,9 @@ class DelaySpectrum(UVBase):
                     )
 
                 pol_inds.update(np.nonzero(self.polarization_array == p_num)[0])
+
+            if pol_inds == set(np.arange(self.Npols)):
+                pol_inds = set()
 
         # any empty sets will be replaced with None
         spw_inds = sorted(spw_inds) or None
@@ -2306,7 +2331,7 @@ class DelaySpectrum(UVBase):
                     else:
                         thermal_data = thermal_data[slice]
 
-                self.thermal_power = thermal_data
+                    self.thermal_power = thermal_data
 
     def read(
         self,
@@ -2621,13 +2646,447 @@ class DelaySpectrum(UVBase):
 
         return
 
-    def initialize_save_file():
-        """Initialize the full hdf5 file onto disk to allow for partial writing."""
-        pass
+    def initialize_save_file(
+        self,
+        filename,
+        overwrite=False,
+        run_check=True,
+        check_extra=True,
+        run_check_acceptability=True,
+        data_compression=None,
+        flags_compression="lzf",
+        nsample_compression="lzf",
+    ):
+        """Initialize the full hdf5 file onto disk to allow for partial writing.
 
-    def write_partial():
-        """Write section of data into an alrady initialized hdf5 file."""
+        Parameters
+        ----------
+        filename : str
+            Name of file to write.
+        overwrite : bool
+            If True will overwrite the file if it already exsits.
+        run_check : bool
+            Option to check for the existence and proper shapes of parameters
+            before writing the file. Default is True.
+        check_extra : bool
+            Option to check optional parameters as well as required ones.
+            Default is True.
+        run_check_acceptability : bool
+            Option to check acceptable range of the values of parameters
+            before writing the file. Default is True.
+        data_compression : str
+            HDF5 filter to apply when writing the data_array. Default is None
+            (no filter/compression).
+        flags_compression : str
+            HDF5 filter to apply when writing the flags_array.
+            Default is the LZF filter.
+        nsample_compression : str
+            HDF5 filter to apply when writing the nsample_array.
+            Default is the LZF filter.
+
+        Notes
+        -----
+        When partially writing out data, this function should be called first to
+        initialize the file on disk. The data is then actually written by
+        calling the write_partial method, with the same filename as the one
+        specified in this function.
+
+        """
+        if run_check:
+            self.check(
+                check_extra=check_extra, run_check_acceptability=run_check_acceptability
+            )
+
+        if os.path.exists(filename):
+            if overwrite:
+                print("File exists; overwriting file")
+            else:
+                raise IOError("File exists; skipping")
+
+        with h5py.File(filename, "w") as h5file:
+            header = h5file.create_group("Header")
+            self._write_header(header)
+
+            dgrp = h5file.create_group("Data")
+            data_shape = self._data_array.expected_shape(self)
+            dtype = self.data_array.dtype
+            _unit = self.data_array.unit.to_string()
+
+            for _name in ["visdata", "visnoise"]:
+                visdata = dgrp.create_dataset(
+                    _name,
+                    data_shape,
+                    chunks=True,
+                    compression=data_compression,
+                    dtype=dtype,
+                )
+                visdata.attrs["unit"] = _unit
+
+            dgrp.create_dataset(
+                "flags",
+                self._flag_array.expected_shape(self),
+                chunks=True,
+                compression=flags_compression,
+                dtype=self._flag_array.expected_type,
+            )
+
+            dgrp.create_dataset(
+                "nsamples",
+                self._nsample_array.expected_shape(self),
+                chunks=True,
+                compression=nsample_compression,
+                dtype=self._nsample_array.expected_type,
+            )
+
+            power_shape = self._power_array.expected_shape(self)
+            power_unit = self._power_array.expected_units[-2].to_string()
+            dtype = self._power_array.expected_type
+            for _name in ["data_power", "noise_power"]:
+                power_data = dgrp.create_dataset(
+                    _name,
+                    power_shape,
+                    chunks=True,
+                    compression=data_compression,
+                    dtype=dtype,
+                )
+                power_data.attrs["unit"] = power_unit
+
+            power_unit = self._thermal_power.expected_units[-1].to_string()
+            tpower = dgrp.create_dataset(
+                "thermal_power",
+                self._thermal_power.expected_shape(self),
+                chunks=True,
+                compression=nsample_compression,
+                dtype=np.float32,
+            )
+            tpower.attrs["unit"] = power_unit
+
+        return
+
+    def write_partial(self, filename):
+        """Write section of data into an alrady initialized hdf5 file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of already initializd file to insert delay spetrum data.
+
+        """
         pass
+        # check that the file already exists
+        if not os.path.exists(filename):
+            raise AssertionError(
+                "{0} does not exists; please first initialize it with initialize_uvh5_file".format(
+                    filename
+                )
+            )
+
+        other = DelaySpectrum()
+        other.read(filename, read_data=False)
+        (
+            spw_inds,
+            freq_inds,
+            delay_inds,
+            bl_inds,
+            lst_inds,
+            pol_inds,
+        ) = other._select_preprocess(
+            antenna_nums=list(set(self.ant_1_array).union(self.ant_2_array)),
+            bls=[
+                (i, j)
+                for i, j in zip(
+                    *uvutils.baseline_to_antnums(
+                        self.baseline_array, self.Nants_telescope
+                    )
+                )
+            ],
+            frequencies=self.freq_array.flatten(),
+            delays=self.delay_array.flatten(),
+            lsts=self.lst_array,
+            polarizations=self.polarization_array,
+        )
+
+        if spw_inds is not None:
+            if np.unique(np.diff(spw_inds)).size <= 1:
+                spw_reg_spaced = True
+                spw_start = spw_inds[0]
+                spw_end = spw_inds[-1] + 1
+                if len(spw_inds) == 1:
+                    d_spw = 1
+                else:
+                    d_spw = spw_inds[1] - spw_inds[0]
+                spw_inds = np.s_[spw_start:spw_end:d_spw]
+            else:
+                spw_reg_spaced = False
+        else:
+            spw_reg_spaced = True
+            spw_inds = np.s_[:]
+
+        if freq_inds is not None:
+            # freq inds is a (Nspw, Nfeqs) list of indices, check all
+            if np.unique(np.diff(freq_inds, axis=1), axis=1).shape[1] <= 1:
+                freq_reg_spaced = True
+                for cnt, fq_ind in enumerate(freq_inds):
+                    fq_start = fq_ind[0]
+                    fq_end = fq_ind[-1] + 1
+                    if len(fq_ind) == 1:
+                        d_fq = 1
+                    else:
+                        d_fq = fq_ind[1] - fq_ind[0]
+
+                    freq_inds[cnt] = np.s_[fq_start:fq_end:d_fq]
+            else:
+                freq_reg_spaced = False
+        else:
+            freq_reg_spaced = True
+            freq_inds = [np.s_[:]] * self.Nspws
+
+        if delay_inds is not None:
+            if np.unique(np.diff(delay_inds)).size <= 1:
+                delay_reg_spaced = True
+                delay_start = delay_inds[0]
+                delay_end = delay_inds[-1] + 1
+                if len(delay_inds) == 1:
+                    d_delay = 1
+                else:
+                    d_delay = delay_inds[1] - delay_inds[0]
+                delay_inds = np.s_[delay_start:delay_end:d_delay]
+            else:
+                delay_reg_spaced = False
+        else:
+            delay_reg_spaced = True
+            delay_inds = np.s_[:]
+
+        if bl_inds is not None:
+            if np.unique(np.diff(bl_inds)).size <= 1:
+                bl_reg_spaced = True
+                bl_start = bl_inds[0]
+                bl_end = bl_inds[-1] + 1
+                if len(bl_inds) == 1:
+                    d_bl = 1
+                else:
+                    d_bl = bl_inds[1] - bl_inds[0]
+                bl_inds = np.s_[bl_start:bl_end:d_bl]
+            else:
+                bl_reg_spaced = False
+        else:
+            bl_reg_spaced = True
+            bl_inds = np.s_[:]
+
+        if lst_inds is not None:
+            if np.unique(np.diff(lst_inds)).size <= 1:
+                lst_reg_spaced = True
+                lst_start = lst_inds[0]
+                lst_end = lst_inds[-1] + 1
+                if len(lst_inds) == 1:
+                    d_lst = 1
+                else:
+                    d_lst = lst_inds[1] - lst_inds[0]
+                lst_inds = np.s_[lst_start:lst_end:d_lst]
+            else:
+                lst_reg_spaced = False
+        else:
+            lst_reg_spaced = True
+            lst_inds = np.s_[:]
+
+        if pol_inds is not None:
+            if np.unique(np.diff(pol_inds)).size <= 1:
+                pol_reg_spaced = True
+                pol_start = pol_inds[0]
+                pol_end = pol_inds[-1] + 1
+                if len(pol_inds) == 1:
+                    d_pol = 1
+                else:
+                    d_pol = pol_inds[1] - pol_inds[0]
+                pol_inds = np.s_[pol_start:pol_end:d_pol]
+            else:
+                pol_reg_spaced = False
+        else:
+            pol_reg_spaced = True
+            pol_inds = np.s_[:]
+
+        restore_cosmo = False
+        if self.power_array is not None and self.power_array.unit.is_equivalent(
+            self._power_array.expected_units
+        ):
+            warnings.warn(
+                "Cannot write DelaySpectrum objects to file when power is in "
+                "cosmological units. Removing cosmological conversion factors.",
+                UserWarning,
+            )
+            self.remove_cosmology()
+            restore_cosmo = True
+
+        with h5py.File(filename, "r+") as f:
+            dgrp = f["/Data"]
+            visdata_dset = dgrp["visdata"]
+            visnoise_dset = dgrp["visnoise"]
+            flags_dset = dgrp["flags"]
+            nsamples_dset = dgrp["nsamples"]
+
+            data_reg_spaced = [
+                spw_reg_spaced,
+                True,
+                pol_reg_spaced,
+                bl_reg_spaced,
+                lst_reg_spaced,
+                freq_reg_spaced,
+            ]
+
+            if np.count_nonzero(data_reg_spaced) >= 5:
+                # fancy indexing is available
+                for fq in freq_inds:
+                    data_inds = tuple(
+                        [spw_inds, np.s_[:], pol_inds, bl_inds, lst_inds, fq]
+                    )
+                    visdata_dset[data_inds] = self.data_array.to_value(
+                        visdata_dset.attrs["unit"]
+                    )
+
+                    visnoise_dset[data_inds] = self.noise_array.to_value(
+                        visnoise_dset.attrs["unit"]
+                    )
+
+                    flags_dset[data_inds] = self.flag_array
+                    nsamples_dset[data_inds] = self.nsample_array
+            else:
+                reg_spaced = np.nonzero(data_reg_spaced)[0]
+                non_reg_inds = np.nonzero(np.logical_not(data_reg_spaced))[0]
+                for fq in freq_inds:
+                    indices = [spw_inds, np.s_[:], pol_inds, bl_inds, lst_inds, fq]
+                    non_reg = [np.ravel(indices[i]).tolist() for i in non_reg_inds]
+                    full_mesh_inds = np.meshgrid(*non_reg)
+                    full_mesh_inds = tuple(f.flatten() for f in full_mesh_inds)
+                    for mesh_ind in zip(*full_mesh_inds):
+                        _inds = tuple(
+                            indices[_cnt]
+                            if _cnt in reg_spaced
+                            else mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            for _cnt in range(len(visdata_dset.shape))
+                        )
+                        data_inds = tuple(
+                            indices[_cnt]
+                            if _cnt in reg_spaced
+                            else np.nonzero(
+                                non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                                == mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            )[0].item()
+                            for _cnt in range(len(visdata_dset.shape))
+                        )
+                        visdata_dset[_inds] = self.data_array[data_inds].to_value(
+                            visdata_dset.attrs["unit"]
+                        )
+                        visnoise_dset[_inds] = self.noise_array[data_inds].to_value(
+                            visnoise_dset.attrs["unit"]
+                        )
+                        flags_dset[_inds] = self.flag_array[data_inds]
+                        nsamples_dset[_inds] = self.nsample_array[data_inds]
+
+            if self.power_array is not None:
+                power_reg_spaced = [
+                    spw_reg_spaced,
+                    pol_reg_spaced,
+                    bl_reg_spaced,
+                    bl_reg_spaced,
+                    lst_reg_spaced,
+                    delay_reg_spaced,
+                ]
+                data_power_dset = dgrp["data_power"]
+                noise_power_dset = dgrp["noise_power"]
+                if np.count_nonzero(power_reg_spaced) >= 5:
+                    inds = tuple(
+                        [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds, delay_inds]
+                    )
+                    data_power_dset[inds] = self.power_array.to_value(
+                        data_power_dset.attrs["unit"]
+                    )
+                    noise_power_dset[inds] = self.noise_power.to_value(
+                        noise_power_dset.attrs["unit"]
+                    )
+                else:
+                    reg_spaced = np.nonzero(power_reg_spaced)[0]
+                    non_reg_inds = np.nonzero(np.logical_not(power_reg_spaced))[0]
+                    indices = [
+                        spw_inds,
+                        pol_inds,
+                        bl_inds,
+                        bl_inds,
+                        lst_inds,
+                        delay_inds,
+                    ]
+                    non_reg = [np.ravel(indices[i]).tolist() for i in non_reg_inds]
+                    full_mesh_inds = np.meshgrid(*non_reg)
+                    full_mesh_inds = tuple(f.flatten() for f in full_mesh_inds)
+                    for mesh_ind in zip(*full_mesh_inds):
+                        _inds = tuple(
+                            indices[_cnt]
+                            if _cnt in reg_spaced
+                            else mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            for _cnt in range(len(visdata_dset.shape))
+                        )
+                        data_inds = tuple(
+                            indices[_cnt]
+                            if _cnt in reg_spaced
+                            else np.nonzero(
+                                non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                                == mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            )[0].item()
+                            for _cnt in range(len(visdata_dset.shape))
+                        )
+                        data_power_dset[_inds] = self.power_array[data_inds].to_value(
+                            data_power_dset.attrs["unit"]
+                        )
+                        noise_power_dset[_inds] = self.noise_power[data_inds].to_value(
+                            noise_power_dset.attrs["unit"]
+                        )
+
+            if self.thermal_power is not None:
+                thermal_reg_spaced = [
+                    spw_reg_spaced,
+                    pol_reg_spaced,
+                    bl_reg_spaced,
+                    bl_reg_spaced,
+                    lst_reg_spaced,
+                ]
+                thermal_dset = dgrp["thermal_power"]
+                if np.count_nonzero(thermal_reg_spaced) >= 4:
+                    inds = tuple([spw_inds, pol_inds, bl_inds, bl_inds, lst_inds])
+                    thermal_dset[inds] = self.thermal_power.to_value(
+                        thermal_dset.attrs["unit"]
+                    )
+                else:
+                    reg_spaced = np.nonzero(thermal_reg_spaced)[0]
+                    non_reg_inds = np.nonzero(np.logical_not(thermal_reg_spaced))[0]
+                    indices = [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds]
+                    non_reg = [np.ravel(indices[i]).tolist() for i in non_reg_inds]
+                    full_mesh_inds = np.meshgrid(*non_reg)
+                    full_mesh_inds = tuple(f.flatten() for f in full_mesh_inds)
+                    for mesh_ind in zip(*full_mesh_inds):
+                        _inds = tuple(
+                            indices[_cnt]
+                            if _cnt in reg_spaced
+                            else mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            for _cnt in range(len(thermal_dset.shape))
+                        )
+                        data_inds = tuple(
+                            indices[_cnt]
+                            if _cnt in reg_spaced
+                            else np.nonzero(
+                                non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                                == mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            )[0].item()
+                            for _cnt in range(len(thermal_dset.shape))
+                        )
+
+                        thermal_dset[_inds] = self.thermal_power[data_inds].to_value(
+                            thermal_dset.attrs["unit"]
+                        )
+
+        # restore old cosmology if there was one
+        if restore_cosmo:
+            self.update_cosmology()
+
+        return
 
     def select_spectral_windows(self, spectral_windows=None, freqs=None, inplace=True):
         """Select the spectral windows from loaded data.

@@ -1699,3 +1699,18 @@ def test_select_spws_and_freqs(ds_from_uvfits):
     ds_out = ds.select(spws=0, frequencies=freqs[0, 0:20])
 
     assert units.allclose(ds_out.freq_array.flatten(), expected)
+
+
+def test_select_full_array(ds_from_uvfits):
+    """Test select using the full array for each input."""
+    ds = ds_from_uvfits
+    output_inds = ds._select_preprocess(
+        antenna_nums=list(set(ds.ant_1_array).union(ds.ant_2_array)),
+        spws=list(range(ds.Nspws)),
+        frequencies=ds.freq_array.flatten(),
+        delays=ds.delay_array.flatten(),
+        lsts=ds.lst_array,
+        polarizations=ds.polarization_array,
+    )
+    for ind in output_inds:
+        assert ind is None
