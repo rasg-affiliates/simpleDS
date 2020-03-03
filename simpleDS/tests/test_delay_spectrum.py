@@ -1697,8 +1697,22 @@ def test_select_spws_and_freqs(ds_from_uvfits):
     ds.select_spectral_windows([(0, 10), (5, 15), (10, 20)])
 
     ds_out = ds.select(spws=0, frequencies=freqs[0, 0:20])
+    assert units.allclose(ds_out.freq_array.flatten(), expected)
+
+
+def test_select_spws_with_power_spectrum(ds_from_uvfits):
+    """Test select after power spectrum estimation."""
+    ds = ds_from_uvfits
+    freqs = copy.deepcopy(ds.freq_array)
+    expected = freqs[0, 0:11]
+    ds.select_spectral_windows([(0, 10), (5, 15), (10, 20)])
+    ds.calculate_delay_spectrum()
+
+    ds_out = ds.select(spws=0, frequencies=freqs[0, 0:20])
 
     assert units.allclose(ds_out.freq_array.flatten(), expected)
+    assert ds_out.Nspws == 1
+    assert ds_out.redshift.size == 1
 
 
 def test_select_full_array(ds_from_uvfits):

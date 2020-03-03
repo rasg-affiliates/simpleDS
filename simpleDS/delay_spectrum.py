@@ -7,7 +7,7 @@ import copy
 import h5py
 import warnings
 import numpy as np
-from itertools import chain
+from itertools import chain, product
 
 import astropy.units as units
 from astropy import constants as const
@@ -1551,14 +1551,6 @@ class DelaySpectrum(UVBase):
                 )
 
         if frequencies is not None:
-            if self.power_array is not None:
-                warnings.warn(
-                    "This object has already been converted to a power spectrum "
-                    "and a frequency selection is being performed. This will result "
-                    "in an inconsistent data_array and power_array. Moreover all "
-                    "parameters with shape Ndelay will retain their old shape "
-                    "if a delay selection is not also performed."
-                )
             frequencies = frequencies.flatten()
             for spw, fq_array in enumerate(self.freq_array):
                 for f in frequencies:
@@ -1592,6 +1584,19 @@ class DelaySpectrum(UVBase):
                     "Frequencies provided for selection will result in a non-rectangular "
                     "frequency array. Please ensure that all remaining spectral windows will "
                     "have the same number of frequencies."
+                )
+
+            if (
+                self.power_array is not None
+                and lens.size == 1
+                and lens.item() != self.Nfreqs
+            ):
+                warnings.warn(
+                    "This object has already been converted to a power spectrum "
+                    "and a frequency selection is being performed. This will result "
+                    "in an inconsistent data_array and power_array. Moreover all "
+                    "parameters with shape Ndelay will retain their old shape "
+                    "if a delay selection is not also performed."
                 )
 
         if delay_chans is not None:
@@ -2776,9 +2781,7 @@ class DelaySpectrum(UVBase):
         # check that the file already exists
         if not os.path.exists(filename):
             raise AssertionError(
-                "{0} does not exists; please first initialize it with initialize_uvh5_file".format(
-                    filename
-                )
+                f"{filename} does not exists; please first initialize it with initialize_uvh5_file"
             )
 
         other = DelaySpectrum()
@@ -2824,7 +2827,7 @@ class DelaySpectrum(UVBase):
 
         if freq_inds is not None:
             # freq inds is a (Nspw, Nfeqs) list of indices, check all
-            if np.unique(np.diff(freq_inds, axis=1), axis=1).shape[1] <= 1:
+            if all(np.unique(np.diff(fq)).size <= 1 for fq in freq_inds):
                 freq_reg_spaced = True
                 for cnt, fq_ind in enumerate(freq_inds):
                     fq_start = fq_ind[0]
@@ -2954,10 +2957,8 @@ class DelaySpectrum(UVBase):
                 non_reg_inds = np.nonzero(np.logical_not(data_reg_spaced))[0]
                 for fq in freq_inds:
                     indices = [spw_inds, np.s_[:], pol_inds, bl_inds, lst_inds, fq]
-                    non_reg = [np.ravel(indices[i]).tolist() for i in non_reg_inds]
-                    full_mesh_inds = np.meshgrid(*non_reg)
-                    full_mesh_inds = tuple(f.flatten() for f in full_mesh_inds)
-                    for mesh_ind in zip(*full_mesh_inds):
+                    non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
+                    for mesh_ind in product(*non_reg):
                         _inds = tuple(
                             indices[_cnt]
                             if _cnt in reg_spaced
@@ -3014,10 +3015,8 @@ class DelaySpectrum(UVBase):
                         lst_inds,
                         delay_inds,
                     ]
-                    non_reg = [np.ravel(indices[i]).tolist() for i in non_reg_inds]
-                    full_mesh_inds = np.meshgrid(*non_reg)
-                    full_mesh_inds = tuple(f.flatten() for f in full_mesh_inds)
-                    for mesh_ind in zip(*full_mesh_inds):
+                    non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
+                    for mesh_ind in product(*non_reg):
                         _inds = tuple(
                             indices[_cnt]
                             if _cnt in reg_spaced
@@ -3058,10 +3057,8 @@ class DelaySpectrum(UVBase):
                     reg_spaced = np.nonzero(thermal_reg_spaced)[0]
                     non_reg_inds = np.nonzero(np.logical_not(thermal_reg_spaced))[0]
                     indices = [spw_inds, pol_inds, bl_inds, bl_inds, lst_inds]
-                    non_reg = [np.ravel(indices[i]).tolist() for i in non_reg_inds]
-                    full_mesh_inds = np.meshgrid(*non_reg)
-                    full_mesh_inds = tuple(f.flatten() for f in full_mesh_inds)
-                    for mesh_ind in zip(*full_mesh_inds):
+                    non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
+                    for mesh_ind in product(*non_reg):
                         _inds = tuple(
                             indices[_cnt]
                             if _cnt in reg_spaced
