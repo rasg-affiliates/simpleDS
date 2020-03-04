@@ -794,11 +794,9 @@ class DelaySpectrum(UVBase):
                     # returns an empty tuple for single numbers. eshape should do the same.
                     if not np.shape(param.value) == eshape:
                         raise ValueError(
-                            "UnitParameter {param} is not expected shape. "
-                            "Parameter shape is {pshape}, expected shape is "
-                            "{eshape}.".format(
-                                param=p, pshape=np.shape(param.value), eshape=eshape
-                            )
+                            f"UnitParameter {p} is not expected shape. "
+                            f"Parameter shape is {np.shape(param.value)}, expected shape is "
+                            f"{eshape}."
                         )
                     if eshape == ():
                         # Single element
@@ -822,11 +820,9 @@ class DelaySpectrum(UVBase):
                             if not param.value.unit.is_equivalent(param.expected_units):
                                 raise units.UnitConversionError(
                                     "UnitParameter " + p + " "
-                                    "has units {0} "
+                                    f"has units {param.value.unit} "
                                     "which are not equivalent to "
-                                    "expected units of {1}.".format(
-                                        param.value.unit, param.expected_units
-                                    )
+                                    f"expected units of {param.expected_units}."
                                 )
                             if not isinstance(
                                 param.value.value.item(0), param.expected_type
@@ -1013,10 +1009,8 @@ class DelaySpectrum(UVBase):
             errmsg = (
                 "Input data object is in units "
                 "incompatible with saved DelaySpectrum units."
-                "Saved units are: {dspec}, "
-                "input units are: {uvin}.".format(
-                    dspec=self.data_array.unit, uvin=this.data_array.unit
-                )
+                f"Saved units are: {self.data_array.unit}, "
+                f"input units are: {this.data_array.unit}."
             )
             raise units.UnitConversionError(errmsg)
 
@@ -1046,8 +1040,8 @@ class DelaySpectrum(UVBase):
                 if my_parm.value is not None and my_parm != other_parm:
                     raise ValueError(
                         "Input data differs from previously "
-                        "loaded data. Parameter {name} is not "
-                        "the same.".format(name=p)
+                        f"loaded data. Parameter {p} is not "
+                        "the same."
                     )
             elif p in ["_lst_array"]:
                 if my_parm.value is not None and my_parm != other_parm:
@@ -1059,10 +1053,8 @@ class DelaySpectrum(UVBase):
                     )
                     warnings.warn(
                         "Input LST arrays differ on average "
-                        "by {time:}. Keeping LST array stored from "
-                        "the first data set read.".format(
-                            time=time_diff.mean().to("min")
-                        ),
+                        f"by {time_diff.mean().to('min')}. Keeping LST array stored from "
+                        "the first data set read.",
                         UserWarning,
                     )
             # these next lines don't seem reasonable
@@ -1128,7 +1120,7 @@ class DelaySpectrum(UVBase):
     def remove_cosmology(self):
         """Remove cosmological conversion from any power spectrum estimates."""
         if self.cosmology is None:
-            raise ValueError("Cannot remove cosmology of type {}".format(type(None)))
+            raise ValueError(f"Cannot remove cosmology of type {type(None)}")
 
         self.k_parallel = None
         self.k_perpendicular = None
@@ -2070,11 +2062,8 @@ class DelaySpectrum(UVBase):
                 "Functions are not serializable and cannot be saved by hdf5. "
                 "Custom taper functions must be reassigned to the object "
                 "after reading. Here is some more information on your custom taper:\n"
-                "Name: {name}\nClass: {classname}\nModule: {module}".format(
-                    name=header["taper"][()],
-                    classname=header["taper"].attrs["class"],
-                    module=header["taper"].attrs["module"],
-                )
+                f"Name: {header['taper'][()]}\nClass: {header['taper'].attrs['class']}\n"
+                f"Module: {header['taper'].attrs['module']}"
             )
             self.taper = None
         else:
@@ -3127,8 +3116,8 @@ class DelaySpectrum(UVBase):
                             sp.extend(np.where(_f == _fq_array)[0])
                         else:
                             raise ValueError(
-                                "Frequency {f} not found in "
-                                "frequency array".format(_f.to("Mhz"))
+                                f"Frequency {_f.to('Mhz'):f} not found in "
+                                "frequency array"
                             )
                 spectral_windows.append(sp)
             spectral_windows = [[sp[0], sp[-1]] for sp in spectral_windows]
@@ -3364,8 +3353,8 @@ class DelaySpectrum(UVBase):
             raise ValueError(
                 "If input receiver temperature is not a scalar "
                 "Quantity, must shape (Nspws, Nfreqs). "
-                "Expected shape was {s1}, but input shape "
-                "was {s2}".format(s1=(self.Nspws, self.Nfreqs), s2=trcvr.shape)
+                f"Expected shape was {(self.Nspws, self.Nfreqs)}, but input shape "
+                f"was {trcvr.shape}"
             )
         else:
             self.trcvr = trcvr
@@ -3423,8 +3412,8 @@ class DelaySpectrum(UVBase):
             self.set_frequency()
         else:
             raise ValueError(
-                "Unknown data type: {dt}. Unable to perform "
-                "delay transformation.".format(dt=self.data_type)
+                f"Unknown data type: {self.data_type}. Unable to perform "
+                "delay transformation."
             )
 
     def calculate_noise_power(self):
