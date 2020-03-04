@@ -383,7 +383,9 @@ def test_partial_write_bls(ds_from_uvfits, test_outfile):
     assert ds2 == ds
 
 
-@pytest.mark.filterwarnings("ignore:test_partial_write_bls_non_regular")
+@pytest.mark.filterwarnings(
+    "ignore:Input baseline array is a mix of integers and tuples of integers."
+)
 def test_partial_write_bls_non_regular(ds_from_uvfits, test_outfile):
     """Test writing in parts to a file."""
     ds = ds_from_uvfits
