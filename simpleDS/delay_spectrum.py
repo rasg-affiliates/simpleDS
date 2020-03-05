@@ -1362,6 +1362,7 @@ class DelaySpectrum(UVBase):
         lsts=None,
         lst_range=None,
         polarizations=None,
+        exact_spw_match=False,
     ):
         """Gather all the indices necessary to make selections on metadata and data.
 
@@ -1398,6 +1399,10 @@ class DelaySpectrum(UVBase):
             All time values which fall in this range will be selected.
         polarizations : array_like of int, optional
             The polarizations to keep in the object.
+        exact_spw_match : bool, optional
+            When True, will only select spectral windows whose entire set of
+            frequencies matches the input frequencies
+
 
         Returns
         -------
@@ -1560,23 +1565,29 @@ class DelaySpectrum(UVBase):
             else:
                 spw_inds.update([ind for ind, t in enumerate(freq_inds) if len(t) > 0])
 
-            freq_inds = [freq_inds[spw] for spw in spw_inds]
-
-            if all(set(fq) == set(np.arange(self.Nfreqs)) for fq in freq_inds):
-                freq_inds = [set() for spw in range(self.Nspws)]
-
-            if spw_inds == set(np.arange(self.Nspws)):
-                spw_inds = set()
-
-            lens = np.unique([len(t) for t in freq_inds])
+            lens = np.unique([len(freq_inds[spw]) for spw in spw_inds])
             lens = lens[lens != 0]
 
+            # reduce the frequencies inidces to only the remaining number of sepctral windows
+            freq_inds = [freq_inds[spw] for spw in spw_inds]
+
             if lens.size > 1:
-                raise ValueError(
-                    "Frequencies provided for selection will result in a non-rectangular "
-                    "frequency array. Please ensure that all remaining spectral windows will "
-                    "have the same number of frequencies."
-                )
+                if not exact_spw_match:
+                    raise ValueError(
+                        "Frequencies provided for selection will result in a non-rectangular "
+                        "frequency array. Please ensure that all remaining spectral windows will "
+                        "have the same number of frequencies. Settings exact_spw_match to True "
+                        "will automatically drop spectral windows of uneven size."
+                    )
+                else:
+                    spw_inds.intersection_update(
+                        [
+                            list(spw_inds)[i]
+                            for i, fq in enumerate(freq_inds)
+                            if len(fq) == self.Nfreqs
+                        ]
+                    )
+                    freq_inds = [fq for fq in freq_inds if len(fq) == self.Nfreqs]
 
             if (
                 self.power_array is not None
@@ -1590,6 +1601,14 @@ class DelaySpectrum(UVBase):
                     "parameters with shape Ndelay will retain their old shape "
                     "if a delay selection is not also performed."
                 )
+
+            # if the frequency and spectral window selections make no cut
+            # reset them to null
+            if all(set(fq) == set(np.arange(self.Nfreqs)) for fq in freq_inds):
+                freq_inds = [set() for spw in range(self.Nspws)]
+
+            if spw_inds == set(np.arange(self.Nspws)):
+                spw_inds = set()
 
         if delay_chans is not None:
             delay_chans = uvutils._get_iterable(delay_chans)
@@ -2796,6 +2815,7 @@ class DelaySpectrum(UVBase):
             delays=self.delay_array.flatten(),
             lsts=self.lst_array,
             polarizations=self.polarization_array,
+            exact_spw_match=True,
         )
 
         if spw_inds is not None:

@@ -659,6 +659,25 @@ def test_write_partial_spws_one_select(ds_from_uvfits, test_outfile):
     assert ds2 == ds
 
 
+def test_write_partial_spws_overlapping_freqs(ds_from_uvfits, test_outfile):
+    """Test partial writing one spectral window at a time."""
+    ds = ds_from_uvfits
+    ds.select_spectral_windows([(0, 3), (1, 4), (2, 5), (3, 6), (4, 7)])
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+    for spw in range(ds.Nspws):
+        ds1 = ds.select(spws=spw, inplace=False)
+        ds1.calculate_delay_spectrum()
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+    ds.calculate_delay_spectrum()
+    # assert False
+    assert ds2 == ds
+
+
 def test_write_partial_delays(ds_from_uvfits, test_outfile):
     """Test partial write along delay axis."""
     ds = ds_from_uvfits
