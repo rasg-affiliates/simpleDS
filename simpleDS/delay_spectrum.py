@@ -3339,16 +3339,22 @@ class DelaySpectrum(UVBase):
 
                 for spw, freqs in enumerate(self.freq_array):
                     self.beam_area[spw, pol_cnt, :] = units.Quantity(
-                        beam_area_interp(freqs.to_value("Hz")), unit=units.sr
+                        beam_area_interp(freqs.to_value("Hz")),
+                        unit=units.sr,
+                        dtype=np.float64,
                     )
 
                     self.beam_sq_area[spw, pol_cnt, :] = units.Quantity(
-                        beam_sq_interp(freqs.to_value("Hz")), unit=units.sr
+                        beam_sq_interp(freqs.to_value("Hz")),
+                        unit=units.sr,
+                        dtype=np.float64,
                     )
 
                     if uvb.receiver_temperature_array is not None and not no_read_trcvr:
                         self.trcvr[spw, :] = units.Quantity(
-                            trcvr_interp(freqs.to_value("Hz")), unit=units.K
+                            trcvr_interp(freqs.to_value("Hz")),
+                            unit=units.K,
+                            dtype=np.float64,
                         )
 
     @units.quantity_input(trcvr=units.K)
