@@ -1362,6 +1362,7 @@ class DelaySpectrum(UVBase):
         lsts=None,
         lst_range=None,
         polarizations=None,
+        uv_index=None,
         exact_spw_match=False,
     ):
         """Gather all the indices necessary to make selections on metadata and data.
@@ -1426,6 +1427,7 @@ class DelaySpectrum(UVBase):
         bl_inds = set()
         lst_inds = set()
         pol_inds = set()
+        uv_inds = set()
 
         if antenna_nums is not None:
             inds1, inds2 = set(), set()
@@ -1696,6 +1698,24 @@ class DelaySpectrum(UVBase):
             if pol_inds == set(np.arange(self.Npols)):
                 pol_inds = set()
 
+        if uv_index is not None:
+            uv_index = uvutils._get_iterable(uv_index)
+
+            if np.array(uv_index).ndim > 1:
+                uv_index = np.array(uv_index).flatten()
+
+            uv_inds.update(uv_index)
+
+        if len(uv_inds) == self.Nuv:
+            uv_inds = set()
+        elif len(uv_inds) > self.Nuv:
+            raise ValueError(
+                "The number of UVData objects in this DelaySpectrum object "
+                f"is {self.Nuv} but the number of selections attempted is "
+                f"{len(uv_inds)}. Restrict the uv_index to be less than "
+                "or equal to the number of UVData objects."
+            )
+
         # any empty sets will be replaced with None
         spw_inds = sorted(spw_inds) or None
         freq_inds = [sorted(fq) or None for fq in freq_inds]
@@ -1705,8 +1725,9 @@ class DelaySpectrum(UVBase):
         bl_inds = sorted(bl_inds) or None
         lst_inds = sorted(lst_inds) or None
         pol_inds = sorted(pol_inds) or None
+        uv_inds = sorted(uv_inds) or None
 
-        return spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds
+        return spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds
 
     def _select_metadata(
         self,
@@ -1716,6 +1737,7 @@ class DelaySpectrum(UVBase):
         bl_inds=None,
         lst_inds=None,
         pol_inds=None,
+        uv_inds=None,
     ):
         """Perform select on everything but data- and power-sized arrays.
 
@@ -1811,6 +1833,8 @@ class DelaySpectrum(UVBase):
                 self.thermal_conversion = np.take(
                     self.thermal_conversion, pol_inds, axis=1
                 )
+        if uv_inds is not None:
+            self.Nuv = len(uv_inds)
 
     def select(
         self,
@@ -1824,6 +1848,7 @@ class DelaySpectrum(UVBase):
         lsts=None,
         lst_range=None,
         polarizations=None,
+        uv_index=None,
         inplace=False,
         run_check=True,
         check_extra=True,
@@ -1871,6 +1896,8 @@ class DelaySpectrum(UVBase):
             All time values which fall in this range will be selected.
         polarizations : array_like of int, optional
             The polarizations to keep in the object.
+        uv_index : array_like of int, optional
+            The index of the UVData objects to keep on the object.
         run_check : bool
             Option to check for the existence and proper shapes of parameters
             after downselecting data on this object (the default is True,
@@ -1900,6 +1927,7 @@ class DelaySpectrum(UVBase):
             bl_inds,
             lst_inds,
             pol_inds,
+            uv_inds,
         ) = ds_object._select_preprocess(
             antenna_nums,
             bls,
@@ -1911,11 +1939,12 @@ class DelaySpectrum(UVBase):
             lsts,
             lst_range,
             polarizations,
+            uv_index,
         )
         # do select operations on everything except data_array, flag_array and nsample_array
         # noise_array, power_array, noise_power, and thermal_power
         ds_object._select_metadata(
-            spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds,
+            spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds,
         )
 
         littleh = self.k_perpendicular.unit == units.Unit("littleh/Mpc")
@@ -1924,7 +1953,7 @@ class DelaySpectrum(UVBase):
         if not self.metadata_only:
 
             for inds, axis in zip(
-                [spw_inds, pol_inds, bl_inds, lst_inds], [0, 2, 3, 4]
+                [spw_inds, uv_inds, pol_inds, bl_inds, lst_inds], [0, 1, 2, 3, 4]
             ):
                 if inds is not None:
                     for param_name, param in zip(
@@ -2101,6 +2130,7 @@ class DelaySpectrum(UVBase):
         lsts,
         lst_range,
         polarizations,
+        uv_index,
         cosmology,
         littleh_units,
     ):
@@ -2126,6 +2156,7 @@ class DelaySpectrum(UVBase):
             bl_inds,
             lst_inds,
             pol_inds,
+            uv_inds,
         ) = self._select_preprocess(
             antenna_nums,
             bls,
@@ -2137,6 +2168,7 @@ class DelaySpectrum(UVBase):
             lsts,
             lst_range,
             polarizations,
+            uv_index,
         )
 
         if spw_inds is not None:
@@ -2169,7 +2201,20 @@ class DelaySpectrum(UVBase):
         else:
             pol_frac = 1
 
-        select_fracs = [spw_frac, freq_frac, delay_frac, bl_frac, lst_frac, pol_frac]
+        if uv_inds is not None:
+            uv_frac = len(uv_inds) / float(self.Nuv)
+        else:
+            uv_frac = 1
+
+        select_fracs = [
+            spw_frac,
+            freq_frac,
+            delay_frac,
+            bl_frac,
+            lst_frac,
+            pol_frac,
+            uv_frac,
+        ]
         min_frac = np.min(select_fracs)
 
         if min_frac == 1:
@@ -2200,7 +2245,7 @@ class DelaySpectrum(UVBase):
         else:
             self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
             self._select_metadata(
-                spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds,
+                spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds,
             )
 
             # open references to datasets
@@ -2210,10 +2255,17 @@ class DelaySpectrum(UVBase):
             nsamples_dset = dgrp["nsamples"]
 
             # iterate over smallest frac first then grab remaining
-            visdata_ind_set = [spw_inds, pol_inds, bl_inds, lst_inds, freq_inds]
-            visdata_axes = [0, 2, 3, 4, 5]
+            visdata_ind_set = [
+                spw_inds,
+                uv_inds,
+                pol_inds,
+                bl_inds,
+                lst_inds,
+                freq_inds,
+            ]
+            visdata_axes = [0, 1, 2, 3, 4, 5]
             visdata_inds = np.argsort(
-                [spw_frac, pol_frac, bl_frac, lst_frac, freq_frac]
+                [spw_frac, uv_frac, pol_frac, bl_frac, lst_frac, freq_frac]
             )
 
             for count, axis_ind in enumerate(visdata_inds):
@@ -2361,6 +2413,7 @@ class DelaySpectrum(UVBase):
         lsts=None,
         lst_range=None,
         polarizations=None,
+        uv_index=None,
         read_data=True,
         run_check=True,
         check_extra=True,
@@ -2411,6 +2464,8 @@ class DelaySpectrum(UVBase):
             All time values which fall in this range will be selected.
         polarizations : array_like of int, optional
             The polarizations to keep in the object.
+        uv_index : array_like of int, optional
+            The index of the UVData objects to keep on the object.
         read_data : bool, default: True
             Whether to read the data or return a metadata only object.
         run_check : bool
@@ -2451,6 +2506,7 @@ class DelaySpectrum(UVBase):
                     lsts,
                     lst_range,
                     polarizations,
+                    uv_index,
                     cosmology,
                     littleh_units,
                 )
@@ -2801,6 +2857,7 @@ class DelaySpectrum(UVBase):
             bl_inds,
             lst_inds,
             pol_inds,
+            uv_inds,
         ) = other._select_preprocess(
             antenna_nums=list(set(self.ant_1_array).union(self.ant_2_array)),
             bls=[
@@ -2816,6 +2873,7 @@ class DelaySpectrum(UVBase):
             lsts=self.lst_array,
             polarizations=self.polarization_array,
             exact_spw_match=True,
+            uv_index=list(range(self.Nuv)),
         )
 
         if spw_inds is not None:
@@ -2917,6 +2975,12 @@ class DelaySpectrum(UVBase):
             pol_reg_spaced = True
             pol_inds = np.s_[:]
 
+        uv_inds_reg_spaced = True
+        if uv_inds is not None:
+            uv_inds = np.s_[uv_inds[0] : uv_inds[0] + 1 : 1]
+        else:
+            uv_inds = np.s_[:]
+
         restore_cosmo = False
         if self.power_array is not None and self.power_array.unit.is_equivalent(
             self._power_array.expected_units
@@ -2938,7 +3002,7 @@ class DelaySpectrum(UVBase):
 
             data_reg_spaced = [
                 spw_reg_spaced,
-                True,
+                uv_inds_reg_spaced,
                 pol_reg_spaced,
                 bl_reg_spaced,
                 lst_reg_spaced,
@@ -2949,7 +3013,7 @@ class DelaySpectrum(UVBase):
                 # fancy indexing is available
                 for fq in freq_inds:
                     data_inds = tuple(
-                        [spw_inds, np.s_[:], pol_inds, bl_inds, lst_inds, fq]
+                        [spw_inds, uv_inds, pol_inds, bl_inds, lst_inds, fq]
                     )
                     visdata_dset[data_inds] = self.data_array.to_value(
                         visdata_dset.attrs["unit"]
@@ -2965,7 +3029,7 @@ class DelaySpectrum(UVBase):
                 reg_spaced = np.nonzero(data_reg_spaced)[0]
                 non_reg_inds = np.nonzero(np.logical_not(data_reg_spaced))[0]
                 for fq in freq_inds:
-                    indices = [spw_inds, np.s_[:], pol_inds, bl_inds, lst_inds, fq]
+                    indices = [spw_inds, uv_inds, pol_inds, bl_inds, lst_inds, fq]
                     non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
                     for mesh_ind in product(*non_reg):
                         _inds = tuple(

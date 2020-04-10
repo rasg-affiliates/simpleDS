@@ -588,13 +588,10 @@ def test_partial_write_pols(ds_from_mwa, test_outfile):
     """Test partial writing along pol axis with regular spacing."""
     np.random.seed(0)
     ds = ds_from_mwa
-    assert ds.x_orientation is not None
-    print(ds.x_orientation)
     ds.initialize_save_file(test_outfile)
     pols = ds.polarization_array
     for pol in np.array_split(pols, 3):
         ds1 = ds.select(polarizations=pol, inplace=False)
-        assert ds1.x_orientation == "east"
 
         ds1.write_partial(test_outfile)
 
