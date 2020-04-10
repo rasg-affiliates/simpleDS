@@ -60,6 +60,21 @@ def ds_uvfits_and_uvb():
     del ds, uvd, uvb
 
 
+@pytest.fixture()
+def ds_from_mwa():
+    """Fixture to initialize a DS object."""
+    testfile = os.path.join(DATA_PATH, "mwa_full_poll.uvh5")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    uvd.x_orientation = "east"
+    ds = DelaySpectrum(uv=[uvd])
+
+    yield ds
+
+    del ds, uvd
+
+
 class DummyClass(object):
     """A Dummy object for comparison."""
 
@@ -1728,3 +1743,11 @@ def test_select_full_array(ds_from_uvfits):
     )
     for ind in output_inds:
         assert ind is None
+
+
+def test_select_pol(ds_from_mwa):
+    """Test selectino using polarization dimension."""
+    ds = ds_from_mwa
+    expected = [-5, -6]
+    ds.select(polarizations=expected, inplace=True)
+    assert np.array_equal(ds.polarization_array, expected)
