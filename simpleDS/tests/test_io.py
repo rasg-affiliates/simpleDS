@@ -47,14 +47,15 @@ def ds_from_uvfits():
 
 
 @pytest.fixture()
-def ds_from_polfile():
+def ds_from_mwa():
     """Fixture to return DS object with multipols."""
-    testfile = os.path.join(UVDATA_PATH, "mwa_integration_time.uvh5")
+    testfile = os.path.join(DATA_PATH, "mwa_full_poll.uvh5")
 
     uvd = UVData()
     uvd.read(testfile)
+    uvd.x_orientation = "east"
 
-    ds = DelaySpectrum(uv=[uvd])
+    ds = DelaySpectrum(uv=uvd)
     ds.beam_sq_area = np.ones_like(ds.beam_sq_area)
     ds.beam_area = np.ones_like(ds.beam_area)
     yield ds
@@ -583,52 +584,40 @@ def test_partial_write_lsts_one_select(ds_from_uvfits, test_outfile):
     assert ds2 == ds
 
 
-@pytest.mark.skip
-def test_partial_write_pols(ds_from_polfile, test_outfile):
+def test_partial_write_pols(ds_from_mwa, test_outfile):
     """Test partial writing along pol axis with regular spacing."""
     np.random.seed(0)
-    ds = ds_from_uvfits
+    ds = ds_from_mwa
+    assert ds.x_orientation is not None
+    print(ds.x_orientation)
     ds.initialize_save_file(test_outfile)
-    pols = ds._polarization_array
+    pols = ds.polarization_array
     for pol in np.array_split(pols, 3):
         ds1 = ds.select(polarizations=pol, inplace=False)
+        assert ds1.x_orientation == "east"
+
         ds1.write_partial(test_outfile)
 
     ds2 = DelaySpectrum()
     ds2.read(test_outfile)
     ds2.update_cosmology()
+    assert ds2 != ds
+    ds2.thermal_power = None
+    ds2.power_array = None
+    ds2.noise_power = None
+    ds2.update_cosmology()
 
-    assert ds2 == ds
+    assert ds == ds2
 
 
-@pytest.mark.skip
-def test_partial_write_pols_non_reg(ds_from_polfile, test_outfile):
+def test_partial_write_pols_non_reg(ds_from_mwa, test_outfile):
     """Test partial writing along pol axis with non regular spacing."""
     np.random.seed(0)
-    ds = ds_from_uvfits
+    ds = ds_from_mwa
     ds.delay_transform()
     ds.initialize_save_file(test_outfile)
     pols = ds.polarization_array
-    np.random.shuffle(pols)
-    assert np.unique(np.diff(pols)).size > 1
-    for pol in np.array_split(pols, 3):
-        ds1 = ds.select(polarizations=pol, inplace=False)
-        ds1.write_partial(test_outfile)
-
-    ds2 = DelaySpectrum()
-    ds2.read(test_outfile)
-    ds2.update_cosmology()
-
-    assert ds2 == ds
-
-
-@pytest.mark.skip
-def test_partial_write_pols_one_select(ds_from_polfile, test_outfile):
-    """Test partial writing along pol axis with regular spacing."""
-    np.random.seed(0)
-    ds = ds_from_uvfits
-    ds.initialize_save_file(test_outfile)
-    pols = ds._polarization_array
+    pols = [[-5, -6, -8], [-7]]
     for pol in pols:
         ds1 = ds.select(polarizations=pol, inplace=False)
         ds1.write_partial(test_outfile)
@@ -636,6 +625,31 @@ def test_partial_write_pols_one_select(ds_from_polfile, test_outfile):
     ds2 = DelaySpectrum()
     ds2.read(test_outfile)
     ds2.update_cosmology()
+    assert ds2 != ds
+    ds2.thermal_power = None
+    ds2.power_array = None
+    ds2.noise_power = None
+    ds2.update_cosmology()
+
+    assert ds == ds2
+
+
+def test_partial_write_pols_one_select(ds_from_mwa, test_outfile):
+    """Test partial writing along pol axis with regular spacing."""
+    np.random.seed(0)
+    ds = ds_from_mwa
+    ds.delay_transform()
+    ds.initialize_save_file(test_outfile)
+    pols = ds.polarization_array
+    for pol in pols:
+        ds1 = ds.select(polarizations=pol, inplace=False)
+        ds1.calculate_delay_spectrum()
+        ds1.write_partial(test_outfile)
+
+    ds2 = DelaySpectrum()
+    ds2.read(test_outfile)
+    ds2.update_cosmology()
+    ds.calculate_delay_spectrum()
 
     assert ds2 == ds
 
