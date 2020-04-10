@@ -2977,7 +2977,11 @@ class DelaySpectrum(UVBase):
 
         uv_inds_reg_spaced = True
         if uv_inds is not None:
-            uv_inds = np.s_[uv_inds[0] : uv_inds[0] + 1 : 1]
+            # this is going to take some thinking
+            # and the use case is very niche
+            raise NotImplementedError(
+                "UV selection on partial write is not supported at this time."
+            )
         else:
             uv_inds = np.s_[:]
 
