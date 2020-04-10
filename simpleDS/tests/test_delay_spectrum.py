@@ -1786,7 +1786,7 @@ def test_select_pol(ds_from_mwa):
 def test_select_uv_index(ds_with_two_uvd):
     """Test you can select separate uvdata objects out of a DS object."""
     ds = ds_with_two_uvd
-    ds1 = ds.select(uv_index=0)
+    ds1 = ds.select(uv_index=[[0]])
     ds2 = ds.select(uv_index=1)
     ds2.data_array -= 1e3 * ds2.data_array.unit
     assert ds1 == ds2

@@ -74,6 +74,30 @@ def test_outfile():
         os.remove(filename)
 
 
+@pytest.fixture()
+def ds_with_two_uvd():
+    """Fixture to return DS object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    uvd.x_orientation = "east"
+
+    ds = DelaySpectrum(uv=[uvd])
+    uvd.data_array += 1e3
+
+    ds.add_uvdata(uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    yield ds
+
+    del ds, uvd, uvb
+
+
 def test_readwrite_ds_object(ds_from_uvfits, test_outfile):
     """Test a ds object can be written and read without chaning the object."""
     ds = ds_from_uvfits
@@ -304,6 +328,32 @@ def test_partial_reads(ds_from_uvfits, test_outfile, select_kwargs):
 
     ds_in = DelaySpectrum()
     ds_in.read(test_outfile, **select_kwargs)
+    assert ds_in == ds
+
+
+def test_partial_read_full_pol(ds_from_mwa, test_outfile):
+    """Test partial read using polarization selections."""
+    ds = ds_from_mwa
+    ds.calculate_delay_spectrum()
+    ds.write(test_outfile)
+
+    ds.select(polarizations=[-5, -7, -8], inplace=True)
+
+    ds_in = DelaySpectrum()
+    ds_in.read(test_outfile, polarizations=[-5, -7, -8])
+    assert ds_in == ds
+
+
+def test_partial_read_multi_uv(ds_with_two_uvd, test_outfile):
+    """Test parital read over uv axis."""
+    ds = ds_with_two_uvd
+    ds.calculate_delay_spectrum()
+    ds.write(test_outfile)
+
+    ds.select(uv_index=0, inplace=True)
+
+    ds_in = DelaySpectrum()
+    ds_in.read(test_outfile, uv_index=0)
     assert ds_in == ds
 
 

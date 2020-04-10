@@ -1947,9 +1947,6 @@ class DelaySpectrum(UVBase):
             spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds,
         )
 
-        littleh = self.k_perpendicular.unit == units.Unit("littleh/Mpc")
-        ds_object.update_cosmology(littleh_units=littleh)
-
         if not self.metadata_only:
 
             for inds, axis in zip(
@@ -2002,6 +1999,9 @@ class DelaySpectrum(UVBase):
                             setattr(
                                 ds_object, param_name, np.take(param, inds, axis=axis),
                             )
+
+        littleh = self.k_perpendicular.unit == units.Unit("littleh/Mpc")
+        ds_object.update_cosmology(littleh_units=littleh)
 
         # check if object is uv_object-consistent
         if run_check:
