@@ -75,6 +75,30 @@ def ds_from_mwa():
     del ds, uvd
 
 
+@pytest.fixture()
+def ds_with_two_uvd():
+    """Fixture to return DS object."""
+    testfile = os.path.join(UVDATA_PATH, "test_redundant_array.uvfits")
+    test_uvb_file = os.path.join(DATA_PATH, "test_redundant_array.beamfits")
+
+    uvd = UVData()
+    uvd.read(testfile)
+    uvd.x_orientation = "east"
+
+    ds = DelaySpectrum(uv=[uvd])
+    uvd.data_array += 1e3
+
+    ds.add_uvdata(uvd)
+
+    uvb = UVBeam()
+    uvb.read_beamfits(test_uvb_file)
+    ds.add_uvbeam(uvb=uvb)
+
+    yield ds
+
+    del ds, uvd, uvb
+
+
 class DummyClass(object):
     """A Dummy object for comparison."""
 
@@ -1511,6 +1535,11 @@ def test_call_delay_spectrum_twice():
             ValueError,
             "The intersection of the input delays and delay_chans ",
         ),
+        (
+            {"uv_index": np.arange(5).tolist()},
+            ValueError,
+            "The number of UVData objects in this DelaySpectrum object",
+        ),
     ],
 )
 def test_select_preprocess_errors(ds_from_uvfits, input, err_type, err_message):
@@ -1740,6 +1769,7 @@ def test_select_full_array(ds_from_uvfits):
         delays=ds.delay_array.flatten(),
         lsts=ds.lst_array,
         polarizations=ds.polarization_array,
+        uv_index=list(range(ds.Nuv)),
     )
     for ind in output_inds:
         assert ind is None
@@ -1751,3 +1781,12 @@ def test_select_pol(ds_from_mwa):
     expected = [-5, -6]
     ds.select(polarizations=expected, inplace=True)
     assert np.array_equal(ds.polarization_array, expected)
+
+
+def test_select_uv_index(ds_with_two_uvd):
+    """Test you can select separate uvdata objects out of a DS object."""
+    ds = ds_with_two_uvd
+    ds1 = ds.select(uv_index=0)
+    ds2 = ds.select(uv_index=1)
+    ds2.data_array -= 1e3 * ds2.data_array.unit
+    assert ds1 == ds2
