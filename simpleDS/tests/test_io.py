@@ -735,7 +735,7 @@ def test_write_partial_spws_overlapping_freqs(ds_from_uvfits, test_outfile):
     ds2.read(test_outfile)
     ds2.update_cosmology()
     ds.calculate_delay_spectrum()
-    # assert False
+
     assert ds2 == ds
 
 
@@ -797,6 +797,17 @@ def test_write_partial_delays_one_select(ds_from_uvfits, test_outfile):
     ds.calculate_delay_spectrum()
 
     assert ds2 == ds
+
+
+def test_partial_write_uv(ds_with_two_uvd, test_outfile):
+    """Test writing with multiple UV at a time."""
+    ds = ds_with_two_uvd
+    ds.initialize_save_file(test_outfile)
+    for uv in range(ds.Nuv):
+        ds1 = ds.select(uv_index=uv)
+        with pytest.raises(NotImplementedError) as cm:
+            ds1.write_partial(test_outfile)
+        assert str(cm.value).startswith("UV selection on partial write is")
 
 
 @pytest.mark.filterwarnings(
