@@ -3703,7 +3703,6 @@ class DelaySpectrum(UVBase):
                         self.Nfreqs,
                     )
                     * npols_noise
-                    * self.Nbls
                     * np.sqrt(2)
                 )
             )
