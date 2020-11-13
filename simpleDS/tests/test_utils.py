@@ -265,7 +265,10 @@ def test_align_lst_shapes_equal():
     ra_range = [0, 12]
 
     test_uv_out, test_uv_2_out = utils.lst_align(
-        test_uv, test_uv_2, ra_range=ra_range, inplace=False,
+        test_uv,
+        test_uv_2,
+        ra_range=ra_range,
+        inplace=False,
     )
 
     assert test_uv_out.time_array.shape == test_uv_out.time_array.shape
@@ -283,7 +286,10 @@ def test_align_lst_shapes_equal_uv_2_longer():
     ra_range = [0, 12]
 
     test_uv_out, test_uv_2_out = utils.lst_align(
-        test_uv, test_uv_2, ra_range=ra_range, inplace=False,
+        test_uv,
+        test_uv_2,
+        ra_range=ra_range,
+        inplace=False,
     )
 
     assert test_uv_out.time_array.shape == test_uv_out.time_array.shape
@@ -300,7 +306,10 @@ def test_align_lst_shapes_equal_uv_1_longer():
     ra_range = [0, 12]
 
     test_uv_out, test_uv_2_out = utils.lst_align(
-        test_uv, test_uv_2, ra_range=ra_range, inplace=False,
+        test_uv,
+        test_uv_2,
+        ra_range=ra_range,
+        inplace=False,
     )
     assert test_uv_out.time_array.shape == test_uv_out.time_array.shape
 
