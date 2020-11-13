@@ -1680,11 +1680,11 @@ def test_select_delay_chans(ds_uvfits_and_uvb, input, ndelays):
 @pytest.mark.parametrize(
     "input,ntimes",
     [
-        ({"lsts": [1.9681493255346292, 1.9712812654619116] * units.rad}, 2),
+        ({"lsts": [0, 1]}, 2),
         ({"lst_range": [2, 3] * units.rad}, 9),
         (
             {
-                "lsts": [1.9681493255346292, 1.9712812654619116] * units.rad,
+                "lsts": [0, 1],
                 "lst_range": [1.9, 3] * units.rad,
             },
             2,
@@ -1695,6 +1695,9 @@ def test_select_lsts(ds_uvfits_and_uvb, input, ntimes):
     """Test time/lst selection."""
     ds, uvd, uvb = ds_uvfits_and_uvb
     ds.calculate_delay_spectrum()
+
+    if "lsts" in input:
+        input["lsts"] = units.Quantity([ds.lst_array[ind] for ind in input["lsts"]])
 
     ds_out = ds.select(**input)
     assert ds_out.Ntimes == ntimes

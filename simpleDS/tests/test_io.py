@@ -325,7 +325,9 @@ def test_partial_reads(ds_from_uvfits, test_outfile, select_kwargs):
     ds.write(test_outfile)
 
     if "lsts" in select_kwargs:
-        select_kwargs["lsts"] = [ds.lst_array[ind] for ind in select_kwargs["lsts"]]
+        select_kwargs["lsts"] = units.Quantity(
+            [ds.lst_array[ind] for ind in select_kwargs["lsts"]]
+        )
 
     ds.select(**select_kwargs, inplace=True)
 
