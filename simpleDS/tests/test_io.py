@@ -303,7 +303,7 @@ def test_partial_read_frequencies_longest(ds_from_uvfits, test_outfile):
         {"delays": -405.999994798125 * units.ns},
         {"delay_chans": np.arange(8).tolist()},
         {"bls": [(0, 26), 69637]},
-        {"lsts": [1.9681493255346292, 1.9712812654619116] * units.rad},
+        {"lsts": [0, 1]},
         {"lst_range": [2, 3] * units.rad},
         {"polarizations": 1},
     ],
@@ -323,6 +323,9 @@ def test_partial_reads(ds_from_uvfits, test_outfile, select_kwargs):
     ds.select_spectral_windows([(0, 9), (10, 19)])
     ds.calculate_delay_spectrum()
     ds.write(test_outfile)
+
+    if "lsts" in select_kwargs:
+        select_kwargs["lsts"] = [ds.lst_array[ind] for ind in select_kwargs["lsts"]]
 
     ds.select(**select_kwargs, inplace=True)
 
