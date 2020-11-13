@@ -3629,16 +3629,6 @@ class DelaySpectrum(UVBase):
             thermal_noise_samples = utils.combine_nsamples(
                 self.nsample_array[:, 0], self.nsample_array[:, 1], axis=2
             )
-        # lst_array is stored in radians, multiply by 12*3600/np.pi to convert
-        # to seconds s
-        if self.lst_array.size > 1:
-            delta_t = np.diff(self.lst_array)[0] * 12.0 * units.h / (np.pi * units.rad)
-            delta_t = delta_t.to("s")
-        else:
-            delta_t = self.integration_time.item(0).to("s")
-        lst_bins = (
-            np.size(self.lst_array) * delta_t / self.integration_time.item(0).to("s")
-        )
         npols_noise = np.array(
             [2 if p in np.arange(1, 5) else 1 for p in self.polarization_array]
         )
@@ -3667,7 +3657,7 @@ class DelaySpectrum(UVBase):
                     )
                     * npols_noise
                     * self.Nbls
-                    * np.sqrt(2 * lst_bins)
+                    * np.sqrt(2)
                 )
             )
             # integrate the noise temperature over the bands being Fourier Transformed
