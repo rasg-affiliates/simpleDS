@@ -134,7 +134,7 @@ def test_read_no_Nants_info(ds_from_uvfits, test_outfile):
     ds.add_trcvr(9 * units.K)
 
     ds.write(test_outfile)
-    with h5py.File(test_outfile) as h5:
+    with h5py.File(test_outfile, "a") as h5:
         del h5["/Header/Nants_data"], h5["Header/Nants_telescope"]
 
     ds_in = DelaySpectrum()
