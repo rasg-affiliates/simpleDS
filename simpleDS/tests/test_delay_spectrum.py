@@ -310,12 +310,12 @@ class TestBasicFunctions(unittest.TestCase):
         pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Ndelays = np.int(self.dspec_object.Ndelays)
 
-        self.dspec_object.polarization_array = self.dspec_object.polarization_array.astype(
-            np.float
+        self.dspec_object.polarization_array = (
+            self.dspec_object.polarization_array.astype(np.float)
         )
         pytest.raises(ValueError, self.dspec_object.check)
-        self.dspec_object.polarization_array = self.dspec_object.polarization_array.astype(
-            np.int
+        self.dspec_object.polarization_array = (
+            self.dspec_object.polarization_array.astype(np.int)
         )
 
         Nfreqs = copy.deepcopy(self.dspec_object.Nfreqs)

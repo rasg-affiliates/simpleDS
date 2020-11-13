@@ -387,10 +387,11 @@ class DelaySpectrum(UVBase):
 
         desc = (
             "The cross-multiplied power spectrum estimates. "
-            "Units are converted to cosmological frame (mK^2/(hMpc^-1)^3)."
+            "Units are converted to cosmological frame (mK^2/(hMpc^-1)^3). "
+            "Will have shape ('Nspws', 'Npols', 'Nbls', 'Nbls', 'Ntimes', 'Ndelays').\n"
             "For uncalibrated data the cosmological power is not well defined "
             "the power array instead represents the power in the delay domain "
-            "adn will have units (Hz^2). "
+            "and will have units (Hz^2). "
             "In python 2 this unit is always in mK^2 Mpc^3. "
             "For python 3 users, it is possible to convert the mK^2 / (littleh/Mpc)^3 "
             "using the littleh_units boolean flag in update_cosmology."
@@ -411,6 +412,7 @@ class DelaySpectrum(UVBase):
         desc = (
             "The cross-multiplied simulated noise power spectrum estimates. "
             "Units are converted to cosmological frame (mK^2/(hMpc^-1)^3)."
+            "Will have shape ('Nspws', 'Npols', 'Nbls', 'Nbls', 'Ntimes', 'Ndelays').\n"
             "For uncalibrated data the noise simulation is not well defined "
             "but is still calculated and will have units (Jy Hz)^2. "
             "In python 2 this unit is always in mK^2 Mpc^3. "
@@ -434,6 +436,7 @@ class DelaySpectrum(UVBase):
         desc = (
             "The predicted thermal variance of the input data averaged over "
             "all input baselines."
+            "Will have shape ('Nspws', 'Npols', 'Nbls', 'Nbls', 'Ntimes').\n"
             "Units are converted to cosmological frame (mK^2/(hMpc^-1)^3). "
             "In python 2 this unit is always in mK^2 Mpc^3. "
             "For python 3 users, it is possible to convert the mK^2 / (littleh/Mpc)^3 "
@@ -1274,11 +1277,14 @@ class DelaySpectrum(UVBase):
                     * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
                     * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
                 )
-                self.unit_conversion = 1.0 / integrate.trapz(
-                    integration_array.value,
-                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                    axis=-1,
-                ).reshape(self.Nspws, self.Npols)
+                self.unit_conversion = (
+                    1.0
+                    / integrate.trapz(
+                        integration_array.value,
+                        x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                        axis=-1,
+                    ).reshape(self.Nspws, self.Npols)
+                )
                 self.unit_conversion = self.unit_conversion / (
                     integration_array.unit * self.freq_array.unit
                 )
@@ -1312,11 +1318,14 @@ class DelaySpectrum(UVBase):
                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
             )
-            thermal_conversion = 1.0 / integrate.trapz(
-                integration_array.value,
-                x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                axis=-1,
-            ).reshape(self.Nspws, self.Npols)
+            thermal_conversion = (
+                1.0
+                / integrate.trapz(
+                    integration_array.value,
+                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                    axis=-1,
+                ).reshape(self.Nspws, self.Npols)
+            )
             thermal_conversion = thermal_conversion << 1.0 / (
                 integration_array.unit * self.freq_array.unit
             )
@@ -1348,7 +1357,10 @@ class DelaySpectrum(UVBase):
                 )
 
     @units.quantity_input(
-        frequencies=units.Hz, delays=units.s, lsts=units.rad, lst_range=units.rad,
+        frequencies=units.Hz,
+        delays=units.s,
+        lsts=units.rad,
+        lst_range=units.rad,
     )
     def _select_preprocess(
         self,
@@ -1468,8 +1480,26 @@ class DelaySpectrum(UVBase):
                         "bls must be a list of tuples of antenna numbers (optionally with polarization)."
                     )
             if not all(
-                [isinstance(item[0], (int, np.integer,)) for item in bls]
-                + [isinstance(item[1], (int, np.integer,)) for item in bls]
+                [
+                    isinstance(
+                        item[0],
+                        (
+                            int,
+                            np.integer,
+                        ),
+                    )
+                    for item in bls
+                ]
+                + [
+                    isinstance(
+                        item[1],
+                        (
+                            int,
+                            np.integer,
+                        ),
+                    )
+                    for item in bls
+                ]
             ):
                 raise ValueError(
                     "bls must be a list of tuples of antenna numbers (optionally with polarization)."
@@ -1666,12 +1696,12 @@ class DelaySpectrum(UVBase):
 
         if lsts is not None:
             lsts = lsts.flatten()
-            for l in lsts:
-                if l not in self.lst_array:
+            for _lst in lsts:
+                if _lst not in self.lst_array:
                     raise ValueError(
-                        f"The input lst {l} is not present in the lst_array."
+                        f"The input lst {_lst} is not present in the lst_array."
                     )
-                lst_inds.update(np.nonzero(self.lst_array == l)[0])
+                lst_inds.update(np.nonzero(self.lst_array == _lst)[0])
 
             if lst_inds == set(np.arange(self.Ntimes)):
                 lst_inds = set()
@@ -1944,7 +1974,13 @@ class DelaySpectrum(UVBase):
         # do select operations on everything except data_array, flag_array and nsample_array
         # noise_array, power_array, noise_power, and thermal_power
         ds_object._select_metadata(
-            spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds,
+            spw_inds,
+            freq_inds,
+            delay_inds,
+            bl_inds,
+            lst_inds,
+            pol_inds,
+            uv_inds,
         )
 
         if not self.metadata_only:
@@ -1997,7 +2033,9 @@ class DelaySpectrum(UVBase):
                     ):
                         if param is not None:
                             setattr(
-                                ds_object, param_name, np.take(param, inds, axis=axis),
+                                ds_object,
+                                param_name,
+                                np.take(param, inds, axis=axis),
                             )
 
         littleh = self.k_perpendicular.unit == units.Unit("littleh/Mpc")
@@ -2245,7 +2283,13 @@ class DelaySpectrum(UVBase):
         else:
             self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
             self._select_metadata(
-                spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds,
+                spw_inds,
+                freq_inds,
+                delay_inds,
+                bl_inds,
+                lst_inds,
+                pol_inds,
+                uv_inds,
             )
 
             # open references to datasets
@@ -2670,7 +2714,10 @@ class DelaySpectrum(UVBase):
                 ["visdata", "visnoise"], [self.data_array, self.noise_array]
             ):
                 visdata = dgrp.create_dataset(
-                    _name, chunks=True, data=_data.value, compression=data_compression,
+                    _name,
+                    chunks=True,
+                    data=_data.value,
+                    compression=data_compression,
                 )
                 visdata.attrs["unit"] = _data.unit.to_string()
 
@@ -3661,10 +3708,15 @@ class DelaySpectrum(UVBase):
                 )
             )
             # integrate the noise temperature over the bands being Fourier Transformed
-            thermal_power = integrate.trapz(
-                np.ma.masked_invalid(thermal_power.value) ** 2
-                * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs) ** 2,
-                x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
-                axis=-1,
-            ) << (self.freq_array.unit * thermal_power.unit ** 2)
+            thermal_power = (
+                integrate.trapz(
+                    np.ma.masked_invalid(thermal_power.value) ** 2
+                    * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs) ** 2,
+                    x=self.freq_array.value.reshape(
+                        self.Nspws, 1, 1, 1, 1, self.Nfreqs
+                    ),
+                    axis=-1,
+                )
+                << (self.freq_array.unit * thermal_power.unit ** 2)
+            )
         self.thermal_power = thermal_power << units.Unit("K^2 sr^2 Hz^2")
