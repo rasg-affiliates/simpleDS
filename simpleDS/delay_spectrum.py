@@ -3703,6 +3703,8 @@ class DelaySpectrum(UVBase):
                         self.Nfreqs,
                     )
                     * npols_noise
+                    # sqrt 2 factor because taking complex variance
+                    # but only interested in real part of the power spectrum
                     * np.sqrt(2)
                 )
             )
