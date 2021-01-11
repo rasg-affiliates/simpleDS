@@ -164,7 +164,7 @@ class DelaySpectrum(UVBase):
             "data_array",
             description=desc,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=(np.complex, np.complex128),
+            expected_type=np.complex,
             expected_units=(
                 units.Jy,
                 units.Jy * units.Hz,
@@ -187,7 +187,7 @@ class DelaySpectrum(UVBase):
             "noise_array",
             description=desc,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=(np.complex, np.complex128),
+            expected_type=np.complex,
             expected_units=(
                 units.Jy,
                 units.Jy * units.Hz,
@@ -221,7 +221,7 @@ class DelaySpectrum(UVBase):
             description=desc,
             value_not_quantity=True,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=(np.float),
+            expected_type=np.float,
         )
 
         desc = "Boolean flag, True is flagged, shape: same as data_array."
