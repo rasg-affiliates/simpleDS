@@ -12,7 +12,8 @@ from astropy.time import Time
 def write_index_rst(readme_file=None, write_file=None):
     """Create index on the fly."""
     t = Time.now()
-    t.out_subfmt = "date_hms"
+    t.format = "iso"
+    t.out_subfmt = "date"
     out = (
         ".. simpleDS documentation master file, created by\n"
         "   make_index.py on {date}\n\n"
@@ -26,30 +27,6 @@ def write_index_rst(readme_file=None, write_file=None):
         readme_file = os.path.join(main_path, "README.md")
 
     readme_text = pypandoc.convert_file(readme_file, "rst")
-
-    # title_badge_text = (
-    #     "simpleDS\n========\n\n"
-    #     ".. image:: https://travis-ci.com/rasg-affiliates/simpleDS.svg?branch=master\n"
-    #     "    :target: https://travis-ci.com/rasg-affiliates/simpleDS\n\n"
-    #     ".. image:: https://circleci.com/gh/rasg-affiliates/simpleDS.svg?style=svg\n"
-    #     "    :target: https://circleci.com/gh/rasg-affiliates/simpleDS\n\n"
-    #     ".. image:: https://codecov.io/gh/rasg-affiliates/simpleDS/branch/master/graph/badge.svg\n"
-    #     "  :target: https://codecov.io/gh/rasg-affiliates/simpleDS\n\n"
-    # )
-
-    # readme_text = pypandoc.convert_file(readme_file, "rst")
-    #
-    # begin_desc = "SimpleDS is currently in a working *BETA* state"
-    # start_desc = str.find(readme_text, begin_desc)
-    #
-    # readme_text = title_badge_text + readme_text[start_desc:]
-
-    # end_text = "Documentation"
-    # regex = re.compile(end_text.replace(" ", r"\s+"))
-    # loc = re.search(regex, readme_text).start()
-    # tutorial_notebook_file = os.path.join(
-    #     os.path.abspath("../examples"), "simpleds_tutorial.ipynb"
-    # )
 
     out += readme_text
     out += (
