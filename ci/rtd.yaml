@@ -9,5 +9,3 @@ dependencies:
   - conda-forge::pyuvdata
   - nbsphinx
   - pip
-  - pip:
-    - pygitversion>=1.0.1
