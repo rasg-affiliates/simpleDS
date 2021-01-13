@@ -119,8 +119,12 @@ def test_incompatible_expected_units():
 
 def test_unitparameters_equal_to_uvparameter_with_same_value():
     """Test that UnitParameters are equal to UVParameters if their values match."""
-    unp1 = unp.UnitParameter(name="unp1", value=3 * units.m, expected_units=units.m)
-    uvp1 = uvp.UVParameter(name="uvp1", value=3)
+    unp1 = unp.UnitParameter(
+        name="unp1",
+        value=units.Quantity(3, unit=units.m, dtype=int),
+        expected_units=units.m,
+    )
+    uvp1 = uvp.UVParameter(name="uvp1", value=np.int64(3))
     warn_message = [
         "A UnitParameter with quantity value is being cast to "
         "UVParameter. All quantity information will be lost. "
@@ -147,7 +151,7 @@ def test_unitparameters_equal_to_uvparameter_with_same_value():
 def test_unitparameters_not_equal_to_uvp_with_different_type():
     """Test that UnitParameters are not equal to UVParameters if their types differ."""
     unp1 = unp.UnitParameter(name="unp1", value=3 * units.m, expected_units=units.m)
-    uvp1 = uvp.UVParameter(name="uvp1", value=3.0, expected_type=np.float)
+    uvp1 = uvp.UVParameter(name="uvp1", value=3)
     warn_message = [
         "A UnitParameter with quantity value is being cast to "
         "UVParameter. All quantity information will be lost. "
@@ -180,7 +184,9 @@ def test_non_required_unitparameters_equal_to_uvparameter():
         spoof_val=10,
         expected_units=units.m,
     )
-    uvp1 = uvp.UVParameter(name="uvp1", value=3, required=False, spoof_val=10)
+    uvp1 = uvp.UVParameter(
+        name="uvp1", value=3.0, required=False, spoof_val=10, expected_type=np.float
+    )
     warn_message = [
         "A UnitParameter with quantity value is being cast to "
         "UVParameter. All quantity information will be lost. "

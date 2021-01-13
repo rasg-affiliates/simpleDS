@@ -1106,7 +1106,7 @@ class DelaySpectrum(UVBase):
                 parm = getattr(this, p)
                 if my_parm.value is not None:
                     tmp_data = np.zeros(
-                        my_parm.expected_shape(self), dtype=my_parm.expected_type
+                        my_parm.expected_shape(self), dtype=my_parm.value.dtype
                     )
                     tmp_data[:, : self.Nuv - 1] = my_parm.value[:]
 

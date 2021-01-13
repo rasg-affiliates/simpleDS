@@ -73,6 +73,11 @@ class UnitParameter(uvp.UVParameter):
         Boolean flag used to specify that input value is not an astropy Quantity object,
         but a UnitParameter is desired over a UVParameter.
 
+    strict_type_check : bool
+        When True, the input expected_type is used exactly, otherwise a more generic
+        type is found to allow changes in precions
+        or to/from numpy dtypes to not break checks.
+
 
     Raises
     ------
@@ -101,6 +106,7 @@ class UnitParameter(uvp.UVParameter):
         expected_units=None,
         tols=(1e-05, 1e-08),
         value_not_quantity=False,
+        strict_type_check=False,
     ):
         """Initialize the UVParameter."""
         self.value_not_quantity = value_not_quantity
@@ -166,6 +172,7 @@ class UnitParameter(uvp.UVParameter):
                 acceptable_vals=acceptable_vals,
                 acceptable_range=acceptable_range,
                 tols=tols,
+                strict_type_check=strict_type_check,
             )
 
             self.tols = (tols[0], tols[1] * tol_unit)
@@ -182,6 +189,7 @@ class UnitParameter(uvp.UVParameter):
                     acceptable_vals=acceptable_vals,
                     acceptable_range=acceptable_range,
                     tols=tols,
+                    strict_type_check=strict_type_check,
                 )
             else:
                 raise ValueError(
@@ -298,6 +306,7 @@ class UnitParameter(uvp.UVParameter):
                     acceptable_vals=self.acceptable_vals,
                     acceptable_range=self.acceptable_range,
                     tols=(self.tols[0], self.tols[1]),
+                    strict_type_check=True,
                 )
             else:
                 return uvp.UVParameter(
@@ -311,6 +320,7 @@ class UnitParameter(uvp.UVParameter):
                     acceptable_vals=self.acceptable_vals,
                     acceptable_range=self.acceptable_range,
                     tols=(self.tols[0], self.tols[1]),
+                    strict_type_check=True,
                 )
         else:
             # what sould happen here? Warn the user we are comparing a qunatity
@@ -328,20 +338,21 @@ class UnitParameter(uvp.UVParameter):
                 return uvp.UVParameter(
                     name=self.name,
                     required=self.required,
-                    value=self.expected_type(self.value.value),
+                    value=self.value.value,
                     form=self.form,
                     description=self.description,
                     expected_type=self.expected_type,
                     acceptable_vals=self.acceptable_vals,
                     acceptable_range=self.acceptable_range,
                     tols=(self.tols[0], self.tols[1].value),
+                    strict_type_check=True,
                 )
 
             else:
                 return uvp.UVParameter(
                     name=self.name,
                     required=self.required,
-                    value=self.expected_type(self.value.value),
+                    value=self.value.value,
                     spoof_val=self.spoof_val,
                     form=self.form,
                     description=self.description,
@@ -349,4 +360,5 @@ class UnitParameter(uvp.UVParameter):
                     acceptable_vals=self.acceptable_vals,
                     acceptable_range=self.acceptable_range,
                     tols=(self.tols[0], self.tols[1].value),
+                    strict_type_check=True,
                 )
