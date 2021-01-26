@@ -70,7 +70,7 @@ def test_outfile(tmp_path):
 
     yield filename
 
-    filename.unlink(missing_ok=True)
+    filename.unlink()
 
 
 @pytest.fixture()
