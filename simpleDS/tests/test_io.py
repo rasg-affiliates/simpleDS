@@ -64,14 +64,13 @@ def ds_from_mwa():
 
 
 @pytest.fixture()
-def test_outfile():
+def test_outfile(tmp_path):
     """Fixture to get the outfile."""
-    filename = os.path.join(pytest.testdir, "test_out.h5")
+    filename = tmp_path / "test_out.h5"
 
     yield filename
 
-    if os.path.exists(filename):
-        os.remove(filename)
+    filename.unlink(missing_ok=True)
 
 
 @pytest.fixture()
