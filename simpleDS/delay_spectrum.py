@@ -2853,7 +2853,7 @@ class DelaySpectrum(UVBase):
                 self._flag_array.expected_shape(self),
                 chunks=True,
                 compression=flags_compression,
-                dtype=self.flag_array.dtype,
+                dtype=self.flag_array.dtype or np.bool,
             )
 
             dgrp.create_dataset(
@@ -2861,12 +2861,12 @@ class DelaySpectrum(UVBase):
                 self._nsample_array.expected_shape(self),
                 chunks=True,
                 compression=nsample_compression,
-                dtype=self.nsample_array.dtype,
+                dtype=self.nsample_array.dtype or np.float32,
             )
 
             power_shape = self._power_array.expected_shape(self)
             power_unit = self._power_array.expected_units[-2].to_string()
-            dtype = self.power_array.dtype
+            dtype = self.power_array.dtype or np.complex
             for _name in ["data_power", "noise_power"]:
                 power_data = dgrp.create_dataset(
                     _name,
