@@ -966,7 +966,7 @@ class DelaySpectrum(UVBase):
         this.integration_time = copy.deepcopy(temp_data) << units.s
 
         # reorder to have increasing lsts for every array like Ntimes
-        this.lst_array = this.lst_array[lst_inds]
+        this.lst_array = np.unwrap(this.lst_array)[lst_inds]
         this.data_array = this.data_array[:, :, :, :, lst_inds]
         this.flag_array = this.flag_array[:, :, :, :, lst_inds]
         this.nsample_array = this.nsample_array[:, :, :, :, lst_inds]
