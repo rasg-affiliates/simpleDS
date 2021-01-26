@@ -910,7 +910,10 @@ class DelaySpectrum(UVBase):
         this.Npols = uv.Npols
         this.Nspws = 1
         this.Nuv = 1
-        this.lst_array = np.unique(uv.lst_array) * units.rad
+        this.lst_array = (
+            uv.lst_array[uv.baseline_array == uv.baseline_array[0]] << units.rad
+        )
+        lst_inds = np.argsort(np.unwrap(this.lst_array))
         this.polarization_array = uv.polarization_array
         if this.vis_units == "Jy":
             data_unit = units.Jy
@@ -961,6 +964,13 @@ class DelaySpectrum(UVBase):
         )
 
         this.integration_time = copy.deepcopy(temp_data) << units.s
+
+        # reorder to have increasing lsts for every array like Ntimes
+        this.lst_array = this.lst_array[lst_inds]
+        this.data_array = this.data_array[:, :, :, :, lst_inds]
+        this.flag_array = this.flag_array[:, :, :, :, lst_inds]
+        this.nsample_array = this.nsample_array[:, :, :, :, lst_inds]
+        this.integration_time = this.integration_time[:, lst_inds]
         # initialize the beam_area and beam_sq_area to help with selections later
         this.beam_area = (
             np.ones(this._beam_area.expected_shape(this)) * np.inf << units.sr
