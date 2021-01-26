@@ -69,8 +69,10 @@ def test_outfile(tmp_path):
     filename = tmp_path / "test_out.h5"
 
     yield filename
-
-    filename.unlink()
+    try:
+        filename.unlink()
+    except FileNotFoundError:
+        pass
 
 
 @pytest.fixture()
