@@ -1197,7 +1197,7 @@ class DelaySpectrum(UVBase):
                             self.Nspws, self.Npols, 1, 1, 1
                         )
                     )
-                print("remove:", self.thermal_power.unit)
+
         self.unit_conversion = None
         self.thermal_conversion = None
         return
@@ -1346,11 +1346,9 @@ class DelaySpectrum(UVBase):
             self.thermal_conversion = thermal_conversion << units.Unit(
                 "mK^2 Mpc^3 /( K^2 sr^2 Hz^6)"
             )
-            print(self.thermal_power.unit)
             self.thermal_power = self.thermal_power * self.thermal_conversion.reshape(
                 self.Nspws, self.Npols, 1, 1, 1
             )
-            print(self.thermal_power.unit)
 
             self.thermal_power = self.thermal_power << units.Unit("mK^2 Mpc^3")
 
