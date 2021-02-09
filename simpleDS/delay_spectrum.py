@@ -431,7 +431,7 @@ class DelaySpectrum(UVBase):
         _thermal_power_units = (
             (units.mK ** 2 * units.Mpc ** 3),
             (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
-            (units.K * units.sr * units.Hz) ** 2,
+            (units.K * units.sr * units.Hz ** 3) ** 2,
         )
         desc = (
             "The predicted thermal variance of the input data averaged over "
@@ -481,7 +481,11 @@ class DelaySpectrum(UVBase):
             expected_units=_conversion_units,
         )
         _tconversion_units = (
-            (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
+            (
+                units.mK ** 2
+                * units.Mpc ** 3
+                / (units.K * units.sr * units.Hz ** 3) ** 2
+            ),
             (
                 units.mK ** 2
                 * (units.Mpc / units.littleh) ** 3
@@ -1182,7 +1186,7 @@ class DelaySpectrum(UVBase):
                 and not self.thermal_power.unit.is_equivalent(
                     (
                         units.Jy ** 2 * units.Hz ** 2,
-                        units.K ** 2 * units.sr ** 2 * units.Hz ** 2,
+                        units.K ** 2 * units.sr ** 2 * units.Hz ** 6,
                     )
                 )
             ):
@@ -1193,7 +1197,7 @@ class DelaySpectrum(UVBase):
                             self.Nspws, self.Npols, 1, 1, 1
                         )
                     )
-
+                print("remove:", self.thermal_power.unit)
         self.unit_conversion = None
         self.thermal_conversion = None
         return
@@ -1321,7 +1325,7 @@ class DelaySpectrum(UVBase):
         if self.thermal_power is not None:
 
             integration_array = (
-                1.0
+                self.freq_array.reshape(self.Nspws, 1, self.Nfreqs) ** 4
                 / simple_cosmo.X2Y(
                     simple_cosmo.calc_z(self.freq_array), cosmo=self.cosmology
                 ).reshape(self.Nspws, 1, self.Nfreqs)
@@ -1340,11 +1344,14 @@ class DelaySpectrum(UVBase):
                 integration_array.unit * self.freq_array.unit
             )
             self.thermal_conversion = thermal_conversion << units.Unit(
-                "mK^2 Mpc^3 /( K^2 sr^2 Hz^2)"
+                "mK^2 Mpc^3 /( K^2 sr^2 Hz^6)"
             )
+            print(self.thermal_power.unit)
             self.thermal_power = self.thermal_power * self.thermal_conversion.reshape(
                 self.Nspws, self.Npols, 1, 1, 1
             )
+            print(self.thermal_power.unit)
+
             self.thermal_power = self.thermal_power << units.Unit("mK^2 Mpc^3")
 
         if littleh_units:
@@ -3721,15 +3728,15 @@ class DelaySpectrum(UVBase):
                 )
             )
             # integrate the noise temperature over the bands being Fourier Transformed
-            thermal_power = (
-                integrate.trapz(
-                    np.ma.masked_invalid(thermal_power.value) ** 2
-                    * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs) ** 2,
-                    x=self.freq_array.value.reshape(
-                        self.Nspws, 1, 1, 1, 1, self.Nfreqs
-                    ),
-                    axis=-1,
-                )
-                << (self.freq_array.unit * thermal_power.unit ** 2)
+            thermal_power = integrate.trapz(
+                np.ma.masked_invalid(thermal_power.value) ** 2
+                * self.taper(self.Nfreqs).reshape(1, 1, 1, 1, 1, self.Nfreqs) ** 2
+                * self.freq_array.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs) ** 4,
+                x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
+                axis=-1,
+            ) << (
+                self.freq_array.unit
+                * self.freq_array.unit ** 4
+                * thermal_power.unit ** 2
             )
-        self.thermal_power = thermal_power << units.Unit("K^2 sr^2 Hz^2")
+        self.thermal_power = thermal_power << units.Unit("K^2 sr^2 Hz^6")
