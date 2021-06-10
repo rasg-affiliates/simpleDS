@@ -383,7 +383,7 @@ def test_initialize_file_name_error(ds_from_uvfits, test_outfile):
         pass
     with pytest.raises(IOError) as cm:
         ds.initialize_save_file(test_outfile)
-    assert str(cm.value).startswith("File exists; skipping")
+    assert str(cm.value).startswith("File exists. If overwriting is desired")
 
 
 def test_initialize_file_overwrite(ds_from_uvfits, test_outfile):
