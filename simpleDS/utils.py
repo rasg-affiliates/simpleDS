@@ -638,7 +638,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
         )
     array_out = np.average(array, weights=weights, axis=axis)
     uncertainty_out = np.sqrt(
-        np.sum(uncertainty ** 2 * weights ** 2, axis=axis)
+        np.sum(uncertainty ** 2 * np.abs(weights) ** 2, axis=axis)
         / np.abs(np.sum(weights, axis=axis)) ** 2
     )
     return array_out, uncertainty_out
