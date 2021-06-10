@@ -754,7 +754,7 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
 
     else:
         min_val_bool = np.abs(delays) == np.amin(np.abs(delays), axis=axis)
-        split_index = np.where(np.logical_and(delays > 0, min_val_bool))
+        split_index = np.where(np.logical_and(delays >= 0, min_val_bool))
         split_inds = [np.squeeze(split_index)]
 
         neg_vals, pos_vals = np.split(array, split_inds, axis=axis)
