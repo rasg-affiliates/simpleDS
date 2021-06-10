@@ -279,6 +279,7 @@ class TestBasicFunctions(unittest.TestCase):
 
     def test_equality(self):
         """Basic equality test."""
+        print(np.allclose(self.dspec_object.flag_array, self.dspec_object2.flag_array))
         assert self.dspec_object == self.dspec_object2
 
     def test_check(self):
@@ -306,16 +307,16 @@ class TestBasicFunctions(unittest.TestCase):
         pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Ndelays -= 1
 
-        self.dspec_object.Ndelays = np.float(self.dspec_object.Ndelays)
+        self.dspec_object.Ndelays = np.float64(self.dspec_object.Ndelays)
         pytest.raises(ValueError, self.dspec_object.check)
-        self.dspec_object.Ndelays = np.int(self.dspec_object.Ndelays)
+        self.dspec_object.Ndelays = np.int32(self.dspec_object.Ndelays)
 
         self.dspec_object.polarization_array = (
-            self.dspec_object.polarization_array.astype(np.float)
+            self.dspec_object.polarization_array.astype(np.float32)
         )
         pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.polarization_array = (
-            self.dspec_object.polarization_array.astype(np.int)
+            self.dspec_object.polarization_array.astype(np.int64)
         )
 
         Nfreqs = copy.deepcopy(self.dspec_object.Nfreqs)
@@ -331,7 +332,7 @@ class TestBasicFunctions(unittest.TestCase):
         pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nfreqs = Nfreqs
 
-        self.dspec_object.Nfreqs = np.complex(2)
+        self.dspec_object.Nfreqs = np.complex64(2)
         pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.Nfreqs = Nfreqs
 
@@ -348,7 +349,7 @@ class TestBasicFunctions(unittest.TestCase):
         self.dspec_object.freq_array = freq_back
 
         self.dspec_object.freq_array = (
-            freq_back.value.astype(np.complex) * freq_back.unit
+            freq_back.value.astype(np.complex64) * freq_back.unit
         )
         pytest.raises(ValueError, self.dspec_object.check)
         self.dspec_object.freq_array = freq_back

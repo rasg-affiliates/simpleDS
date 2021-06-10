@@ -26,7 +26,8 @@ def test_get_data_array():
     data_array = utils.get_data_array(test_uv, reds=baseline_array)
 
     compare_data = np.zeros(
-        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs), dtype=np.complex
+        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs),
+        dtype=np.complex64,
     )
 
     pol_array = uvutils.polnum2str(test_uv.polarization_array)
@@ -49,7 +50,8 @@ def test_get_data_no_squeeze():
     data_array = utils.get_data_array(test_uv, reds=baseline_array, squeeze=False)
 
     compare_data = np.zeros(
-        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs), dtype=np.complex
+        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs),
+        dtype=np.complex64,
     )
 
     pol_array = uvutils.polnum2str(test_uv.polarization_array)
@@ -71,7 +73,8 @@ def test_get_nsamples_array():
     nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array)
 
     test_samples = np.zeros(
-        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float
+        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs),
+        dtype=np.float32,
     )
 
     pol_array = uvutils.polnum2str(test_uv.polarization_array)
@@ -94,7 +97,8 @@ def test_get_nsamples_no_squeeze():
     nsample_array = utils.get_nsample_array(test_uv, reds=baseline_array, squeeze=False)
 
     test_samples = np.zeros(
-        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float
+        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs),
+        dtype=np.float32,
     )
 
     pol_array = uvutils.polnum2str(test_uv.polarization_array)
@@ -116,7 +120,8 @@ def test_get_flag_array():
     flag_array = utils.get_flag_array(test_uv, reds=baseline_array)
 
     test_flags = np.zeros(
-        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float
+        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs),
+        dtype=np.float32,
     )
 
     pol_array = uvutils.polnum2str(test_uv.polarization_array)
@@ -139,7 +144,8 @@ def test_get_flag_array_no_squeeze():
     flag_array = utils.get_flag_array(test_uv, reds=baseline_array, squeeze=False)
 
     test_flags = np.zeros(
-        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs), dtype=np.float
+        (test_uv.Npols, test_uv.Nbls, test_uv.Ntimes, test_uv.Nfreqs),
+        dtype=np.float32,
     )
 
     pol_array = uvutils.polnum2str(test_uv.polarization_array)
@@ -708,7 +714,7 @@ def test_fold_along_delay_amplitude_check_complex():
     axis = -1
     errs = np.ones_like(array)
     array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
-    test_value_array = np.ones((1, 10, 11)).astype(np.complex)
+    test_value_array = np.ones((1, 10, 11)).astype(np.complex64)
     test_value_array[:, :, 1:] *= np.mean([np.sqrt(2), 1]) + 1j * np.mean(
         [np.sqrt(3), 1]
     )
@@ -730,7 +736,7 @@ def test_fold_along_delay_amplitude_check_complex_mismatched_weights():
     array_out, errs_out = utils.fold_along_delay(
         delays, array, errs, weights=1.0 / errs ** 2, axis=axis
     )
-    test_errs_array = np.ones((1, 10, 11)).astype(np.complex)
+    test_errs_array = np.ones((1, 10, 11)).astype(np.complex64)
     test_errs_array[:, :, 1:].real *= 1.0 / np.sqrt(
         np.sum(1.0 / np.array([2.0, 1.0]) ** 2)
     )
@@ -746,13 +752,13 @@ def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
     array[:, :, 10].real *= 5
     array[:, :, 11:].imag *= np.sqrt(3)
     array[:, :, 10].imag *= 6
-    errs = np.ones_like(array).astype(np.complex)
+    errs = np.ones_like(array).astype(np.complex64)
     errs[:, :, 11:].real *= 2
     axis = -1
     array_out, errs_out = utils.fold_along_delay(
         delays, array, errs, weights=1.0 / errs ** 2, axis=axis
     )
-    test_errs_array = np.ones((1, 10, 11)).astype(np.complex)
+    test_errs_array = np.ones((1, 10, 11)).astype(np.complex64)
     test_errs_array[:, :, 1:].real *= 1.0 / np.sqrt(
         np.sum(1.0 / np.array([2.0, 1.0]) ** 2)
     )

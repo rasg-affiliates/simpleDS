@@ -34,7 +34,7 @@ def get_data_array(uv, reds, squeeze=True):
 
     """
     data_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    data_array = np.zeros(data_shape, dtype=np.complex)
+    data_array = np.zeros(data_shape, dtype=np.complex64)
 
     for count, baseline in enumerate(reds):
         tmp_data = uv.get_data(baseline, squeeze="none")
@@ -74,7 +74,7 @@ def get_nsample_array(uv, reds, squeeze=True):
 
     """
     nsample_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    nsample_array = np.zeros(nsample_shape, dtype=np.float)
+    nsample_array = np.zeros(nsample_shape, dtype=np.float32)
 
     for count, baseline in enumerate(reds):
         tmp_data = uv.get_nsamples(baseline, squeeze="none")
@@ -113,7 +113,7 @@ def get_flag_array(uv, reds, squeeze=True):
 
     """
     flag_shape = (uv.Npols, uv.Nbls, uv.Ntimes, uv.Nfreqs)
-    flag_array = np.zeros(flag_shape, dtype=np.bool)
+    flag_array = np.zeros(flag_shape, dtype=bool)
     reds = np.array(reds)
 
     for count, baseline in enumerate(reds):
@@ -153,7 +153,7 @@ def get_integration_time(uv, reds, squeeze=True):
 
     """
     shape = (uv.Nbls, uv.Ntimes)
-    integration_time = np.zeros(shape, dtype=np.float)
+    integration_time = np.zeros(shape, dtype=np.float32)
     reds = np.array(reds)
 
     for count, baseline in enumerate(reds):
@@ -780,7 +780,7 @@ def fold_along_delay(delays, array, uncertainty, weights=None, axis=-1):
             try:
                 _weights.imag = np.ones_like(_weights.real)
             except TypeError:
-                _weights = _weights.astype(np.complex)
+                _weights = _weights.astype(np.complex64)
                 _weights.imag = np.ones_like(_weights.real)
         out_array_real, out_errors_real = weighted_average(
             _array.real, _errors.real, weights=_weights.real, axis=0
