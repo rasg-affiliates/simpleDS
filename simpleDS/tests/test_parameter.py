@@ -7,7 +7,6 @@ from __future__ import print_function, absolute_import, division
 import numpy as np
 
 import pytest
-import operator
 from simpleDS import parameter as unp
 from astropy import units
 from astropy.cosmology import WMAP9
@@ -132,20 +131,11 @@ def test_unitparameters_equal_to_uvparameter_with_same_value():
         "to alter the unit of the value to match expected "
         "UVParameter units."
     ]
-    assert uvtest.checkWarnings(
-        operator.eq,
-        func_args=[unp1, uvp1],
-        category=[UserWarning] * len(warn_message),
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-    assert uvtest.checkWarnings(
-        operator.eq,
-        func_args=[uvp1, unp1],
-        category=[UserWarning] * len(warn_message),
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
+    with uvtest.check_warnings(UserWarning, match=warn_message):
+        assert unp1 == uvp1
+
+    with uvtest.check_warnings(UserWarning, match=warn_message):
+        assert uvp1 == unp1
 
 
 def test_unitparameters_not_equal_to_uvp_with_different_type():
@@ -159,20 +149,11 @@ def test_unitparameters_not_equal_to_uvp_with_different_type():
         "to alter the unit of the value to match expected "
         "UVParameter units."
     ]
-    assert uvtest.checkWarnings(
-        operator.ne,
-        func_args=[unp1, uvp1],
-        category=[UserWarning] * len(warn_message),
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-    assert uvtest.checkWarnings(
-        operator.ne,
-        func_args=[uvp1, unp1],
-        category=[UserWarning] * len(warn_message),
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
+    with uvtest.check_warnings(UserWarning, match=warn_message):
+        assert unp1 != uvp1
+
+    with uvtest.check_warnings(UserWarning, match=warn_message):
+        assert uvp1 != unp1
 
 
 def test_non_required_unitparameters_equal_to_uvparameter():
@@ -194,20 +175,11 @@ def test_non_required_unitparameters_equal_to_uvparameter():
         "to alter the unit of the value to match expected "
         "UVParameter units."
     ]
-    assert uvtest.checkWarnings(
-        operator.eq,
-        func_args=[unp1, uvp1],
-        category=[UserWarning] * len(warn_message),
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
-    assert uvtest.checkWarnings(
-        operator.eq,
-        func_args=[uvp1, unp1],
-        category=[UserWarning] * len(warn_message),
-        nwarnings=len(warn_message),
-        message=warn_message,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        assert unp1 == uvp1
+
+    with uvtest.check_warnings(UserWarning, warn_message):
+        assert uvp1 == unp1
 
 
 def test_non_required_non_value_unitparameter_is_equal_to_uvparameter():

@@ -158,13 +158,10 @@ def test_readwrite_ds_object_power_units(ds_from_uvfits, test_outfile):
 
     ds.calculate_delay_spectrum()
 
-    uvtest.checkWarnings(
-        ds.write,
-        func_args=[test_outfile],
-        message="Cannot write DelaySpectrum objects to file when power ",
-        nwarnings=1,
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(
+        UserWarning, match="Cannot write DelaySpectrum objects to file when power "
+    ):
+        ds.write(test_outfile)
 
     ds_in = DelaySpectrum()
     ds_in.read(test_outfile)
@@ -181,23 +178,16 @@ def test_readwrite_custom_taper(ds_from_uvfits, test_outfile):
 
     ds.delay_transform()
 
-    uvtest.checkWarnings(
-        ds.write,
-        func_args=[test_outfile],
-        message="The given taper funtion has a different name than ",
-        nwarnings=1,
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(
+        UserWarning, match="The given taper function has a different name than"
+    ):
+        ds.write(test_outfile)
 
     ds_in = DelaySpectrum()
-    uvtest.checkWarnings(
-        ds_in.read,
-        func_args=[test_outfile],
-        func_kwargs={"run_check": False},
-        message="Saved taper function has different name than",
-        nwarnings=1,
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(
+        UserWarning, match="Saved taper function has a different name than"
+    ):
+        ds_in.read(test_outfile, run_check=False)
 
     assert ds != ds_in
     ds_in.set_taper(windows.cosine)
