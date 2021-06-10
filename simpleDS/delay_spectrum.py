@@ -2705,7 +2705,9 @@ class DelaySpectrum(UVBase):
             if overwrite:
                 print("File exists; overwriting file")
             else:
-                raise IOError("File exists; skipping")
+                raise IOError(
+                    "File exists. If overwriting is desired set the clobber keyword to True."
+                )
 
         restore_cosmo = False
         if self.power_array is not None and self.power_array.unit.is_equivalent(
@@ -2833,7 +2835,7 @@ class DelaySpectrum(UVBase):
                 print("File exists; overwriting file")
             else:
                 raise IOError(
-                    "File exist. If overwriting is desired set the clobber keyword to True."
+                    "File exists. If overwriting is desired set the clobber keyword to True."
                 )
 
         with h5py.File(filename, "w") as h5file:
