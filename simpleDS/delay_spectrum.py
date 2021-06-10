@@ -2601,8 +2601,8 @@ class DelaySpectrum(UVBase):
 
         header["Nuv"] = self.Nuv
         header["Nspws"] = self.Nspws
-        header["data_type"] = self.data_type
-        header["vis_units"] = self.vis_units
+        header["data_type"] = self.data_type.encode()
+        header["vis_units"] = self.vis_units.encode()
 
         header["lst_array"] = self.lst_array.value
         header["lst_array"].attrs["unit"] = self.lst_array.unit.to_string()
