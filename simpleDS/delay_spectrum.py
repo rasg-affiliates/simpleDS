@@ -2832,7 +2832,9 @@ class DelaySpectrum(UVBase):
             if overwrite:
                 print("File exists; overwriting file")
             else:
-                raise IOError("File exists; skipping")
+                raise IOError(
+                    "File exist. If overwriting is desired set the clobber keyword to True."
+                )
 
         with h5py.File(filename, "w") as h5file:
             header = h5file.create_group("Header")
