@@ -388,15 +388,12 @@ class TestBasicFunctions(unittest.TestCase):
             "noise array to unicalibrated units."
         ]
 
-        pytest.raises(
+        with pytest.raises(
             units.UnitConversionError,
-            uvtest.checkWarnings,
-            self.dspec_object.add_uvdata,
-            func_args=[uvd],
-            category=UserWarning,
-            nwarnings=len(warn_message),
-            message=warn_message,
-        )
+            match="Input data object is in units incompatible",
+        ):
+            with uvtest.check_warnings(UserWarning, warn_message):
+                self.dspec_object.add_uvdata(uvd)
 
     def test_add_too_many_UVData(self):
         """Test error is raised when adding too many UVData objects."""
@@ -504,13 +501,8 @@ def test_adding_new_uvdata_with_different_lsts():
     # the actual output of this warning depends on the time difference of the
     #  arrays so we'll cheat on the check.
     warn_message = ["Input LST arrays differ on average by"]
-    uvtest.checkWarnings(
-        dspec_object.add_uvdata,
-        func_args=[uvd1],
-        message=warn_message,
-        nwarnings=len(warn_message),
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        dspec_object.add_uvdata(uvd1)
 
 
 def test_select_spectral_window_not_inplace():
@@ -851,26 +843,18 @@ def test_warning_from_uncalibrated_data():
     uvd.read(testfile)
     uvd.vis_units = "uncalib"
     warn_message = [
-        "Data is uncalibrated. Unable to covert noise array " "to unicalibrated units."
+        "Data is uncalibrated. Unable to covert noise array to unicalibrated units."
     ]
-    dspec_object = uvtest.checkWarnings(
-        DelaySpectrum,
-        func_args=[uvd],
-        category=[UserWarning],
-        nwarnings=1,
-        message=warn_message,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        dspec_object = DelaySpectrum(uvd)
+
     warn_message = [
         "Fourier Transforming uncalibrated data. Units will "
         "not have physical meaning. "
         "Data will be arbitrarily scaled."
     ]
-    uvtest.checkWarnings(
-        dspec_object.delay_transform,
-        category=[UserWarning],
-        nwarnings=1,
-        message=warn_message,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        dspec_object.delay_transform()
 
 
 def test_delay_transform_bad_data_type():
@@ -1024,16 +1008,11 @@ def test_delay_spectrum_power_units_input_uncalib():
     test_uv_2.select(freq_chans=np.arange(95, 116))
 
     warn_message = [
-        "Data is uncalibrated. Unable to covert noise " "array to unicalibrated units.",
-        "Data is uncalibrated. Unable to covert noise " "array to unicalibrated units.",
+        "Data is uncalibrated. Unable to covert noise array to unicalibrated units.",
+        "Data is uncalibrated. Unable to covert noise array to unicalibrated units.",
     ]
-    dspec_object = uvtest.checkWarnings(
-        DelaySpectrum,
-        func_kwargs={"uv": [test_uv_1, test_uv_2]},
-        message=warn_message,
-        nwarnings=len(warn_message),
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        dspec_object = DelaySpectrum([test_uv_1, test_uv_2])
 
     dspec_object.add_trcvr(144 * units.K)
     warn_message = [
@@ -1041,12 +1020,8 @@ def test_delay_spectrum_power_units_input_uncalib():
         "Units will not have physical meaning. "
         "Data will be arbitrarily scaled."
     ]
-    uvtest.checkWarnings(
-        dspec_object.calculate_delay_spectrum,
-        message=warn_message,
-        nwarnings=len(warn_message),
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(UserWarning, match=warn_message):
+        dspec_object.calculate_delay_spectrum()
 
     assert (units.Hz ** 2).is_equivalent(dspec_object.power_array.unit)
 
@@ -1294,16 +1269,11 @@ def test_update_cosmology_unit_and_shape_uncalib():
     test_uv_2.select(freq_chans=np.arange(95, 116))
 
     warn_message = [
-        "Data is uncalibrated. Unable to covert noise " "array to unicalibrated units.",
-        "Data is uncalibrated. Unable to covert noise " "array to unicalibrated units.",
+        "Data is uncalibrated. Unable to covert noise array to unicalibrated units.",
+        "Data is uncalibrated. Unable to covert noise array to unicalibrated units.",
     ]
-    dspec_object = uvtest.checkWarnings(
-        DelaySpectrum,
-        func_kwargs={"uv": [test_uv_1, test_uv_2]},
-        message=warn_message,
-        nwarnings=len(warn_message),
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        dspec_object = DelaySpectrum([test_uv_1, test_uv_2])
 
     dspec_object.add_trcvr(144 * units.K)
     warn_message = [
@@ -1311,12 +1281,8 @@ def test_update_cosmology_unit_and_shape_uncalib():
         "Units will not have physical meaning. "
         "Data will be arbitrarily scaled."
     ]
-    uvtest.checkWarnings(
-        dspec_object.calculate_delay_spectrum,
-        message=warn_message,
-        nwarnings=len(warn_message),
-        category=UserWarning,
-    )
+    with uvtest.check_warnings(UserWarning, warn_message):
+        dspec_object.calculate_delay_spectrum()
 
     assert dspec_object.check()
 
