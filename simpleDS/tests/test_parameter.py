@@ -166,7 +166,7 @@ def test_non_required_unitparameters_equal_to_uvparameter():
         expected_units=units.m,
     )
     uvp1 = uvp.UVParameter(
-        name="uvp1", value=3.0, required=False, spoof_val=10, expected_type=np.float
+        name="uvp1", value=3.0, required=False, spoof_val=10, expected_type=np.float32
     )
     warn_message = [
         "A UnitParameter with quantity value is being cast to "
@@ -195,9 +195,9 @@ def test_non_required_non_value_unitparameter_is_equal_to_uvparameter():
 def test_non_value_unitparameter_is_equal_to_uvparameter():
     """Test a UnitParameter with value_not_quantity is equal to a UVParameter."""
     unp1 = unp.UnitParameter(
-        name="unp1", value=3.0, expected_type=np.float, value_not_quantity=True
+        name="unp1", value=3.0, expected_type=np.float32, value_not_quantity=True
     )
-    uvp1 = uvp.UVParameter(name="uvp1", value=3.0, expected_type=np.float)
+    uvp1 = uvp.UVParameter(name="uvp1", value=3.0, expected_type=np.float32)
     assert unp1 == uvp1
     assert uvp1 == unp1
 

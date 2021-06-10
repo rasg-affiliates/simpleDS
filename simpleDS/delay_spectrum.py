@@ -164,7 +164,7 @@ class DelaySpectrum(UVBase):
             "data_array",
             description=desc,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=np.complex,
+            expected_type=np.complex64,
             expected_units=(
                 units.Jy,
                 units.Jy * units.Hz,
@@ -187,7 +187,7 @@ class DelaySpectrum(UVBase):
             "noise_array",
             description=desc,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=np.complex,
+            expected_type=np.complex64,
             expected_units=(
                 units.Jy,
                 units.Jy * units.Hz,
@@ -221,7 +221,7 @@ class DelaySpectrum(UVBase):
             description=desc,
             value_not_quantity=True,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=np.float,
+            expected_type=np.float64,
         )
 
         desc = "Boolean flag, True is flagged, shape: same as data_array."
@@ -230,7 +230,7 @@ class DelaySpectrum(UVBase):
             description=desc,
             value_not_quantity=True,
             form=("Nspws", "Nuv", "Npols", "Nbls", "Ntimes", "Nfreqs"),
-            expected_type=np.bool,
+            expected_type=bool,
         )
 
         desc = (
@@ -243,7 +243,7 @@ class DelaySpectrum(UVBase):
             "lst_array",
             description=desc,
             form=("Ntimes",),
-            expected_type=np.float,
+            expected_type=np.float64,
             tols=radian_tol,
             expected_units=units.rad,
         )
@@ -283,7 +283,7 @@ class DelaySpectrum(UVBase):
             "freq_array",
             description=desc,
             form=("Nspws", "Nfreqs"),
-            expected_type=np.float,
+            expected_type=np.float64,
             tols=1e-3 * units.Hz,
             expected_units=units.Hz,
         )
@@ -293,7 +293,7 @@ class DelaySpectrum(UVBase):
             "delay_array",
             description=desc,
             form=("Ndelays",),
-            expected_type=np.float,
+            expected_type=np.float64,
             tols=1e-3 * units.ns,
             expected_units=units.ns,
         )
@@ -316,7 +316,7 @@ class DelaySpectrum(UVBase):
         self._uvw = UnitParameter(
             "uvw",
             description=desc,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=(3),
             expected_units=units.m,
         )
@@ -329,7 +329,7 @@ class DelaySpectrum(UVBase):
         self._trcvr = UnitParameter(
             "trcvr",
             description=desc,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=("Nspws", "Nfreqs"),
             expected_units=units.K,
         )
@@ -340,7 +340,7 @@ class DelaySpectrum(UVBase):
         self._redshift = UnitParameter(
             "redshift",
             description=desc,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=("Nspws",),
             expected_units=units.dimensionless_unscaled,
         )
@@ -356,7 +356,7 @@ class DelaySpectrum(UVBase):
         self._k_perpendicular = UnitParameter(
             "k_perpendicular",
             description=desc,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=("Nspws",),
             expected_units=_kval_units,
         )
@@ -374,7 +374,7 @@ class DelaySpectrum(UVBase):
         self._k_parallel = UnitParameter(
             "k_parallel",
             description=desc,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=("Nspws", "Ndelays"),
             expected_units=_kval_units,
         )
@@ -399,7 +399,7 @@ class DelaySpectrum(UVBase):
         self._power_array = UnitParameter(
             "power_array",
             description=desc,
-            expected_type=np.complex,
+            expected_type=np.complex64,
             required=False,
             form=("Nspws", "Npols", "Nbls", "Nbls", "Ntimes", "Ndelays"),
             expected_units=_power_units,
@@ -422,7 +422,7 @@ class DelaySpectrum(UVBase):
         self._noise_power = UnitParameter(
             "noise_power",
             description=desc,
-            expected_type=np.complex,
+            expected_type=np.complex64,
             required=False,
             form=("Nspws", "Npols", "Nbls", "Nbls", "Ntimes", "Ndelays"),
             expected_units=_noise_power_units,
@@ -445,7 +445,7 @@ class DelaySpectrum(UVBase):
         self._thermal_power = UnitParameter(
             "thermal_power",
             description=desc,
-            expected_type=np.float,
+            expected_type=np.float64,
             required=False,
             form=("Nspws", "Npols", "Nbls", "Nbls", "Ntimes"),
             expected_units=_thermal_power_units,
@@ -476,7 +476,7 @@ class DelaySpectrum(UVBase):
             "unit_conversion",
             description=desc,
             required=False,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=("Nspws", "Npols"),
             expected_units=_conversion_units,
         )
@@ -501,7 +501,7 @@ class DelaySpectrum(UVBase):
             "thermal_conversion",
             description=desc,
             required=False,
-            expected_type=np.float,
+            expected_type=np.float64,
             form=("Nspws", "Npols"),
             expected_units=_tconversion_units,
         )
@@ -510,7 +510,7 @@ class DelaySpectrum(UVBase):
             "beam_area",
             description=desc,
             form=("Nspws", "Npols", "Nfreqs"),
-            expected_type=np.float,
+            expected_type=np.float64,
             expected_units=units.sr,
         )
         desc = (
@@ -521,7 +521,7 @@ class DelaySpectrum(UVBase):
             "beam_sq_area",
             description=desc,
             form=("Nspws", "Npols", "Nfreqs"),
-            expected_type=np.float,
+            expected_type=np.float64,
             expected_units=units.sr,
         )
         desc = (
@@ -538,7 +538,7 @@ class DelaySpectrum(UVBase):
             "integration_time",
             description=desc,
             form=("Nbls", "Ntimes"),
-            expected_type=np.float,
+            expected_type=np.float64,
             expected_units=units.s,
         )
 
@@ -947,21 +947,21 @@ class DelaySpectrum(UVBase):
         )
 
         temp_data = np.zeros(
-            shape=this._nsample_array.expected_shape(this), dtype=np.float
+            shape=this._nsample_array.expected_shape(this), dtype=np.float64
         )
         temp_data[:, :, :, :, :] = utils.get_nsample_array(
             uv, reds=this.baseline_array, squeeze=False
         )
         this.nsample_array = copy.deepcopy(temp_data)
 
-        temp_data = np.ones(shape=this._flag_array.expected_shape(this), dtype=np.bool)
+        temp_data = np.ones(shape=this._flag_array.expected_shape(this), dtype=bool)
         temp_data[:, :, :, :, :] = utils.get_flag_array(
             uv, reds=this.baseline_array, squeeze=False
         )
         this.flag_array = copy.deepcopy(temp_data)
 
         temp_data = np.zeros(
-            shape=this._integration_time.expected_shape(this), dtype=np.float
+            shape=this._integration_time.expected_shape(this), dtype=np.float64
         )
         temp_data[:, :] = utils.get_integration_time(
             uv, reds=this.baseline_array, squeeze=False
@@ -1478,7 +1478,7 @@ class DelaySpectrum(UVBase):
             if isinstance(bls, tuple) and (len(bls) == 2 or len(bls) == 3):
                 bls = [bls]
             if len(bls) == 0 or not all(isinstance(item, tuple) for item in bls):
-                if any(isinstance(bl, (int, np.int, np.int_, np.intc)) for bl in bls):
+                if any(isinstance(bl, (int, np.int64, np.int_, np.intc)) for bl in bls):
                     warnings.warn(
                         "Input baseline array is a mix of integers and tuples of "
                         "integers. Assuming all integers not in a tuple as baseline "
@@ -2098,7 +2098,7 @@ class DelaySpectrum(UVBase):
             self.Nants_telescope = self.Nants_data
 
         if "x_orientation" in header:
-            self.x_orientation = header["x_orientation"][()]
+            self.x_orientation = header["x_orientation"][()].decode("utf-8")
         else:
             warnings.warn(
                 "The parameter x_orientation is not present in the header of this "
@@ -2113,8 +2113,8 @@ class DelaySpectrum(UVBase):
 
         self.Nuv = int(header["Nuv"][()])
         self.Nspws = int(header["Nspws"][()])
-        self.data_type = header["data_type"][()]
-        self.vis_units = header["vis_units"][()]
+        self.data_type = header["data_type"][()].decode("utf-8")
+        self.vis_units = header["vis_units"][()].decode("utf-8")
 
         self.lst_array = header["lst_array"][:] * units.Unit(
             header["lst_array"].attrs["unit"]
@@ -2594,7 +2594,7 @@ class DelaySpectrum(UVBase):
         header["Nants_data"] = self.Nants_data
         header["Nants_telescope"] = self.Nants_telescope
         if self.x_orientation is not None:
-            header["x_orientation"] = self.x_orientation
+            header["x_orientation"] = self.x_orientation.encode()
 
         if self.Ndelays is not None:
             header["Ndelays"] = self.Ndelays
@@ -2876,7 +2876,7 @@ class DelaySpectrum(UVBase):
             power_shape = self._power_array.expected_shape(self)
             power_unit = self._power_array.expected_units[-2].to_string()
             dtype = (
-                self.power_array.dtype if self.power_array is not None else np.complex
+                self.power_array.dtype if self.power_array is not None else np.complex64
             )
             for _name in ["data_power", "noise_power"]:
                 power_data = dgrp.create_dataset(
@@ -3300,7 +3300,7 @@ class DelaySpectrum(UVBase):
             raise ValueError("Spectral windows must all have the same size.")
         freq_chans = spectral_windows[:, 0, None] + np.arange(num_freqs[0])
         this.Nspws = Nspws
-        this.Nfreqs = np.int(num_freqs[0])
+        this.Nfreqs = int(num_freqs[0])
         this.freq_array = np.take(this.freq_array, freq_chans)
         this.trcvr = np.take(this.trcvr, freq_chans)
 
@@ -3335,7 +3335,7 @@ class DelaySpectrum(UVBase):
 
         # This seems obvious for an FFT but in the case that something more
         # sophisticated is added later this hook will exist.
-        this.Ndelays = np.int(this.Nfreqs)
+        this.Ndelays = int(this.Nfreqs)
         delays = np.fft.fftfreq(this.Ndelays, d=np.diff(this.freq_array[0])[0].value)
         delays = np.fft.fftshift(delays) << 1.0 / this.freq_array.unit
         this.delay_array = delays << units.ns
