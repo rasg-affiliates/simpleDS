@@ -131,12 +131,7 @@ workflows:
   build_and_test:
     jobs:
       - flake8:
-          python_version: "3.6"
-      - simpleds:
-          name: simpleds_3.6
-          python_version: "3.6"
-          requires:
-            - flake8
+          python_version: "3.8"
       - simpleds:
           name: simpleds_3.7
           python_version: "3.7"
@@ -147,16 +142,21 @@ workflows:
           python_version: "3.8"
           requires:
             - flake8
-      - doctest:
-          python_version: "3.6"
+      - simpleds:
+          name: simpleds_3.9
+          python_version: "3.9"
           requires:
-              - simpleds_3.6
+            - flake8
+      - doctest:
+          python_version: "3.9"
+          requires:
               - simpleds_3.7
               - simpleds_3.8
+              - simpleds_3.9
       - tutorial_notebook:
           name: tutorial
-          python_version: "3.6"
+          python_version: "3.8"
           requires:
-              - simpleds_3.6
               - simpleds_3.7
               - simpleds_3.8
+              - simpleds_3.9

@@ -8,9 +8,9 @@ env:
     - WITH_SUDO=true
     - OS=macos-latest
   matrix:
-    - PYTHON=3.6
     - PYTHON=3.7
     - PYTHON=3.8
+    - PTYHON=3.9
 
 install:
   # ensure that we have the full tag information available for version.py
