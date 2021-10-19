@@ -267,8 +267,93 @@ class UnitParameter(uvp.UVParameter):
                                 "{name} parameter values are not close".format(name=p)
                             )
                             return False
+                    elif isinstance(parm, (np.ndarray, list, tuple)):
+                        try:
+                            if not np.allclose(
+                                np.asarray(parm), np.asarray(other_parm)
+                            ):
+                                print(
+                                    "Assumed Cosmologies are not equal. "
+                                    "{name} parameter values are not close".format(
+                                        name=p
+                                    )
+                                )
+                                return False
+                        except TypeError:
+                            try:
+
+                                if not all(
+                                    np.isclose(p_val, other_val)
+                                    for p_val, other_val in zip(parm, other_parm)
+                                ):
+                                    print(
+                                        "Assumed Cosmologies are not equal. "
+                                        "{name} parameter values are not close".format(
+                                            name=p
+                                        )
+                                    )
+                                    return False
+
+                            except units.UnitConversionError:
+                                return False
+
+                        except units.UnitConversionError:
+                            return False
+                    elif isinstance(parm, dict):
+                        try:
+                            # Try a naive comparison first
+                            # this will fail if keys are the same
+                            # but cases differ.
+                            # so only look for exact equality
+                            # then default to the long test below.
+                            if parm == other_parm:
+                                return True
+                        except ValueError:
+                            pass
+                            # this dict probably contains arrays
+                            # we will need to check each item individually
+
+                        # check to see if they are equal other than
+                        # upper/lower case keys
+                        self_lower = {k.lower(): v for k, v in parm.items()}
+                        other_lower = {k.lower(): v for k, v in other_parm.items()}
+                        if set(self_lower.keys()) != set(other_lower.keys()):
+                            print(
+                                "Assumed Cosmologies are not equal. "
+                                "{name} parameter values are not close".format(name=p)
+                            )
+                            return False
+                        else:
+                            # need to check if values are close,
+                            # not just equal
+                            values_close = True
+                            for key in self_lower.keys():
+                                try:
+                                    if not np.allclose(
+                                        self_lower[key], other_lower[key]
+                                    ):
+                                        values_close = False
+                                except (TypeError):
+                                    # this isn't a type that can be
+                                    # handled by np.isclose,
+                                    # test for equality
+                                    if self_lower[key] != other_lower[key]:
+                                        values_close = False
+                                except units.UnitConversionError:
+                                    return False
+                            if values_close is False:
+                                print(
+                                    "Assumed Cosmologies are not equal. "
+                                    "{name} parameter values are not close".format(
+                                        name=p
+                                    )
+                                )
+                                return False
+                            else:
+                                return True
                     elif parm != other_parm:
                         return False
+
                 return True
 
             else:
