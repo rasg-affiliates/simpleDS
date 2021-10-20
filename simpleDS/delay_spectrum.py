@@ -971,9 +971,9 @@ class DelaySpectrum(UVBase):
 
         # reorder to have increasing lsts for every array like Ntimes
         this.lst_array = np.unwrap(this.lst_array)[lst_inds]
-        this.data_array = this.data_array[..., lst_inds]
-        this.flag_array = this.flag_array[:, :, :, :, lst_inds]
-        this.nsample_array = this.nsample_array[:, :, :, :, lst_inds]
+        this.data_array = this.data_array[..., lst_inds, :]
+        this.flag_array = this.flag_array[..., lst_inds, :]
+        this.nsample_array = this.nsample_array[..., lst_inds, :]
         this.integration_time = this.integration_time[:, lst_inds]
         # initialize the beam_area and beam_sq_area to help with selections later
         this.beam_area = (
