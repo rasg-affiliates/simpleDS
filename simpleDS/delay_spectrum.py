@@ -1495,26 +1495,8 @@ class DelaySpectrum(UVBase):
                         "bls must be a list of tuples of antenna numbers (optionally with polarization)."
                     )
             if not all(
-                [
-                    isinstance(
-                        item[0],
-                        (
-                            int,
-                            np.integer,
-                        ),
-                    )
-                    for item in bls
-                ]
-                + [
-                    isinstance(
-                        item[1],
-                        (
-                            int,
-                            np.integer,
-                        ),
-                    )
-                    for item in bls
-                ]
+                [isinstance(item[0], (int, np.integer)) for item in bls]
+                + [isinstance(item[1], (int, np.integer)) for item in bls]
             ):
                 raise ValueError(
                     "bls must be a list of tuples of antenna numbers (optionally with polarization)."
@@ -1989,13 +1971,7 @@ class DelaySpectrum(UVBase):
         # do select operations on everything except data_array, flag_array and nsample_array
         # noise_array, power_array, noise_power, and thermal_power
         ds_object._select_metadata(
-            spw_inds,
-            freq_inds,
-            delay_inds,
-            bl_inds,
-            lst_inds,
-            pol_inds,
-            uv_inds,
+            spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds
         )
 
         if not self.metadata_only:
@@ -2298,13 +2274,7 @@ class DelaySpectrum(UVBase):
         else:
             self.update_cosmology(cosmology=cosmology, littleh_units=littleh_units)
             self._select_metadata(
-                spw_inds,
-                freq_inds,
-                delay_inds,
-                bl_inds,
-                lst_inds,
-                pol_inds,
-                uv_inds,
+                spw_inds, freq_inds, delay_inds, bl_inds, lst_inds, pol_inds, uv_inds
             )
 
             # open references to datasets
