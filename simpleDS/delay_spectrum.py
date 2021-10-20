@@ -3707,8 +3707,8 @@ class DelaySpectrum(UVBase):
                 x=self.freq_array.value.reshape(self.Nspws, 1, 1, 1, 1, self.Nfreqs),
                 axis=-1,
             ) << (
-                self.freq_array.unit
-                * self.freq_array.unit ** 4
+                # four power from nu^4 one power from the integration
+                self.freq_array.unit ** 5
                 * thermal_power.unit ** 2
             )
         self.thermal_power = thermal_power << units.Unit("K^2 sr^2 Hz^6")
