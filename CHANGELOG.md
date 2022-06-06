@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] 06 June 2022
+
+### Added
+- File initialization for partial I/O
+
+### Changed
+- Thermal noise estimation to be more consistent with theoretical expectations.
+
+### Fixed
+- Compatibility with numpy 1.20
+- Unnecessary `Nbls` factor in thermal estimation.
+
 ## [2.0.0] 23 January 2020
 
 ### Added
