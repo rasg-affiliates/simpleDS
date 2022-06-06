@@ -20,22 +20,24 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Get Miniconda MacOSX
-        if: matrix.os == 'macos-latest'
-        run: |
-          wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O $HOME/miniconda.sh;
-          bash $HOME/miniconda.sh -b -p $HOME/miniconda
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            use-mamba: true
+            python-version: ${{ env.PYTHON }}
+            environment-file: ci/${{ env.ENV_NAME }}.yaml
+            activate-environment: ${{ env.ENV_NAME }}
 
-      - name: Get Miniconda Linux
-        if: matrix.os == 'ubuntu-latest'
+      - name: Mamba Info
         run: |
-          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
-          bash $HOME/miniconda.sh -b -p $HOME/miniconda
-
-      - name: Setup Environment
-        run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
-          ./ci/install_conda.sh
+          mamba info -a
+          mamba list
+          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+            exit 1;
+          fi
 
       - name: Install
         run: |
