@@ -2,34 +2,6 @@ name: Run Tests
 on: [push, pull_request]
 
 jobs:
-  flake8:
-    name: Flake8
-    runs-on: ubuntu-latest
-    env:
-      ENV_NAME: linting
-      WITH_SUDO: yes
-      PYTHON: 3.7
-    steps:
-     - uses: actions/checkout@master
-       with:
-         fetch-depth: 1
-
-     - name: Get Miniconda Linux
-       run: |
-         wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
-         bash $HOME/miniconda.sh -b -p $HOME/miniconda
-
-     - name: Setup Environment
-       run: |
-         export PATH="$HOME/miniconda/bin:$PATH"
-         ./ci/install_conda.sh
-
-     - name: Linting
-       run: |
-         export PATH="$HOME/miniconda/bin:$PATH"
-         source activate $ENV_NAME
-         flake8
-
   tests:
     env:
       ENV_NAME: tests
