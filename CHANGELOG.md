@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Thermal noise estimation to be more consistent with theoretical expectations.
+- requires astorpy>=5.0.4 for unit compatibility.
+- dropped python 3.7 support
 
 ### Fixed
 - Compatibility with numpy 1.20
