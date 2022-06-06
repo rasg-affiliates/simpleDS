@@ -9,7 +9,6 @@ jobs:
       WITH_SUDO: yes
       OS: ${{ matrix.os }}
     name: Testing
-    needs: [flake8]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
