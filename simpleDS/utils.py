@@ -223,7 +223,7 @@ def noise_equivalent_bandwidth(window):
     float
 
     """
-    return np.sum(window) ** 2 / (np.sum(window ** 2) * len(window))
+    return np.sum(window) ** 2 / (np.sum(window**2) * len(window))
 
 
 def combine_nsamples(nsample_1, nsample_2=None, axis=-1):
@@ -623,7 +623,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
         )
     # if weights is none use uniform? inverse variance?
     if weights is None:
-        weights = 1.0 / uncertainty ** 2
+        weights = 1.0 / uncertainty**2
     # check shape of weights
     if np.ndim(weights) == 1 and weights.size != array.shape[axis]:
         raise ValueError(
@@ -638,7 +638,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
         )
     array_out = np.average(array, weights=weights, axis=axis)
     uncertainty_out = np.sqrt(
-        np.sum(uncertainty ** 2 * np.abs(weights) ** 2, axis=axis)
+        np.sum(uncertainty**2 * np.abs(weights) ** 2, axis=axis)
         / np.abs(np.sum(weights, axis=axis)) ** 2
     )
     return array_out, uncertainty_out

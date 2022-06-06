@@ -379,8 +379,8 @@ class DelaySpectrum(UVBase):
             expected_units=_kval_units,
         )
         _power_units = (
-            (units.mK ** 2 * units.Mpc ** 3),
-            (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
+            (units.mK**2 * units.Mpc**3),
+            (units.mK**2 * (units.Mpc / units.littleh) ** 3),
             (units.Jy * units.Hz) ** 2,
             (units.Hz) ** 2,
         )
@@ -405,8 +405,8 @@ class DelaySpectrum(UVBase):
             expected_units=_power_units,
         )
         _noise_power_units = (
-            (units.mK ** 2 * units.Mpc ** 3),
-            (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
+            (units.mK**2 * units.Mpc**3),
+            (units.mK**2 * (units.Mpc / units.littleh) ** 3),
             (units.Jy * units.Hz) ** 2,
         )
         desc = (
@@ -429,9 +429,9 @@ class DelaySpectrum(UVBase):
         )
 
         _thermal_power_units = (
-            (units.mK ** 2 * units.Mpc ** 3),
-            (units.mK ** 2 * (units.Mpc / units.littleh) ** 3),
-            (units.K * units.sr * units.Hz ** 3) ** 2,
+            (units.mK**2 * units.Mpc**3),
+            (units.mK**2 * (units.Mpc / units.littleh) ** 3),
+            (units.K * units.sr * units.Hz**3) ** 2,
         )
         desc = (
             "The predicted thermal variance of the input data averaged over "
@@ -452,15 +452,15 @@ class DelaySpectrum(UVBase):
         )
 
         _conversion_units = (
-            (units.mK ** 2 * units.Mpc ** 3 / (units.Jy * units.Hz) ** 2),
-            (units.mK ** 2 * units.Mpc ** 3 / (units.K * units.sr * units.Hz) ** 2),
+            (units.mK**2 * units.Mpc**3 / (units.Jy * units.Hz) ** 2),
+            (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz) ** 2),
             (
-                units.mK ** 2
+                units.mK**2
                 * (units.Mpc / units.littleh) ** 3
                 / (units.Jy * units.Hz) ** 2
             ),
             (
-                units.mK ** 2
+                units.mK**2
                 * (units.Mpc / units.littleh) ** 3
                 / (units.K * units.sr * units.Hz) ** 2
             ),
@@ -482,12 +482,12 @@ class DelaySpectrum(UVBase):
         )
         _tconversion_units = (
             (
-                units.mK ** 2
-                * units.Mpc ** 3
-                / (units.K * units.sr * units.Hz ** 3) ** 2
+                units.mK**2
+                * units.Mpc**3
+                / (units.K * units.sr * units.Hz**3) ** 2
             ),
             (
-                units.mK ** 2
+                units.mK**2
                 * (units.Mpc / units.littleh) ** 3
                 / (units.K * units.sr * units.Hz) ** 2
             ),
@@ -1145,13 +1145,13 @@ class DelaySpectrum(UVBase):
         # in the new cosmological framework.
         if self.power_array is not None:
             if self.power_array.unit.is_equivalent(
-                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+                units.mK**2 * units.Mpc**3 / units.littleh**3
             ):
                 self.power_array = self.power_array.to(
-                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0)
                 )
                 self.noise_power = self.noise_power.to(
-                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0)
                 )
             # only divide by the conversion when power array is in cosmological units
             # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
@@ -1159,8 +1159,8 @@ class DelaySpectrum(UVBase):
                 self.unit_conversion is not None
                 and not self.power_array.unit.is_equivalent(
                     (
-                        units.Jy ** 2 * units.Hz ** 2,
-                        units.K ** 2 * units.sr ** 2 * units.Hz ** 2,
+                        units.Jy**2 * units.Hz**2,
+                        units.K**2 * units.sr**2 * units.Hz**2,
                     )
                 )
             ):
@@ -1174,10 +1174,10 @@ class DelaySpectrum(UVBase):
 
         if self.thermal_power is not None:
             if self.thermal_power.unit.is_equivalent(
-                units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+                units.mK**2 * units.Mpc**3 / units.littleh**3
             ):
                 self.thermal_power = self.thermal_power.to(
-                    units.mK ** 2 * units.Mpc ** 3, units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0)
                 )
             # only divide by the conversion when power array is in cosmological units
             # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
@@ -1185,8 +1185,8 @@ class DelaySpectrum(UVBase):
                 self.thermal_conversion is not None
                 and not self.thermal_power.unit.is_equivalent(
                     (
-                        units.Jy ** 2 * units.Hz ** 2,
-                        units.K ** 2 * units.sr ** 2 * units.Hz ** 6,
+                        units.Jy**2 * units.Hz**2,
+                        units.K**2 * units.sr**2 * units.Hz**6,
                     )
                 )
             ):
@@ -1266,7 +1266,7 @@ class DelaySpectrum(UVBase):
                     * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
                 )
                 self.unit_conversion = (
-                    const.c ** 2 * units.sr / (2 * const.k_B)
+                    const.c**2 * units.sr / (2 * const.k_B)
                 ) ** 2 / integrate.trapz(
                     integration_array.value,
                     x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
@@ -1291,14 +1291,11 @@ class DelaySpectrum(UVBase):
                     * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
                     * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
                 )
-                self.unit_conversion = (
-                    1.0
-                    / integrate.trapz(
-                        integration_array.value,
-                        x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                        axis=-1,
-                    ).reshape(self.Nspws, self.Npols)
-                )
+                self.unit_conversion = 1.0 / integrate.trapz(
+                    integration_array.value,
+                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                    axis=-1,
+                ).reshape(self.Nspws, self.Npols)
                 self.unit_conversion = self.unit_conversion / (
                     integration_array.unit * self.freq_array.unit
                 )
@@ -1332,14 +1329,11 @@ class DelaySpectrum(UVBase):
                 * self.taper(self.Nfreqs).reshape(1, 1, self.Nfreqs) ** 2
                 * self.beam_sq_area.reshape(self.Nspws, self.Npols, self.Nfreqs)
             )
-            thermal_conversion = (
-                1.0
-                / integrate.trapz(
-                    integration_array.value,
-                    x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
-                    axis=-1,
-                ).reshape(self.Nspws, self.Npols)
-            )
+            thermal_conversion = 1.0 / integrate.trapz(
+                integration_array.value,
+                x=self.freq_array.value.reshape(self.Nspws, 1, self.Nfreqs),
+                axis=-1,
+            ).reshape(self.Nspws, self.Npols)
             thermal_conversion = thermal_conversion << 1.0 / (
                 integration_array.unit * self.freq_array.unit
             )
@@ -3708,7 +3702,7 @@ class DelaySpectrum(UVBase):
                 axis=-1,
             ) << (
                 # four power from nu^4 one power from the integration
-                self.freq_array.unit ** 5
-                * thermal_power.unit ** 2
+                self.freq_array.unit**5
+                * thermal_power.unit**2
             )
         self.thermal_power = thermal_power << units.Unit("K^2 sr^2 Hz^6")

@@ -197,7 +197,7 @@ def test_X2Y_unit():
     """Test unit on X2Y are 1/(Hz/Mpc)^3 or Mpc^3 * s."""
     test_z = 7
     test_x2y = cosmo.X2Y(test_z)
-    assert units.Mpc ** 3 * units.s / units.sr == test_x2y.unit
+    assert units.Mpc**3 * units.s / units.sr == test_x2y.unit
 
 
 def tests_X2Y_val():

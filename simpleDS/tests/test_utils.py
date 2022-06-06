@@ -230,7 +230,7 @@ def test_cross_multiply_quantity_units():
     """Test that cross mulitplying quantities have the right units."""
     array_1 = np.ones((1, 3)) * units.Hz
     array_out = utils.cross_multiply_array(array_1, axis=1)
-    assert units.Hz ** 2 == array_out.unit
+    assert units.Hz**2 == array_out.unit
 
 
 def test_noise_shape():
@@ -350,7 +350,7 @@ def test_jy_to_mk_value():
     """Test the Jy to mK conversion factor."""
     test_fq = np.array([0.1]) * units.GHz
     jy_to_mk = utils.jy_to_mk(test_fq)
-    test_conversion = const.c ** 2 / (2 * test_fq.to("1/s") ** 2 * const.k_B)
+    test_conversion = const.c**2 / (2 * test_fq.to("1/s") ** 2 * const.k_B)
     test_conversion = test_conversion.to("mK/Jy")
     assert np.allclose(test_conversion.value, jy_to_mk.value)
 
@@ -359,7 +359,7 @@ def test_jy_to_mk_units():
     """Test the Jy to mK conversion factor."""
     test_fq = np.array([0.1]) * units.GHz
     jy_to_mk = utils.jy_to_mk(test_fq)
-    test_conversion = const.c ** 2 / (2 * test_fq.to("1/s") ** 2 * const.k_B) * units.sr
+    test_conversion = const.c**2 / (2 * test_fq.to("1/s") ** 2 * const.k_B) * units.sr
     test_conversion = test_conversion.to("mK*sr/Jy")
     assert test_conversion.unit.to_string() == jy_to_mk.unit.to_string()
 
@@ -587,8 +587,8 @@ def test_weighted_average_inverse_variance_weights():
 def test_fold_along_delay_mismatched_sizes():
     """Test fold_along_delay errors if inputs are a different sizes."""
     delays = np.arange(20) * units.s
-    array = np.ones((1, 10, 3)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 3)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 3)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 3)) * units.mK**2 * units.Mpc**3
     axis = 2
     pytest.raises(ValueError, utils.fold_along_delay, delays, array, errs, axis=axis)
 
@@ -596,8 +596,8 @@ def test_fold_along_delay_mismatched_sizes():
 def test_fold_along_delay_mismatched_uncertainty_shape():
     """Test fold_along_delay errors if inputs are a different sizes."""
     delays = np.arange(20) * units.s
-    array = np.ones((1, 10, 20)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = 2
     pytest.raises(ValueError, utils.fold_along_delay, delays, array, errs, axis=axis)
 
@@ -605,8 +605,8 @@ def test_fold_along_delay_mismatched_uncertainty_shape():
 def test_fold_along_delay_delays_no_zero_bin():
     """Test fold_along_delay errors if inputs are a different sizes."""
     delays = (np.arange(21) + 11) * units.s
-    array = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = -1
     pytest.raises(ValueError, utils.fold_along_delay, delays, array, errs, axis=axis)
 
@@ -614,8 +614,8 @@ def test_fold_along_delay_delays_no_zero_bin():
 def test_fold_along_delay_odd_length_ones_unchanged():
     """Test fold_along_delay returns all ones if  odd shaped input is ones."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = -1
     array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     assert np.allclose(np.ones((1, 10, 11)), array_out.value)
@@ -624,18 +624,18 @@ def test_fold_along_delay_odd_length_ones_unchanged():
 def test_fold_along_delay_odd_length_units_unchanged():
     """Test fold_along_delay returns the same unit as odd shaped input."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     axis = -1
     array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
-    assert units.mK ** 2 * units.Mpc ** 3 == array_out.unit
+    assert units.mK**2 * units.Mpc**3 == array_out.unit
 
 
 def test_fold_along_delay_even_length_ones_unchanged():
     """Test fold_along_delay returns all ones if even shaped input is ones."""
     delays = (np.arange(-10, 10) + 0.5) * units.s
-    array = np.ones((1, 10, 20)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 20)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
     axis = -1
     array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
     assert np.allclose(np.ones((1, 10, 10)), array_out.value)
@@ -644,17 +644,17 @@ def test_fold_along_delay_even_length_ones_unchanged():
 def test_fold_along_delay_even_length_units_unchanged():
     """Test fold_along_delay returns the same unit as the even shaped input."""
     delays = (np.arange(-10, 10) + 0.5) * units.s
-    array = np.ones((1, 10, 20)) * units.mK ** 2 * units.Mpc ** 3
-    errs = np.ones((1, 10, 20)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
+    errs = np.ones((1, 10, 20)) * units.mK**2 * units.Mpc**3
     axis = -1
     array_out, errs_out = utils.fold_along_delay(delays, array, errs, axis=axis)
-    assert units.mK ** 2 * units.Mpc ** 3 == array_out.unit
+    assert units.mK**2 * units.Mpc**3 == array_out.unit
 
 
 def test_fold_along_delay_amplitude_check():
     """Test fold_along_delay returns correct amplitude during average."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     array[:, :, 11:] *= np.sqrt(2)
     array[:, :, 10] *= 3
     axis = -1
@@ -668,14 +668,14 @@ def test_fold_along_delay_amplitude_check():
 def test_fold_along_delay_amplitude_check_with_weights():
     """Test fold_along_delay returns correct amplitude of weighted average."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     array[:, :, 11:] *= np.sqrt(2)
     array[:, :, 10] *= 3
     errs = np.ones_like(array)
     errs[:, :, 11:] *= 2
     axis = -1
     array_out, errs_out = utils.fold_along_delay(
-        delays, array, errs, weights=1.0 / errs ** 2, axis=axis
+        delays, array, errs, weights=1.0 / errs**2, axis=axis
     )
     test_value_array = np.ones((1, 10, 11))
     test_value_array[:, :, 1:] *= np.average(
@@ -688,14 +688,14 @@ def test_fold_along_delay_amplitude_check_with_weights():
 def test_fold_along_delay_weight_check():
     """Test fold_along_delay returns correct weighted weights."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * units.mK**2 * units.Mpc**3
     array[:, :, 11:] *= np.sqrt(2)
     array[:, :, 10] *= 3
     errs = np.ones_like(array)
     errs[:, :, 11:] *= 2
     axis = -1
     array_out, errs_out = utils.fold_along_delay(
-        delays, array, errs, weights=1.0 / errs ** 2, axis=axis
+        delays, array, errs, weights=1.0 / errs**2, axis=axis
     )
     test_errs_array = np.ones((1, 10, 11))
     test_errs_array[:, :, 1:] *= np.sqrt(1.0 / np.sum(1.0 / np.array([2.0, 1.0]) ** 2))
@@ -706,7 +706,7 @@ def test_fold_along_delay_weight_check():
 def test_fold_along_delay_amplitude_check_complex():
     """Test fold_along_delay returns expected complex values."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * (1 + 1j) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * (1 + 1j) * units.mK**2 * units.Mpc**3
     array[:, :, 11:].real *= np.sqrt(2)
     array[:, :, 10].real *= 5
     array[:, :, 11:].imag *= np.sqrt(3)
@@ -725,7 +725,7 @@ def test_fold_along_delay_amplitude_check_complex():
 def test_fold_along_delay_amplitude_check_complex_mismatched_weights():
     """Test fold_along_delay returns expected values if weights are not complex."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * (1 + 1j) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * (1 + 1j) * units.mK**2 * units.Mpc**3
     array[:, :, 11:].real *= np.sqrt(2)
     array[:, :, 10].real *= 5
     array[:, :, 11:].imag *= np.sqrt(3)
@@ -734,7 +734,7 @@ def test_fold_along_delay_amplitude_check_complex_mismatched_weights():
     errs[:, :, 11:] *= 2
     axis = -1
     array_out, errs_out = utils.fold_along_delay(
-        delays, array, errs, weights=1.0 / errs ** 2, axis=axis
+        delays, array, errs, weights=1.0 / errs**2, axis=axis
     )
     test_errs_array = np.ones((1, 10, 11)).astype(np.complex64)
     test_errs_array[:, :, 1:].real *= 1.0 / np.sqrt(
@@ -747,7 +747,7 @@ def test_fold_along_delay_amplitude_check_complex_mismatched_weights():
 def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
     """Test fold_along_delay returns expected values if weights are complex with all zeros."""
     delays = np.arange(-10, 11) * units.s
-    array = np.ones((1, 10, 21)) * (1 + 1j) * units.mK ** 2 * units.Mpc ** 3
+    array = np.ones((1, 10, 21)) * (1 + 1j) * units.mK**2 * units.Mpc**3
     array[:, :, 11:].real *= np.sqrt(2)
     array[:, :, 10].real *= 5
     array[:, :, 11:].imag *= np.sqrt(3)
@@ -756,7 +756,7 @@ def test_fold_along_delay_amplitude_check_mismatched_complex_weights():
     errs[:, :, 11:].real *= 2
     axis = -1
     array_out, errs_out = utils.fold_along_delay(
-        delays, array, errs, weights=1.0 / errs ** 2, axis=axis
+        delays, array, errs, weights=1.0 / errs**2, axis=axis
     )
     test_errs_array = np.ones((1, 10, 11)).astype(np.complex64)
     test_errs_array[:, :, 1:].real *= 1.0 / np.sqrt(

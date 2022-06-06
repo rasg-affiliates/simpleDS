@@ -881,7 +881,7 @@ def test_delay_spectrum_power_units():
     uvb.read_beamfits(test_uvb_file)
     dspec_object.add_uvbeam(uvb=uvb, use_exact=True)
     dspec_object.calculate_delay_spectrum()
-    assert (units.mK ** 2 * units.Mpc ** 3).is_equivalent(dspec_object.power_array.unit)
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit)
 
 
 def test_delay_spectrum_power_shape():
@@ -988,7 +988,7 @@ def test_delay_spectrum_power_units_input_kelvin_str():
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
 
-    assert (units.mK ** 2 * units.Mpc ** 3).is_equivalent(dspec_object.power_array.unit)
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.power_array.unit)
 
 
 def test_delay_spectrum_power_units_input_uncalib():
@@ -1024,7 +1024,7 @@ def test_delay_spectrum_power_units_input_uncalib():
     with uvtest.check_warnings(UserWarning, match=warn_message):
         dspec_object.calculate_delay_spectrum()
 
-    assert (units.Hz ** 2).is_equivalent(dspec_object.power_array.unit)
+    assert (units.Hz**2).is_equivalent(dspec_object.power_array.unit)
 
 
 def test_delay_spectrum_noise_power_units():
@@ -1047,7 +1047,7 @@ def test_delay_spectrum_noise_power_units():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    assert (units.mK ** 2 * units.Mpc ** 3).is_equivalent(dspec_object.noise_power.unit)
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.noise_power.unit)
 
 
 def test_delay_spectrum_thermal_power_units():
@@ -1070,7 +1070,7 @@ def test_delay_spectrum_thermal_power_units():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    assert (units.mK ** 2 * units.Mpc ** 3).is_equivalent(
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(
         dspec_object.thermal_power.unit
     )
 
@@ -1135,7 +1135,7 @@ def test_remove_cosmology():
 
     dspec_object.remove_cosmology()
 
-    assert dspec_object.power_array.unit.is_equivalent(units.Jy ** 2 * units.Hz ** 2)
+    assert dspec_object.power_array.unit.is_equivalent(units.Jy**2 * units.Hz**2)
 
     dspec_object2.delay_transform()
     dspec_object2.power_array = utils.cross_multiply_array(
@@ -1168,7 +1168,7 @@ def test_remove_cosmology_no_cosmo():
 
     dspec_object.remove_cosmology()
 
-    assert dspec_object.power_array.unit.is_equivalent(units.Jy ** 2 * units.Hz ** 2)
+    assert dspec_object.power_array.unit.is_equivalent(units.Jy**2 * units.Hz**2)
 
     assert units.allclose(dspec_object2.power_array, dspec_object.power_array)
 
@@ -1309,7 +1309,7 @@ def test_update_cosmology_littleh_units():
     dspec_object.update_cosmology(cosmology=test_cosmo, littleh_units=True)
 
     assert dspec_object.check()
-    test_unit = (units.mK ** 2) / (units.littleh / units.Mpc) ** 3
+    test_unit = (units.mK**2) / (units.littleh / units.Mpc) ** 3
     assert dspec_object.power_array.unit, test_unit
 
 
@@ -1329,7 +1329,7 @@ def test_update_cosmology_littleh_units_from_calc_delay_spectr():
 
     assert dspec_object.check()
 
-    test_unit = (units.mK ** 2) / (units.littleh / units.Mpc) ** 3
+    test_unit = (units.mK**2) / (units.littleh / units.Mpc) ** 3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
 
@@ -1353,7 +1353,7 @@ def test_call_update_cosmology_twice():
     assert dspec_object.cosmology.name == "WMAP9"
 
     dspec_object.update_cosmology(test_cosmo2, littleh_units=True)
-    test_unit = (units.mK ** 2) / (units.littleh / units.Mpc) ** 3
+    test_unit = (units.mK**2) / (units.littleh / units.Mpc) ** 3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()
@@ -1378,7 +1378,7 @@ def test_call_update_cosmology_twice_no_littleh():
     assert dspec_object.cosmology.name == "WMAP9"
 
     dspec_object.update_cosmology(test_cosmo2, littleh_units=False)
-    test_unit = units.mK ** 2 * units.Mpc ** 3
+    test_unit = units.mK**2 * units.Mpc**3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()
@@ -1403,7 +1403,7 @@ def test_call_delay_spectrum_twice_no_littleh():
     assert dspec_object.cosmology.name == "WMAP9"
 
     dspec_object.calculate_delay_spectrum(cosmology=test_cosmo2, littleh_units=False)
-    test_unit = units.mK ** 2 * units.Mpc ** 3
+    test_unit = units.mK**2 * units.Mpc**3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()
@@ -1428,7 +1428,7 @@ def test_call_delay_spectrum_twice():
     assert dspec_object.cosmology.name == "WMAP9"
 
     dspec_object.calculate_delay_spectrum(cosmology=test_cosmo2, littleh_units=True)
-    test_unit = units.mK ** 2 * units.Mpc ** 3 / units.littleh ** 3
+    test_unit = units.mK**2 * units.Mpc**3 / units.littleh**3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()

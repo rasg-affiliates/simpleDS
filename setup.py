@@ -30,6 +30,15 @@ setup_args = {
         "all": ["astropy-healpix", "pytest", "pytest-cov"],
     },
     "tests_require": ["pytest"],
+    "classifiers": [
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.9",
+        "Topic :: Scientific/Engineering :: Astronomy",
+    ],
 }
 
 if __name__ == "__main__":
