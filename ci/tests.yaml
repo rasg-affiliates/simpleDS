@@ -10,4 +10,5 @@ dependencies:
   - h5py
   - pytest-cov
   - pyuvdata>=1.4.2
+  - setuptools_scm
   - pip

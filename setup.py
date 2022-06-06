@@ -4,10 +4,15 @@
 """Setup modules simpleDS."""
 from __future__ import absolute_import, division, print_function
 
-from setuptools import setup
-import glob
 import io
-from pygitversion import branch_scheme
+import sys
+import glob
+from setuptools import setup
+
+# add simpleds to our path in order to use the branch_scheme function
+sys.path.append("simpleDS")
+from branch_scheme import branch_scheme  # noqa
+
 
 with io.open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
@@ -24,7 +29,13 @@ setup_args = {
     "scripts": glob.glob("scripts/*"),
     "use_scm_version": {"local_scheme": branch_scheme},
     "include_package_data": True,
-    "install_requires": ["numpy>=1.18", "astropy>=5.0.4", "scipy", "pyuvdata>=1.4.2"],
+    "install_requires": [
+        "astropy>=5.0.4",
+        "numpy>=1.18",
+        "pyuvdata>=1.4.2",
+        "scipy",
+        "setuptools_scm",
+    ],
     "extras_require": {
         "healpix": ["astropy-healpix"],
         "all": ["astropy-healpix", "pytest", "pytest-cov"],
