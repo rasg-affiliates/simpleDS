@@ -12,7 +12,7 @@ from itertools import chain, product
 import astropy.units as units
 from astropy import constants as const
 from astropy.cosmology.core import Cosmology as reference_cosmology_object
-
+from astropy.cosmology.units import littleh, with_H0
 from pyuvdata.uvbase import UVBase
 from pyuvdata import UVData, utils as uvutils
 
@@ -345,7 +345,7 @@ class DelaySpectrum(UVBase):
             expected_units=units.dimensionless_unscaled,
         )
 
-        _kval_units = (1.0 / units.Mpc, units.littleh / units.Mpc)
+        _kval_units = (1.0 / units.Mpc, littleh / units.Mpc)
 
         desc = (
             "Cosmological wavenumber of spatial modes probed perpendicular "
@@ -380,7 +380,7 @@ class DelaySpectrum(UVBase):
         )
         _power_units = (
             (units.mK**2 * units.Mpc**3),
-            (units.mK**2 * (units.Mpc / units.littleh) ** 3),
+            (units.mK**2 * (units.Mpc / littleh) ** 3),
             (units.Jy * units.Hz) ** 2,
             (units.Hz) ** 2,
         )
@@ -406,7 +406,7 @@ class DelaySpectrum(UVBase):
         )
         _noise_power_units = (
             (units.mK**2 * units.Mpc**3),
-            (units.mK**2 * (units.Mpc / units.littleh) ** 3),
+            (units.mK**2 * (units.Mpc / littleh) ** 3),
             (units.Jy * units.Hz) ** 2,
         )
         desc = (
@@ -430,7 +430,7 @@ class DelaySpectrum(UVBase):
 
         _thermal_power_units = (
             (units.mK**2 * units.Mpc**3),
-            (units.mK**2 * (units.Mpc / units.littleh) ** 3),
+            (units.mK**2 * (units.Mpc / littleh) ** 3),
             (units.K * units.sr * units.Hz**3) ** 2,
         )
         desc = (
@@ -454,14 +454,10 @@ class DelaySpectrum(UVBase):
         _conversion_units = (
             (units.mK**2 * units.Mpc**3 / (units.Jy * units.Hz) ** 2),
             (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz) ** 2),
+            (units.mK**2 * (units.Mpc / littleh) ** 3 / (units.Jy * units.Hz) ** 2),
             (
                 units.mK**2
-                * (units.Mpc / units.littleh) ** 3
-                / (units.Jy * units.Hz) ** 2
-            ),
-            (
-                units.mK**2
-                * (units.Mpc / units.littleh) ** 3
+                * (units.Mpc / littleh) ** 3
                 / (units.K * units.sr * units.Hz) ** 2
             ),
             (units.dimensionless_unscaled),
@@ -488,7 +484,7 @@ class DelaySpectrum(UVBase):
             ),
             (
                 units.mK**2
-                * (units.Mpc / units.littleh) ** 3
+                * (units.Mpc / littleh) ** 3
                 / (units.K * units.sr * units.Hz) ** 2
             ),
         )
@@ -1145,13 +1141,13 @@ class DelaySpectrum(UVBase):
         # in the new cosmological framework.
         if self.power_array is not None:
             if self.power_array.unit.is_equivalent(
-                units.mK**2 * units.Mpc**3 / units.littleh**3
+                units.mK**2 * units.Mpc**3 / littleh**3
             ):
                 self.power_array = self.power_array.to(
-                    units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3, with_H0(self.cosmology.H0)
                 )
                 self.noise_power = self.noise_power.to(
-                    units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3, with_H0(self.cosmology.H0)
                 )
             # only divide by the conversion when power array is in cosmological units
             # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
@@ -1174,10 +1170,10 @@ class DelaySpectrum(UVBase):
 
         if self.thermal_power is not None:
             if self.thermal_power.unit.is_equivalent(
-                units.mK**2 * units.Mpc**3 / units.littleh**3
+                units.mK**2 * units.Mpc**3 / littleh**3
             ):
                 self.thermal_power = self.thermal_power.to(
-                    units.mK**2 * units.Mpc**3, units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3, with_H0(self.cosmology.H0)
                 )
             # only divide by the conversion when power array is in cosmological units
             # e.g. not if this is the first time, or if calculate_delay_spectrum was just called.
@@ -1348,21 +1344,24 @@ class DelaySpectrum(UVBase):
 
         if littleh_units:
             self.k_perpendicular = self.k_perpendicular.to(
-                "littleh/Mpc", units.with_H0(self.cosmology.H0)
+                littleh / units.Mpc, with_H0(self.cosmology.H0)
             )
             self.k_parallel = self.k_parallel.to(
-                "littleh/Mpc", units.with_H0(self.cosmology.H0)
+                littleh / units.Mpc, with_H0(self.cosmology.H0)
             )
             if self.power_array is not None:
                 self.power_array = self.power_array.to(
-                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3 / littleh**3,
+                    with_H0(self.cosmology.H0),
                 )
                 self.noise_power = self.noise_power.to(
-                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3 / littleh**3,
+                    with_H0(self.cosmology.H0),
                 )
             if self.thermal_power is not None:
                 self.thermal_power = self.thermal_power.to(
-                    "mK^2 Mpc^3/littleh^3", units.with_H0(self.cosmology.H0)
+                    units.mK**2 * units.Mpc**3 / littleh**3,
+                    with_H0(self.cosmology.H0),
                 )
 
     @units.quantity_input(
@@ -2023,8 +2022,8 @@ class DelaySpectrum(UVBase):
                                 np.take(param, inds, axis=axis),
                             )
 
-        littleh = self.k_perpendicular.unit == units.Unit("littleh/Mpc")
-        ds_object.update_cosmology(littleh_units=littleh)
+        use_littleh = self.k_perpendicular.unit == units.Unit(littleh / units.Mpc)
+        ds_object.update_cosmology(littleh_units=use_littleh)
 
         # check if object is uv_object-consistent
         if run_check:

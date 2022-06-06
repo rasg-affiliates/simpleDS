@@ -24,7 +24,7 @@ setup_args = {
     "scripts": glob.glob("scripts/*"),
     "use_scm_version": {"local_scheme": branch_scheme},
     "include_package_data": True,
-    "install_requires": ["numpy>=1.18", "astropy>=4.0", "scipy", "pyuvdata>=1.4.2"],
+    "install_requires": ["numpy>=1.18", "astropy>=5.0.4", "scipy", "pyuvdata>=1.4.2"],
     "extras_require": {
         "healpix": ["astropy-healpix"],
         "all": ["astropy-healpix", "pytest", "pytest-cov"],
@@ -34,9 +34,9 @@ setup_args = {
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: BSD License",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering :: Astronomy",
     ],
 }

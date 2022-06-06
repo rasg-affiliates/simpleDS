@@ -7,6 +7,7 @@ import copy
 import numpy as np
 from astropy import constants as const
 from astropy import units
+from astropy.cosmology.units import littleh
 from pyuvdata import utils as uvutils
 from scipy.signal import windows
 
@@ -644,7 +645,7 @@ def weighted_average(array, uncertainty, weights=None, axis=-1):
     return array_out, uncertainty_out
 
 
-accepted_units = ["mK^2*Mpc^3", "mK^2*Mpc^3/littleh^3", "time"]
+accepted_units = ["mK^2*Mpc^3", units.mK**2 * units.Mpc**3 / littleh**3, "time"]
 
 
 @units.quantity_input(delays="time", array=accepted_units)

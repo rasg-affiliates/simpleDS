@@ -15,6 +15,8 @@ from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 from astropy import units
 from astropy.cosmology import Planck15, WMAP9
+from astropy.cosmology.units import littleh
+
 from scipy.signal import windows
 
 from simpleDS import DelaySpectrum
@@ -1309,7 +1311,7 @@ def test_update_cosmology_littleh_units():
     dspec_object.update_cosmology(cosmology=test_cosmo, littleh_units=True)
 
     assert dspec_object.check()
-    test_unit = (units.mK**2) / (units.littleh / units.Mpc) ** 3
+    test_unit = (units.mK**2) / (littleh / units.Mpc) ** 3
     assert dspec_object.power_array.unit, test_unit
 
 
@@ -1329,7 +1331,7 @@ def test_update_cosmology_littleh_units_from_calc_delay_spectr():
 
     assert dspec_object.check()
 
-    test_unit = (units.mK**2) / (units.littleh / units.Mpc) ** 3
+    test_unit = (units.mK**2) / (littleh / units.Mpc) ** 3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
 
@@ -1353,7 +1355,7 @@ def test_call_update_cosmology_twice():
     assert dspec_object.cosmology.name == "WMAP9"
 
     dspec_object.update_cosmology(test_cosmo2, littleh_units=True)
-    test_unit = (units.mK**2) / (units.littleh / units.Mpc) ** 3
+    test_unit = (units.mK**2) / (littleh / units.Mpc) ** 3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()
@@ -1428,7 +1430,7 @@ def test_call_delay_spectrum_twice():
     assert dspec_object.cosmology.name == "WMAP9"
 
     dspec_object.calculate_delay_spectrum(cosmology=test_cosmo2, littleh_units=True)
-    test_unit = units.mK**2 * units.Mpc**3 / units.littleh**3
+    test_unit = units.mK**2 * units.Mpc**3 / littleh**3
     assert dspec_object.power_array.unit == test_unit
     assert dspec_object.cosmology.name == "Planck15"
     assert dspec_object.check()

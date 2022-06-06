@@ -105,8 +105,8 @@ workflows:
   build_and_test:
     jobs:
       - simpleds:
-          name: simpleds_3.7
-          python_version: "3.7"
+          name: simpleds_3.10
+          python_version: "3.10"
       - simpleds:
           name: simpleds_3.8
           python_version: "3.8"
@@ -116,13 +116,13 @@ workflows:
       - doctest:
           python_version: "3.9"
           requires:
-              - simpleds_3.7
+              - simpleds_3.10
               - simpleds_3.8
               - simpleds_3.9
       - tutorial_notebook:
           name: tutorial
-          python_version: "3.8"
+          python_version: "3.9"
           requires:
-              - simpleds_3.7
+              - simpleds_3.10
               - simpleds_3.8
               - simpleds_3.9
