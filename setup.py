@@ -13,7 +13,7 @@ with io.open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
 setup_args = {
-    "name": "simpleDS",
+    "name": "simple_delay_spectrum",
     "author": "rasg-affiliates",
     "license": "BSD",
     "description": ("A Simple Delay Spectrum calculator for radio interferometers. "),
