@@ -20,6 +20,7 @@ with io.open("README.md", "r", encoding="utf-8") as readme_file:
 setup_args = {
     "name": "simple_delay_spectrum",
     "author": "rasg-affiliates",
+    "url": "https://github.com/rasg-affiliates/simpleDS",
     "license": "BSD",
     "description": ("A Simple Delay Spectrum calculator for radio interferometers. "),
     "long_description": readme,
