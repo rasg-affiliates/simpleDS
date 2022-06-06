@@ -10,6 +10,5 @@ dependencies:
   - pytest
   - nbval
   - matplotlib
+  - pyuvdata>=1.4.2
   - pip
-  - pip:
-    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
