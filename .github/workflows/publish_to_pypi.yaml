@@ -21,24 +21,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Mambaforge
-        uses: conda-incubator/setup-miniconda@v2
+      - name: Set up Python
+        uses: actions/setup-python@v3
         with:
-            miniforge-variant: Mambaforge
-            miniforge-version: latest
-            use-mamba: true
-            python-version: ${{ env.PYTHON }}
-            environment-file: ci/${{ env.ENV_NAME }}.yaml
-            activate-environment: ${{ env.ENV_NAME }}
+          python-version: ${{ env.PYTHON }}
 
-      - name: Mamba Info
-        run: |
-          mamba info -a
-          mamba list
-          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
-            exit 1;
-          fi
+      - name: Install build
+        run: pip install build
 
       - name: Build a binary wheel and a source tarball
         run: |

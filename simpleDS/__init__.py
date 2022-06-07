@@ -6,14 +6,13 @@ from pathlib import Path
 from setuptools_scm import get_version
 from pkg_resources import get_distribution, DistributionNotFound
 
-from .branch_scheme import branch_scheme
 
 from .utils import *  # noqa
 from .delay_spectrum import *  # noqa
 
 try:  # pragma: nocover
     # get accurate version for developer installs
-    version_str = get_version(Path(__file__).parent.parent, local_scheme=branch_scheme)
+    version_str = get_version(Path(__file__).parent.parent)
 
     __version__ = version_str
 
