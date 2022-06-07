@@ -5,13 +5,8 @@
 from __future__ import absolute_import, division, print_function
 
 import io
-import sys
 import glob
 from setuptools import setup
-
-# add simpleds to our path in order to use the branch_scheme function
-sys.path.append("simpleDS")
-from branch_scheme import branch_scheme  # noqa
 
 
 with io.open("README.md", "r", encoding="utf-8") as readme_file:
@@ -28,7 +23,7 @@ setup_args = {
     "package_dir": {"simpleDS": "simpleDS"},
     "packages": ["simpleDS", "simpleDS.tests"],
     "scripts": glob.glob("scripts/*"),
-    "use_scm_version": {"local_scheme": branch_scheme},
+    "use_scm_version": True,
     "include_package_data": True,
     "install_requires": [
         "astropy>=5.0.4",
