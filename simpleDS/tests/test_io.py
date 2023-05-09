@@ -293,7 +293,7 @@ def test_partial_read_frequencies_longest(ds_from_uvfits, test_outfile):
     [
         {"delays": -405.999994798125 * units.ns},
         {"delay_chans": np.arange(8).tolist()},
-        {"bls": [(0, 26), 69637]},
+        {"bls": [(1, 27), 69637]},
         {"lsts": [0, 1]},
         {"lst_range": [2, 3] * units.rad},
         {"polarizations": 1},

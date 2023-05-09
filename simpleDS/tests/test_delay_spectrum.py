@@ -1525,13 +1525,13 @@ def test_select_preprocess_errors(ds_from_uvfits, input, err_type, err_message):
 @pytest.mark.parametrize(
     "input",
     [
-        {"antenna_nums": [0, 44]},
-        {"bls": (0, 26)},  # if statement looking for just one input that is a tuple
-        {"bls": (26, 0)},  # reverse the baseline to see if it is taken
-        {"bls": [(0, 26), (1, 4)]},
-        {"bls": [(0, 26), 69637]},
-        {"bls": [(0, 26, "pI"), (1, 4, "pI")]},
-        {"antenna_nums": [0, 44], "bls": [157697]},  # Mix bls and antenna_nums
+        {"antenna_nums": [1, 45]},
+        {"bls": (1, 27)},  # if statement looking for just one input that is a tuple
+        {"bls": (27, 1)},  # reverse the baseline to see if it is taken
+        {"bls": [(1, 27), (2, 5)]},
+        {"bls": [(1, 27), 69637]},
+        {"bls": [(1, 27, "pI"), (2, 5, "pI")]},
+        {"antenna_nums": [1, 45], "bls": [157697]},  # Mix bls and antenna_nums
         {"freq_chans": np.arange(11).tolist()},
         {"freq_chans": [np.arange(11).tolist()]},
         {"frequencies": [146798030.15625, 147290641.0, 147783251.84375] * units.Hz},

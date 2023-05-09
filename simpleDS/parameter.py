@@ -198,7 +198,7 @@ class UnitParameter(uvp.UVParameter):
                     "value_not_quantity flag."
                 )
 
-    def __eq__(self, other):
+    def __eq__(self, other, silent=False):
         """Equal if classes match and values are identical."""
         if isinstance(other, self.__class__):
             # if both are UnitParameter objects then do new comparison
@@ -373,9 +373,9 @@ class UnitParameter(uvp.UVParameter):
             )
             return False
 
-    def __ne__(self, other):
+    def __ne__(self, other, silent=False):
         """Not Equal."""
-        return not self.__eq__(other)
+        return not self.__eq__(other, silent=silent)
 
     def to_uvp(self):
         """Cast self as a UVParameter."""
