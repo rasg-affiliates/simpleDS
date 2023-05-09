@@ -20,7 +20,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         python-version: [3.8, 3.9, "3.10"]
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
           fetch-depth: 1
 
@@ -51,7 +51,7 @@ jobs:
         run: |
           python -m pytest --cov=simpleDS --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@master
+      - uses: codecov/codecov-action@main
         if: matrix.os == 'ubuntu-latest' && success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -83,7 +83,7 @@ jobs:
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
           fetch-depth: 1
 
