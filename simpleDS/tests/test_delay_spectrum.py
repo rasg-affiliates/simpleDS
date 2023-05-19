@@ -219,7 +219,7 @@ class TestDelaySpectrumInit(unittest.TestCase):
             this_param = getattr(self.dspec_object, v)
             try:
                 assert rand_num == this_param.value
-            except (AssertionError):
+            except AssertionError:
                 print(
                     "setting {prop_name} to a random number failed".format(prop_name=k)
                 )

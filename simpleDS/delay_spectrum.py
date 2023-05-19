@@ -1244,7 +1244,6 @@ class DelaySpectrum(UVBase):
         # If power spectrum estimation has already occurred, need to re-normalize
         # in the new cosmological framework.
         if self.power_array is not None:
-
             if self.power_array.unit.is_equivalent((units.Jy * units.Hz) ** 2):
                 # This additoinal units.sr term in the c/2*K_b expression may seem
                 # weird, however, the temperature to Jy conversion factor is defined
@@ -1316,7 +1315,6 @@ class DelaySpectrum(UVBase):
                 self.noise_power = self.noise_power << units.Unit("mK^2 * Mpc^3")
 
         if self.thermal_power is not None:
-
             integration_array = (
                 self.freq_array.reshape(self.Nspws, 1, self.Nfreqs) ** 4
                 / simple_cosmo.X2Y(
@@ -1968,7 +1966,6 @@ class DelaySpectrum(UVBase):
         )
 
         if not self.metadata_only:
-
             for inds, axis in zip(
                 [spw_inds, uv_inds, pol_inds, bl_inds, lst_inds], [0, 1, 2, 3, 4]
             ):
