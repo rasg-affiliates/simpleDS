@@ -28,7 +28,7 @@ setup_args = {
     "install_requires": [
         "astropy>=5.0.4",
         "numpy>=1.18",
-        "pyuvdata>=1.4.2",
+        "pyuvdata>2.2.9",
         "scipy",
         "setuptools_scm",
     ],

@@ -298,7 +298,7 @@ def test_not_equal_to_different_object():
 def test_cosmologies_not_equal_value():
     """Test two cosmologies are not equal if a value is different."""
     wmap = WMAP9.clone()
-    test_cosmo = WMAP9.clone(Neff=10)
+    test_cosmo = WMAP9.clone(Neff=1, m_nu=1e-9 * units.g)
 
     unp1 = unp.UnitParameter(name="wmap", value=wmap, value_not_quantity=True)
     unp2 = unp.UnitParameter(
