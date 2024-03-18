@@ -477,11 +477,7 @@ class DelaySpectrum(UVBase):
             expected_units=_conversion_units,
         )
         _tconversion_units = (
-            (
-                units.mK**2
-                * units.Mpc**3
-                / (units.K * units.sr * units.Hz**3) ** 2
-            ),
+            (units.mK**2 * units.Mpc**3 / (units.K * units.sr * units.Hz**3) ** 2),
             (
                 units.mK**2
                 * (units.Mpc / littleh) ** 3
@@ -1478,9 +1474,11 @@ class DelaySpectrum(UVBase):
                         "numbers and converting to antenna pairs."
                     )
                     bls = [
-                        uvutils.baseline_to_antnums(bl, self.Nants_telescope)
-                        if isinstance(bl, (int, np.int_, np.intc))
-                        else bl
+                        (
+                            uvutils.baseline_to_antnums(bl, self.Nants_telescope)
+                            if isinstance(bl, (int, np.int_, np.intc))
+                            else bl
+                        )
                         for bl in bls
                     ]
                 else:
@@ -2316,9 +2314,11 @@ class DelaySpectrum(UVBase):
                             nsamples = nsamples[slice]
                 else:
                     slice = tuple(
-                        np.s_[:]
-                        if _cnt != visdata_axes[axis_ind]
-                        else (visdata_ind_set[axis_ind] or np.s_[:])
+                        (
+                            np.s_[:]
+                            if _cnt != visdata_axes[axis_ind]
+                            else (visdata_ind_set[axis_ind] or np.s_[:])
+                        )
                         for _cnt in range(len(visdata_dset.shape))
                     )
                     if count == 0:
@@ -2363,9 +2363,11 @@ class DelaySpectrum(UVBase):
 
                 if _power:
                     slice = tuple(
-                        np.s_[:]
-                        if _cnt != power_axes[axis_ind]
-                        else (power_ind_set[axis_ind] or np.s_[:])
+                        (
+                            np.s_[:]
+                            if _cnt != power_axes[axis_ind]
+                            else (power_ind_set[axis_ind] or np.s_[:])
+                        )
                         for _cnt in range(len(power_dset.shape))
                     )
                     if count == 0:
@@ -2377,9 +2379,11 @@ class DelaySpectrum(UVBase):
 
                 if _noise:
                     slice = tuple(
-                        np.s_[:]
-                        if _cnt != power_axes[axis_ind]
-                        else (power_ind_set[axis_ind] or np.s_[:])
+                        (
+                            np.s_[:]
+                            if _cnt != power_axes[axis_ind]
+                            else (power_ind_set[axis_ind] or np.s_[:])
+                        )
                         for _cnt in range(len(noise_power_dset.shape))
                     )
                     if count == 0:
@@ -2406,9 +2410,11 @@ class DelaySpectrum(UVBase):
 
                 for count, axis_ind in enumerate(power_inds):
                     slice = tuple(
-                        np.s_[:]
-                        if _cnt != power_axes[axis_ind]
-                        else (power_ind_set[axis_ind] or np.s_[:])
+                        (
+                            np.s_[:]
+                            if _cnt != power_axes[axis_ind]
+                            else (power_ind_set[axis_ind] or np.s_[:])
+                        )
                         for _cnt in range(len(thermal_dset.shape))
                     )
                     if count == 0:
@@ -3068,18 +3074,26 @@ class DelaySpectrum(UVBase):
                     non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
                     for mesh_ind in product(*non_reg):
                         _inds = tuple(
-                            indices[_cnt]
-                            if _cnt in reg_spaced
-                            else mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            (
+                                indices[_cnt]
+                                if _cnt in reg_spaced
+                                else mesh_ind[
+                                    np.nonzero(_cnt == non_reg_inds)[0].item()
+                                ]
+                            )
                             for _cnt in range(len(visdata_dset.shape))
                         )
                         data_inds = tuple(
-                            indices[_cnt]
-                            if _cnt in reg_spaced
-                            else np.nonzero(
-                                non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
-                                == mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
-                            )[0].item()
+                            (
+                                indices[_cnt]
+                                if _cnt in reg_spaced
+                                else np.nonzero(
+                                    non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                                    == mesh_ind[
+                                        np.nonzero(_cnt == non_reg_inds)[0].item()
+                                    ]
+                                )[0].item()
+                            )
                             for _cnt in range(len(visdata_dset.shape))
                         )
                         visdata_dset[_inds] = self.data_array[data_inds].to_value(
@@ -3126,18 +3140,26 @@ class DelaySpectrum(UVBase):
                     non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
                     for mesh_ind in product(*non_reg):
                         _inds = tuple(
-                            indices[_cnt]
-                            if _cnt in reg_spaced
-                            else mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            (
+                                indices[_cnt]
+                                if _cnt in reg_spaced
+                                else mesh_ind[
+                                    np.nonzero(_cnt == non_reg_inds)[0].item()
+                                ]
+                            )
                             for _cnt in range(len(visdata_dset.shape))
                         )
                         data_inds = tuple(
-                            indices[_cnt]
-                            if _cnt in reg_spaced
-                            else np.nonzero(
-                                non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
-                                == mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
-                            )[0].item()
+                            (
+                                indices[_cnt]
+                                if _cnt in reg_spaced
+                                else np.nonzero(
+                                    non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                                    == mesh_ind[
+                                        np.nonzero(_cnt == non_reg_inds)[0].item()
+                                    ]
+                                )[0].item()
+                            )
                             for _cnt in range(len(visdata_dset.shape))
                         )
                         data_power_dset[_inds] = self.power_array[data_inds].to_value(
@@ -3168,18 +3190,26 @@ class DelaySpectrum(UVBase):
                     non_reg = [np.ravel(indices[i]) for i in non_reg_inds]
                     for mesh_ind in product(*non_reg):
                         _inds = tuple(
-                            indices[_cnt]
-                            if _cnt in reg_spaced
-                            else mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                            (
+                                indices[_cnt]
+                                if _cnt in reg_spaced
+                                else mesh_ind[
+                                    np.nonzero(_cnt == non_reg_inds)[0].item()
+                                ]
+                            )
                             for _cnt in range(len(thermal_dset.shape))
                         )
                         data_inds = tuple(
-                            indices[_cnt]
-                            if _cnt in reg_spaced
-                            else np.nonzero(
-                                non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
-                                == mesh_ind[np.nonzero(_cnt == non_reg_inds)[0].item()]
-                            )[0].item()
+                            (
+                                indices[_cnt]
+                                if _cnt in reg_spaced
+                                else np.nonzero(
+                                    non_reg[np.nonzero(_cnt == non_reg_inds)[0].item()]
+                                    == mesh_ind[
+                                        np.nonzero(_cnt == non_reg_inds)[0].item()
+                                    ]
+                                )[0].item()
+                            )
                             for _cnt in range(len(thermal_dset.shape))
                         )
 

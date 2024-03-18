@@ -333,7 +333,7 @@ class UnitParameter(uvp.UVParameter):
                                         self_lower[key], other_lower[key]
                                     ):
                                         values_close = False
-                                except (TypeError):
+                                except TypeError:
                                     # this isn't a type that can be
                                     # handled by np.isclose,
                                     # test for equality
