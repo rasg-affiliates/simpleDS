@@ -2,6 +2,7 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Test utils."""
+
 from __future__ import print_function
 
 import os

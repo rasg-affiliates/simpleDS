@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Format the simpleDS object parameters into a sphinx rst file."""
+
 from __future__ import absolute_import, division, print_function
 
 import os
