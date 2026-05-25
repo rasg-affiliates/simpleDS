@@ -2,6 +2,7 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Test Delay Spectrum calculations."""
+
 from __future__ import print_function
 
 import os
@@ -219,7 +220,7 @@ class TestDelaySpectrumInit(unittest.TestCase):
             this_param = getattr(self.dspec_object, v)
             try:
                 assert rand_num == this_param.value
-            except (AssertionError):
+            except AssertionError:
                 print(
                     "setting {prop_name} to a random number failed".format(prop_name=k)
                 )
@@ -1072,9 +1073,7 @@ def test_delay_spectrum_thermal_power_units():
 
     dspec_object.calculate_delay_spectrum()
     dspec_object.add_trcvr(144 * units.K)
-    assert (units.mK**2 * units.Mpc**3).is_equivalent(
-        dspec_object.thermal_power.unit
-    )
+    assert (units.mK**2 * units.Mpc**3).is_equivalent(dspec_object.thermal_power.unit)
 
 
 def test_delay_spectrum_thermal_power_shape():
@@ -1555,9 +1554,11 @@ def test_select(ds_uvfits_and_uvb, input):
     }
     if "bls" in uvd_input and not isinstance(uvd_input["bls"], tuple):
         uvd_input["bls"] = [
-            uvd.baseline_to_antnums(bl)
-            if isinstance(bl, (int, np.int_, np.intc))
-            else bl
+            (
+                uvd.baseline_to_antnums(bl)
+                if isinstance(bl, (int, np.int_, np.intc))
+                else bl
+            )
             for bl in uvd_input["bls"]
         ]
 
