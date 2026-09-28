@@ -2,6 +2,7 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Tests for the UnitParameter class."""
+
 from __future__ import print_function, absolute_import, division
 
 import numpy as np

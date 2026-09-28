@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 """Configuration for sphinx documtation."""
+
 import os
 import sys
 import simpleDS
