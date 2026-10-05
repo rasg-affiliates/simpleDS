@@ -2,6 +2,7 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Init file for simpleDS."""
+
 from pathlib import Path
 from setuptools_scm import get_version
 from pkg_resources import get_distribution, DistributionNotFound

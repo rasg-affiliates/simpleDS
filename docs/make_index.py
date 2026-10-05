@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Format the readme.md file into the sphinx index.rst file."""
+
 from __future__ import absolute_import, division, print_function
 
 import codecs
