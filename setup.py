@@ -2,12 +2,12 @@
 # Copyright (c) 2018 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Setup modules simpleDS."""
+
 from __future__ import absolute_import, division, print_function
 
 import io
 import glob
 from setuptools import setup
-
 
 with io.open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
