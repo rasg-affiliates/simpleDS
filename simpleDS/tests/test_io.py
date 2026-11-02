@@ -2,6 +2,7 @@
 # Copyright (c) 2020 rasg-affiliates
 # Licensed under the 3-clause BSD License
 """Test Delay Spectrum I/O Operations."""
+
 from __future__ import print_function
 
 import os
@@ -19,7 +20,6 @@ from pyuvdata import UVBeam, UVData, utils as uvutils
 from simpleDS import DelaySpectrum
 from simpleDS.data import DATA_PATH
 from pyuvdata.data import DATA_PATH as UVDATA_PATH
-
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:Cannot write DelaySpectrum objects to file when power is in cosmological units"

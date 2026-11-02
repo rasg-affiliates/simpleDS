@@ -6,6 +6,7 @@
 These objects extend the functionality of pyuvdata UVParameter objects to also
 include compatibility with Astropy Units and Quantity objects.
 """
+
 import numpy as np
 import warnings
 import copy
@@ -333,7 +334,7 @@ class UnitParameter(uvp.UVParameter):
                                         self_lower[key], other_lower[key]
                                     ):
                                         values_close = False
-                                except (TypeError):
+                                except TypeError:
                                     # this isn't a type that can be
                                     # handled by np.isclose,
                                     # test for equality
